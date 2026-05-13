@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Free ARK Cluster Population — /pop · Quick's ARK Bot</title>
+    <meta name="description" content="Free /pop cluster population for ARK Discord servers. Full cluster view, per-map breakdown, animated 24h/7d population charts. No limits, no paywall." />
+    <meta property="og:title" content="Free ARK Cluster Population — /pop · Quick's ARK Bot" />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="container nav-inner">
+        <a class="brand" href="index.html">
+          <span class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/><path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/></svg></span>
+          <span class="brand-text"><span class="name">Quick's ARK Bot</span><span class="sub">Discord Automation · ARK</span></span>
+        </a>
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="index.html">Home</a>
+          <a href="features.html">Features</a>
+          <a href="pop.html" class="active">/pop</a>
+          <a href="premium.html">Premium</a>
+          <a href="branding.html">Branding</a>
+          <a href="demos.html">Demos</a>
+          <a href="pricing.html">Pricing</a>
+          <a href="dashboard.html">Dashboard</a>
+          <a href="support.html">Support</a>
+        </nav>
+        <div class="nav-cta">
+          <a class="btn btn-ghost nav-hide-sm" data-link="inviteBot" href="#">Invite Bot</a>
+          <a class="btn btn-primary" data-link="subscribe" href="#">Subscribe</a>
+          <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Full Cluster · Free</span>
+        <h1 data-word-reveal>Full cluster population. Free.</h1>
+        <p class="lead">
+          <code class="cmd" style="font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(74,222,128,0.12);color:#86efac;padding:2px 7px;border-radius:4px;font-size:0.92em">/pop</code>
+          aggregates every map in your ARK cluster. Total players, per-map breakdown,
+          animated charts &mdash; built for whole clusters, not just single maps.
+        </p>
+        <div style="margin-top:20px;display:inline-flex;gap:10px;flex-wrap:wrap;justify-content:center">
+          <a class="btn btn-primary" data-link="inviteBot" href="#">Invite the Bot</a>
+          <a class="btn btn-ghost" href="demos.html#pop">Watch /pop demo</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Animated /pop embed -->
+    <section class="pop-section">
+      <div class="container">
+        <div class="pop-wrap">
+          <div class="pop-explainer" data-animate>
+            <h3>Built around full ARK clusters &mdash; not single maps.</h3>
+            <p>
+              Unlike basic server tools, <code>/pop</code> aggregates every map in your
+              cluster by default. Players see the whole picture in one embed.
+            </p>
+            <ul class="pop-bullets">
+              <li><span class="ico"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Total cluster players &amp; max slots</li>
+              <li><span class="ico"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Per-map online &amp; capacity</li>
+              <li><span class="ico"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Peak today &amp; 24h average</li>
+              <li><span class="ico"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Best map &amp; lowest map at a glance</li>
+              <li><span class="ico"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Animated 24h &amp; 7d charts</li>
+              <li><span class="ico"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Refresh, Map Breakdown, Chart buttons</li>
+            </ul>
+            <p style="margin-top:18px;font-size:0.92rem"><strong style="color:var(--text)">/pop is free.</strong> No artificial cluster limits. No paywall on charts. Premium servers can rebrand the embed colors and title.</p>
+          </div>
+
+          <div class="pop-card" data-animate>
+            <div class="pop-card-cmd">/pop game:"ARK Survival Ascended" platform:"Steam" cluster:"Quick's ARK"</div>
+            <div class="pop-title">ARK Cluster Population <span class="pop-live"><span class="dot"></span> Live</span></div>
+            <div class="pop-stats">
+              <div><div class="pop-stat-name">Cluster</div><div class="pop-stat-value">Quick's ARK</div></div>
+              <div><div class="pop-stat-name">Platform</div><div class="pop-stat-value">Steam</div></div>
+              <div><div class="pop-stat-name">Total Players</div><div class="pop-stat-value pop-stat-big"><span class="count-up" data-count="184">0</span> / 620</div></div>
+              <div><div class="pop-stat-name">Online Maps</div><div class="pop-stat-value pop-stat-big">11 / 12</div></div>
+              <div><div class="pop-stat-name">Peak Today</div><div class="pop-stat-value"><span class="count-up" data-count="231">0</span></div></div>
+              <div><div class="pop-stat-name">Average 24h</div><div class="pop-stat-value"><span class="count-up" data-count="156">0</span></div></div>
+            </div>
+            <div class="pop-maps">
+              <div class="pop-map"><span class="pop-map-name"><span class="pulse-dot"></span> The Island</span><span class="pop-map-bar" style="--w:60%"><span></span></span><span class="pop-map-count">42 / 70</span></div>
+              <div class="pop-map"><span class="pop-map-name"><span class="pulse-dot"></span> Ragnarok</span><span class="pop-map-bar" style="--w:54%"><span></span></span><span class="pop-map-count">38 / 70</span></div>
+              <div class="pop-map"><span class="pop-map-name"><span class="pulse-dot"></span> Fjordur</span><span class="pop-map-bar" style="--w:44%"><span></span></span><span class="pop-map-count">31 / 70</span></div>
+              <div class="pop-map"><span class="pop-map-name"><span class="pulse-dot"></span> Aberration</span><span class="pop-map-bar" style="--w:31%"><span></span></span><span class="pop-map-count">22 / 70</span></div>
+              <div class="pop-map"><span class="pop-map-name"><span class="pulse-dot"></span> Extinction</span><span class="pop-map-bar" style="--w:21%"><span></span></span><span class="pop-map-count">15 / 70</span></div>
+              <div class="pop-map"><span class="pop-map-name"><span class="pulse-dot"></span> Genesis 2</span><span class="pop-map-bar" style="--w:13%"><span></span></span><span class="pop-map-count">9 / 70</span></div>
+              <div class="pop-map"><span class="pop-map-name"><span class="pulse-dot"></span> Scorched Earth</span><span class="pop-map-bar" style="--w:6%"><span></span></span><span class="pop-map-count">3 / 50</span></div>
+            </div>
+            <div class="pop-chart">
+              <div class="pop-chart-label">24h Cluster Population</div>
+              <svg viewBox="0 0 600 100" preserveAspectRatio="none" aria-hidden="true">
+                <defs><linearGradient id="chartGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ef4444" stop-opacity=".45"/><stop offset="1" stop-color="#ef4444" stop-opacity="0"/></linearGradient></defs>
+                <path class="chart-fill" d="M0,75 L50,68 L100,60 L150,52 L200,40 L250,46 L300,32 L350,38 L400,24 L450,30 L500,42 L550,28 L600,36 L600,100 L0,100 Z"/>
+                <path class="chart-line" d="M0,75 L50,68 L100,60 L150,52 L200,40 L250,46 L300,32 L350,38 L400,24 L450,30 L500,42 L550,28 L600,36"/>
+              </svg>
+            </div>
+            <div class="pop-actions">
+              <button class="pop-action primary" type="button" disabled>Refresh</button>
+              <button class="pop-action" type="button" disabled>24h Chart</button>
+              <button class="pop-action" type="button" disabled>7d Chart</button>
+              <button class="pop-action" type="button" disabled>Map Breakdown</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cluster map grid visualisation -->
+    <section style="padding-top:0">
+      <div class="container">
+        <div class="section-head" data-animate>
+          <span class="eyebrow">Map Grid</span>
+          <h2>Per-Map Visual</h2>
+          <p>The same cluster shown as a visual grid &mdash; each map with player counts, online/offline status, and a capacity bar.</p>
+        </div>
+        <div class="cluster-grid" data-cluster-grid data-animate>
+          <div class="cluster-tile">
+            <div class="cluster-tile-head">
+              <div class="cluster-tile-name">The Island</div>
+              <div class="cluster-tile-status"><span class="dot"></span> Online</div>
+            </div>
+            <div class="cluster-tile-count">42<span class="max"> / 70</span></div>
+            <div class="cluster-tile-bar" style="--w:60%"><span></span></div>
+          </div>
+          <div class="cluster-tile">
+            <div class="cluster-tile-head">
+              <div class="cluster-tile-name">Ragnarok</div>
+              <div class="cluster-tile-status"><span class="dot"></span> Online</div>
+            </div>
+            <div class="cluster-tile-count">38<span class="max"> / 70</span></div>
+            <div class="cluster-tile-bar" style="--w:54%"><span></span></div>
+          </div>
+          <div class="cluster-tile">
+            <div class="cluster-tile-head">
+              <div class="cluster-tile-name">Fjordur</div>
+              <div class="cluster-tile-status"><span class="dot"></span> Online</div>
+            </div>
+            <div class="cluster-tile-count">31<span class="max"> / 70</span></div>
+            <div class="cluster-tile-bar" style="--w:44%"><span></span></div>
+          </div>
+          <div class="cluster-tile">
+            <div class="cluster-tile-head">
+              <div class="cluster-tile-name">Aberration</div>
+              <div class="cluster-tile-status"><span class="dot"></span> Online</div>
+            </div>
+            <div class="cluster-tile-count">22<span class="max"> / 70</span></div>
+            <div class="cluster-tile-bar" style="--w:31%"><span></span></div>
+          </div>
+          <div class="cluster-tile">
+            <div class="cluster-tile-head">
+              <div class="cluster-tile-name">Extinction</div>
+              <div class="cluster-tile-status"><span class="dot"></span> Online</div>
+            </div>
+            <div class="cluster-tile-count">15<span class="max"> / 70</span></div>
+            <div class="cluster-tile-bar" style="--w:21%"><span></span></div>
+          </div>
+          <div class="cluster-tile offline">
+            <div class="cluster-tile-head">
+              <div class="cluster-tile-name">Scorched Earth</div>
+              <div class="cluster-tile-status"><span class="dot"></span> Low</div>
+            </div>
+            <div class="cluster-tile-count">3<span class="max"> / 50</span></div>
+            <div class="cluster-tile-bar" style="--w:6%"><span></span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Why free callout -->
+    <section style="padding-top:0">
+      <div class="container">
+        <div class="cta-panel" data-animate style="background:radial-gradient(700px 320px at 50% 0%, rgba(34,197,94,0.18), transparent 60%), var(--surface);border-color:rgba(34,197,94,0.25)">
+          <span class="eyebrow" style="background:rgba(34,197,94,0.14);color:var(--success);border-color:rgba(34,197,94,0.3)">Forever Free</span>
+          <h2>Why is /pop free?</h2>
+          <p style="max-width:680px;margin:0 auto 22px">
+            Every community deserves to see their cluster activity. Charging for population
+            visibility is the kind of artificial limit we built this bot to avoid.
+            Premium pays for server-owner tools &mdash; payments, staff pay, branding,
+            advanced workflows &mdash; not for the basics.
+          </p>
+          <div class="cta-actions">
+            <a class="btn btn-primary btn-lg" data-link="inviteBot" href="#">Invite the Bot</a>
+            <a class="btn btn-ghost btn-lg" href="features.html">All Features</a>
+            <a class="btn btn-outline btn-lg" href="premium.html">See Premium</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <div class="brand" style="margin-bottom:14px">
+              <span class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/><path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/></svg></span>
+              <span class="brand-text"><span class="name">Quick's ARK Bot</span><span class="sub">Discord Automation · ARK</span></span>
+            </div>
+            <p>Advanced Discord automation for ARK and gaming communities.</p>
+          </div>
+          <div><h4>Product</h4><ul><li><a href="features.html">Features</a></li><li><a href="pop.html">/pop Cluster</a></li><li><a href="premium.html">Premium</a></li><li><a href="branding.html">Branding</a></li><li><a href="demos.html">Demos</a></li><li><a href="pricing.html">Pricing</a></li><li><a href="dashboard.html">Dashboard</a></li></ul></div>
+          <div><h4>Resources</h4><ul><li><a href="faq.html">FAQ</a></li><li><a href="support.html">Support</a></li><li><a href="terms.html">Terms</a></li><li><a href="privacy.html">Privacy</a></li></ul></div>
+          <div><h4>Connect</h4><ul><li><a data-link="supportDiscord" href="#">Discord Server</a></li><li><a data-link="contactEmail" href="#">Email Support</a></li><li><a data-link="inviteBot" href="#">Invite Bot</a></li><li><a data-link="dashboardLogin" href="#">Dashboard Login</a></li></ul></div>
+        </div>
+        <div class="footer-bottom"><div>© <span data-year>2026</span> Quick's ARK Bot. All rights reserved.</div><div>Not affiliated with Studio Wildcard or Discord Inc.</div></div>
+      </div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
