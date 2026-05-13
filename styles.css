@@ -4604,3 +4604,32 @@ section a.highlight-card {
   .discord-frame { height: 400px; }
   .dembed-fields { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   v13 — Fix hero float cards being clipped on the right side
+   ============================================================ */
+
+/* The .hero-stage-wrap had overflow-x: clip applied earlier as part
+   of the global horizontal-overflow lock. That was over-aggressive
+   — it cut off the float-card tails ("PayPal · Staff Pay" became
+   "PayPal · Staff", "Premium Branding" became "Premium Brandin")
+   at the stage column edge. The .hero-cinematic clip at the
+   section boundary is enough to prevent any document overflow. */
+.hero-stage-wrap {
+  overflow: visible !important;
+}
+
+/* Reduce the float card offsets so they extend just slightly past
+   the stage edge rather than 22–36 px out (which overflowed the
+   viewport at narrow desktop widths and got clipped). */
+.float-1 { left: -10px; right: auto; }
+.float-2 { right: -10px; left: auto; }
+.float-3 { left: -12px; right: auto; }
+.float-4 { right: -8px;  left: auto; }
+
+/* Keep them flush at the stage edge on narrower desktop widths
+   (820–1100 px) where there's less horizontal room. */
+@media (max-width: 1100px) {
+  .float-1, .float-3 { left: 0; }
+  .float-2, .float-4 { right: 0; }
+}
