@@ -30,16 +30,16 @@
      Single source of truth for site navigation. The .nav-links block in
      each HTML page is hidden by CSS but kept for no-JS / crawler fallback. */
   const MENU_LINKS = [
-    { href: "index.html", label: "Home" },
-    { href: "features.html", label: "Features" },
-    { href: "pop.html", label: "/pop" },
-    { href: "premium.html", label: "Premium" },
-    { href: "branding.html", label: "Branding" },
-    { href: "demos.html", label: "Demos" },
-    { href: "pricing.html", label: "Pricing" },
-    { href: "dashboard.html", label: "Dashboard" },
-    { href: "faq.html", label: "FAQ" },
-    { href: "support.html", label: "Support" },
+    { href: "index.html", label: "Home", desc: "Cinematic landing page." },
+    { href: "features.html", label: "Features", desc: "Explore everything the bot can do." },
+    { href: "pop.html", label: "/pop", desc: "Full ARK cluster population and charts." },
+    { href: "premium.html", label: "Premium", desc: "Payments, staff tools, branding, automation." },
+    { href: "branding.html", label: "Branding", desc: "Customize embeds and panels for your server." },
+    { href: "demos.html", label: "Demos", desc: "Animated Discord command previews." },
+    { href: "pricing.html", label: "Pricing", desc: "Free · Monthly · Lifetime." },
+    { href: "dashboard.html", label: "Dashboard", desc: "Customer dashboard placeholder." },
+    { href: "faq.html", label: "FAQ", desc: "Common questions answered." },
+    { href: "support.html", label: "Support", desc: "Discord, email, owner contact." },
     { href: "terms.html", label: "Terms" },
     { href: "privacy.html", label: "Privacy" },
   ];
@@ -81,7 +81,8 @@
         <nav class="menu-links" aria-label="Main navigation">
           ${MENU_LINKS.map((l, i) => {
             const active = l.href.toLowerCase() === here ? " active" : "";
-            return `<a class="${active.trim()}" href="${l.href}" style="--i:${i}">${l.label}</a>`;
+            const desc = l.desc ? `<span class="menu-link-desc">${l.desc}</span>` : "";
+            return `<a class="${active.trim()}" href="${l.href}" style="--i:${i}" aria-current="${active ? "page" : "false"}"><span class="menu-link-text"><span class="menu-link-label">${l.label}</span>${desc}</span></a>`;
           }).join("")}
         </nav>
         <div class="menu-cta-mobile">
@@ -130,6 +131,8 @@
     });
     panel.addEventListener("click", (e) => {
       if (e.target.closest("[data-menu-close]")) closeMenu();
+      // Close menu when navigating via a link (visual polish before page load)
+      else if (e.target.closest(".menu-links a")) closeMenu();
     });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && panel.classList.contains("open")) closeMenu();
@@ -1223,6 +1226,93 @@
     { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
   );
   document.querySelectorAll("[data-stagger], .pop-card").forEach((el) => v3Observer.observe(el));
+
+  /* ============================================================
+     v7 — Scroll progress, back-to-top, reveal observer, parallax
+     ============================================================ */
+
+  // Scroll progress bar
+  const progress = document.createElement("div");
+  progress.className = "scroll-progress";
+  progress.setAttribute("aria-hidden", "true");
+  document.body.appendChild(progress);
+
+  // Back to top button
+  const backTop = document.createElement("button");
+  backTop.type = "button";
+  backTop.className = "back-top";
+  backTop.setAttribute("aria-label", "Back to top");
+  backTop.innerHTML =
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>';
+  document.body.appendChild(backTop);
+  backTop.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+  });
+
+  // Parallax participants
+  const parallaxEls = document.querySelectorAll(".parallax-slow, .parallax-medium");
+
+  let scrollTicking = false;
+  function onScroll() {
+    const scrolled = window.scrollY || document.documentElement.scrollTop;
+    const max = (document.documentElement.scrollHeight || 0) - window.innerHeight;
+    const pct = max > 0 ? Math.min(100, (scrolled / max) * 100) : 0;
+    progress.style.width = pct + "%";
+    if (scrolled > 600) backTop.classList.add("visible");
+    else backTop.classList.remove("visible");
+    if (!reducedMotion && parallaxEls.length) {
+      parallaxEls.forEach((el) => {
+        const speed = el.classList.contains("parallax-slow") ? 0.12 : 0.28;
+        el.style.transform = "translateY(" + scrolled * speed + "px)";
+      });
+    }
+    scrollTicking = false;
+  }
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!scrollTicking) {
+        requestAnimationFrame(onScroll);
+        scrollTicking = true;
+      }
+    },
+    { passive: true }
+  );
+  onScroll();
+
+  // Reveal observer for [data-reveal] elements
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in-view");
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.12, rootMargin: "0px 0px -60px 0px" }
+  );
+  document.querySelectorAll("[data-reveal]").forEach((el) => revealObserver.observe(el));
+
+  // Smooth scroll for in-page anchor links (also closes menu if open)
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    const href = a.getAttribute("href");
+    if (!href || href === "#") return;
+    const tgt = document.querySelector(href);
+    if (!tgt) return;
+    e.preventDefault();
+    tgt.scrollIntoView({
+      behavior: reducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+    const panel = document.getElementById("menuPanel");
+    if (panel && panel.classList.contains("open")) {
+      const trig = document.querySelector(".nav-toggle");
+      if (trig) trig.click();
+    }
+  });
 
   // Initialise tutorial player after data is defined (avoids TDZ).
   const tutorialRoot = document.querySelector("[data-tut-root]");
