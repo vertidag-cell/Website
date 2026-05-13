@@ -3315,7 +3315,12 @@ body.menu-open {
 .hero-cinematic {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  /* Clip horizontally only — let tall stage content flow vertically */
+  overflow-x: clip;
+  overflow-y: visible;
+}
+@supports not (overflow-x: clip) {
+  .hero-cinematic { overflow-x: hidden; }
 }
 .hero-bg-glow,
 .hero-bg-grid {
@@ -4443,4 +4448,91 @@ body::after {
   .stage-mini-status,
   .stage-embed-footer-row { opacity: 1 !important; animation: none !important; }
   .mini-sparkline path { stroke-dashoffset: 0 !important; animation: none !important; }
+}
+
+/* ============================================================
+   v10 — Fixes for content cutoff on homepage
+   ============================================================ */
+
+/* The highlight cards are <a> tags. Strip default link styling so the
+   inner h3 doesn't pick up an underline and the button-shaped span
+   inside doesn't try to inherit blue. */
+a.highlight-card,
+a.highlight-card:hover,
+a.highlight-card:focus {
+  text-decoration: none;
+  color: inherit;
+}
+a.highlight-card:focus-visible {
+  outline: 2px solid var(--red-bright);
+  outline-offset: 3px;
+}
+/* The "Explore →" span inside the highlight-card mimics a button but
+   is not actually clickable separately — let the whole card click. */
+.highlight-card .btn {
+  pointer-events: none;
+}
+
+/* Hero stage embed: tighten padding so all 10 setup buttons + the
+   live-status strip fit comfortably on every viewport. */
+.stage-embed {
+  padding: 13px 14px;
+}
+.setup-grid {
+  gap: 5px;
+}
+.setup-btn {
+  padding: 7px 11px;
+  font-size: 0.72rem;
+  line-height: 1.15;
+}
+
+/* The embed footer row was redundant copy — hide on every screen.
+   (Element stays in HTML for now; v11 can remove it cleanly later.) */
+.stage-embed-footer-row { display: none; }
+
+/* Mini-status: the text container must be allowed to shrink so the
+   sparkline doesn't get pushed onto a second line on narrow widths. */
+.stage-mini-status {
+  flex-wrap: nowrap;
+}
+.stage-mini-status > span:not(.status-dot) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Switch the Setup Hub buttons to a single column earlier (600px
+   instead of 520px) so the longest labels ("Cluster · /pop",
+   "Hype Rewards") never wrap inside the button on small tablets. */
+@media (max-width: 600px) {
+  .setup-grid { grid-template-columns: 1fr; }
+  .mini-sparkline { display: none; }
+  .stage-mini-status { font-size: 0.74rem; padding: 8px 10px; }
+}
+
+/* Hero badge — shrink slightly on narrow viewports so it never wraps */
+@media (max-width: 520px) {
+  .hero-badge { font-size: 0.74rem; padding: 6px 12px 6px 10px; }
+}
+
+/* Hero padding shrinks on phones so the page doesn't feel sparse */
+@media (max-width: 720px) {
+  .hero { padding: 56px 0 64px; }
+}
+
+/* Hero-stage-wrap also gets explicit overflow handling so the float
+   cards never cause horizontal scroll while still letting tall stage
+   content flow vertically. */
+.hero-stage-wrap {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+@supports not (overflow-x: clip) {
+  .hero-stage-wrap { overflow-x: hidden; }
+}
+
+/* Anchor inside a section: ensure block-level link styles correctly */
+section a.highlight-card {
+  display: grid; /* re-assert in case anchor reset confuses */
 }
