@@ -292,7 +292,8 @@
         .map((b, i) => {
           const cls = b.style ? "dbtn-" + b.style : "";
           const icon = b.icon || "";
-          return `<button class="dbtn ${cls}" style="animation-delay:${i * 70}ms" disabled aria-disabled="true">${icon}${escapeHtml(b.label)}</button>`;
+          // Labels are authored locally; allow HTML (spinner, checkmark icons).
+          return `<button class="dbtn ${cls}" style="animation-delay:${i * 70}ms" disabled aria-disabled="true">${icon}${b.label}</button>`;
         })
         .join("");
       return div;
