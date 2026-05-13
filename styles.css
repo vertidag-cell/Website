@@ -48,6 +48,10 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   line-height: 1.55;
+  /* Hard lock against any horizontal scrolling, anywhere */
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -3961,4 +3965,164 @@ body {
   .back-top { transition: none; }
   .menu-links a { transition: none; }
   .menu-links a:hover { padding-left: 16px; }
+}
+
+/* ============================================================
+   v8 — Hard overflow lock + bigger visible motion + scroll hint
+   ============================================================ */
+
+/* Belt-and-braces clipping on every wrapper that could possibly leak
+   horizontally on small screens. Children that need to extend past
+   the wrapper (e.g. float cards) still work because they are inside
+   ancestors that are overflow:hidden. */
+.navbar,
+.menu-panel,
+.menu-inner,
+section,
+footer,
+.hero,
+.hero-stage-wrap,
+.tut-section,
+.tut-frame,
+.pop-section,
+.cta-section,
+.legal,
+.dash-mock,
+.dash-hero {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+/* Older browsers: fall back to hidden where `clip` is unsupported */
+@supports not (overflow-x: clip) {
+  .navbar,
+  .menu-panel,
+  .menu-inner,
+  section,
+  footer { overflow-x: hidden; }
+}
+
+/* Containers: keep an internal gutter so content never kisses the edge */
+.container {
+  width: 100%;
+  max-width: min(100% - 28px, 1200px);
+  margin-inline: auto;
+  padding: 0;
+}
+@media (max-width: 720px) {
+  .container { max-width: min(100% - 24px, 1200px); }
+}
+
+/* Menu panel: bound to viewport, slide further so the entrance reads */
+.menu-panel { width: 100vw; max-width: 100vw; overflow-x: hidden; }
+.menu-inner {
+  width: min(420px, 100vw);
+  max-width: 100vw;
+  transform: translateX(96px);
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.menu-panel.open .menu-inner { transform: none; }
+
+/* Stronger active state — thicker bar, double glow */
+.menu-links a.active::before {
+  width: 4px;
+  top: 6px;
+  bottom: 6px;
+  box-shadow: 0 0 12px var(--red-glow), 0 0 24px rgba(220, 38, 38, 0.35);
+}
+
+/* Bigger, more obvious reveal motion */
+[data-reveal=""],
+[data-reveal="up"] { transform: translateY(48px); }
+[data-reveal="left"] { transform: translateX(-48px); }
+[data-reveal="right"] { transform: translateX(48px); }
+[data-reveal="scale"] { transform: scale(0.88); }
+[data-reveal="blur"] { filter: blur(12px); }
+
+/* Hero badge: more punchy on every screen */
+.hero-badge {
+  padding: 8px 16px 8px 12px;
+  font-size: 0.85rem;
+}
+
+/* Hero scroll hint — visible cue that there's more below */
+.hero-scroll-hint {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translate(-50%, 0);
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+  animation:
+    hintAppear 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) 9.5s forwards,
+    hintBob 2.6s ease-in-out 10.5s infinite;
+}
+.hero-scroll-hint::after {
+  content: "";
+  width: 1px;
+  height: 18px;
+  background: linear-gradient(180deg, var(--text-dim), transparent);
+}
+@keyframes hintAppear {
+  to { opacity: 1; }
+}
+@keyframes hintBob {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, 6px); }
+}
+@media (max-width: 720px) {
+  .hero-scroll-hint { display: none; }
+}
+
+/* Hero floats: clip aggressively on smaller screens */
+@media (max-width: 980px) {
+  .hero-stage-wrap { overflow-x: clip; }
+}
+@media (max-width: 520px) {
+  .stage-chart { display: none; }
+  .stage-maps .stage-map:nth-child(n + 4) { display: none; }
+  .stage-cmdbox { font-size: 0.72rem; padding: 9px 12px; }
+  .stage-fields { grid-template-columns: 1fr; }
+}
+
+/* Anything sitting in fixed/absolute that might leak: clip */
+.page-intro,
+.menu-backdrop {
+  width: 100vw;
+  max-width: 100vw;
+  overflow: hidden;
+}
+
+/* Drifting body glow streak — clamp size + clip body so it never adds
+   a horizontal scrollbar even when transforms push it outside */
+body::after {
+  width: min(60vmax, 80vw);
+  height: min(60vmax, 80vw);
+  max-width: 100vw;
+}
+
+/* Containers used by sub-pages: same internal gutter */
+.legal-wrap {
+  padding-inline: 4px;
+}
+
+/* Stronger menu open animation: links slide further */
+.menu-links a {
+  transform: translateX(28px);
+}
+
+/* Reduced motion v8 */
+@media (prefers-reduced-motion: reduce) {
+  .menu-inner { transition: none !important; }
+  .hero-scroll-hint { animation: none !important; opacity: 0 !important; }
 }
