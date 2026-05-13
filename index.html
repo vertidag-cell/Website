@@ -3,22 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Quick's ARK Bot — Advanced Discord Management for ARK Communities</title>
+    <title>Quick's ARK Bot — Premium Discord Automation for ARK Communities</title>
     <meta
       name="description"
-      content="Quick's ARK Bot is a Discord bot for ARK PvP servers and gaming communities. Tickets, PayPal payments, staff pay, hype rewards, credits, pets, giveaways, and full moderation in one server management bot."
+      content="Quick's ARK Bot is a premium Discord automation bot for ARK PvP servers and gaming communities. Tickets, PayPal payments, staff pay, hype rewards, credits, pets, giveaways, and full moderation in one server management bot."
     />
     <meta
       name="keywords"
-      content="Discord bot for ARK servers, ARK Discord bot, ARK PvP server management, Discord ticket bot, Discord PayPal payment bot, Discord staff pay bot, gaming community bot, server management bot"
+      content="Discord bot for ARK servers, ARK Discord bot, ARK PvP server management, Discord ticket bot, Discord PayPal payment bot, Discord staff pay bot, gaming community bot, server management bot, Discord automation"
     />
-    <meta property="og:title" content="Quick's ARK Bot — Advanced Discord Management for ARK Communities" />
+    <meta property="og:title" content="Quick's ARK Bot — Premium Discord Automation for ARK Communities" />
     <meta
       property="og:description"
-      content="Run your ARK Discord like a professional server. Tickets, PayPal payments, staff pay, hype rewards, credits, pets, giveaways, and moderation."
+      content="One bot. Tickets, payments, rewards, staff tools, and community automation. Built for ARK communities that take their server seriously."
     />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0a0a0d" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -32,8 +33,16 @@
     <header class="navbar">
       <div class="container nav-inner">
         <a class="brand" href="index.html">
-          <span class="brand-mark">Q</span>
-          <span data-text="brand.name">Quick's ARK Bot</span>
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/>
+              <path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/>
+            </svg>
+          </span>
+          <span class="brand-text">
+            <span class="name" data-text="brand.name">Quick's ARK Bot</span>
+            <span class="sub">Discord Automation · ARK</span>
+          </span>
         </a>
         <nav class="nav-links" aria-label="Main navigation">
           <a href="index.html">Home</a>
@@ -59,14 +68,14 @@
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <span class="eyebrow">Discord Bot for ARK Servers</span>
+          <span class="hero-badge"><span class="dot"></span> Built for ARK PvP Communities</span>
           <h1>
             Run Your ARK Discord <span class="accent">Like a Professional Server</span>
           </h1>
           <p class="lead">
             Quick's ARK Bot gives ARK communities powerful tools for tickets,
             payments, staff logs, credits, hype rewards, pets, giveaways, events,
-            moderation, and server automation.
+            moderation, and server automation. Less manual work. More control.
           </p>
           <div class="hero-ctas">
             <a class="btn btn-primary btn-lg" data-link="inviteBot" href="#">Invite the Bot</a>
@@ -74,14 +83,27 @@
             <a class="btn btn-outline btn-lg" href="#features">View Features</a>
             <a class="btn btn-outline btn-lg" data-link="supportDiscord" href="#">Join Support Discord</a>
           </div>
-          <div class="hero-trust">
-            <span><span class="dot"></span> Multi-server ready</span>
-            <span><span class="dot"></span> Per-server PayPal</span>
-            <span><span class="dot"></span> Built for ARK PvP</span>
+          <div class="trust-badges">
+            <span class="trust-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Multi-Guild Ready
+            </span>
+            <span class="trust-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              PayPal Automation
+            </span>
+            <span class="trust-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              Discord.js v14
+            </span>
+            <span class="trust-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Built for ARK Communities
+            </span>
           </div>
         </div>
 
-        <!-- Dashboard mockup -->
+        <!-- Hero dashboard mockup -->
         <div class="mockup" aria-hidden="true">
           <div class="mockup-bar">
             <div class="mockup-dots"><span></span><span></span><span></span></div>
@@ -136,21 +158,100 @@
       </div>
     </section>
 
+    <!-- Tutorial walkthroughs -->
+    <section id="tutorials" class="tut-section">
+      <div class="container">
+        <div class="section-head" data-animate>
+          <span class="eyebrow">Simple Setup. Powerful Results.</span>
+          <h2>Watch How Quick's ARK Bot Works</h2>
+          <p>
+            Short animated walkthroughs show exactly how setup, subscriptions,
+            tickets, payments, and rewards work inside Discord — no real
+            payments, no fake claims.
+          </p>
+        </div>
+
+        <div data-tut-root data-animate>
+          <div class="tut-tabs" role="tablist">
+            <button class="tut-tab active" data-tut="setup" role="tab" type="button">
+              <code class="cmd">/setup</code> Setup Server
+            </button>
+            <button class="tut-tab" data-tut="subscribe" role="tab" type="button">
+              <code class="cmd">/subscribe</code> Activate
+            </button>
+            <button class="tut-tab" data-tut="tickets" role="tab" type="button">
+              Tickets
+            </button>
+            <button class="tut-tab" data-tut="reward" role="tab" type="button">
+              Reward Community
+            </button>
+            <button class="tut-tab" data-tut="payments" role="tab" type="button">
+              Payments &amp; Staff
+            </button>
+          </div>
+
+          <div class="tut-frame">
+            <div class="tut-controls">
+              <button class="tut-play" aria-label="Play tutorial" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+              <div class="tut-titlebox">
+                <div class="tut-title">Setup Your Server in Minutes</div>
+                <div class="tut-sub">Configure modules through the Discord-driven Setup Hub.</div>
+              </div>
+              <div class="tut-step-count">Step 1 / 4</div>
+            </div>
+            <div class="tut-progress" aria-hidden="true"><span></span></div>
+            <div class="tut-steps" aria-hidden="true"></div>
+
+            <!-- Discord mockup -->
+            <div class="discord-frame">
+              <aside class="discord-sidebar" aria-hidden="true">
+                <div class="discord-server-name">
+                  Quick's Server
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="channel-cat">Server</div>
+                <div class="channel"><span class="channel-hash">#</span> general</div>
+                <div class="channel"><span class="channel-hash">#</span> commands</div>
+                <div class="channel-cat">Support</div>
+                <div class="channel"><span class="channel-hash">#</span> tickets</div>
+                <div class="channel"><span class="channel-hash">#</span> ticket-logs</div>
+                <div class="channel-cat">Billing</div>
+                <div class="channel"><span class="channel-hash">#</span> billing</div>
+                <div class="channel"><span class="channel-hash">#</span> payment-logs</div>
+                <div class="channel-cat">Community</div>
+                <div class="channel"><span class="channel-hash">#</span> hype</div>
+                <div class="channel"><span class="channel-hash">#</span> staff-pay</div>
+              </aside>
+              <div class="discord-main">
+                <div class="discord-header discord-channel-name"><span class="channel-hash">#</span>&nbsp;general</div>
+                <div class="discord-messages" aria-live="polite"></div>
+                <div class="discord-input">
+                  <div class="discord-cmdbox"><span class="placeholder">Message #general</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Features -->
     <section id="features">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-animate>
           <span class="eyebrow">Features</span>
-          <h2>Everything an ARK Community Needs</h2>
+          <h2><span class="count-up" data-count="14">14</span>+ Modules. One Subscription.</h2>
           <p>
-            A complete management toolkit for ARK PvP servers, hosting
-            communities, and gaming networks — built around tickets, payments,
-            staff, and player engagement.
+            One bot. Tickets, payments, rewards, staff tools, and community
+            automation — designed for server owners who want everything organized.
           </p>
         </div>
 
         <div class="features-grid">
-          <article class="feature-card">
+          <article class="feature-card" data-animate>
+            <span class="feature-included">Included</span>
             <div class="feature-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 5 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 5h.09A1.65 1.65 0 0 0 10 3.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19 9c.41.16.74.41 1 .73"/></svg>
             </div>
@@ -158,7 +259,8 @@
             <p>Central admin dashboard for configuring the bot through Discord buttons — no commands or config files required.</p>
           </article>
 
-          <article class="feature-card">
+          <article class="feature-card" data-animate data-animate-delay="1">
+            <span class="feature-included">Included</span>
             <div class="feature-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
             </div>
@@ -166,7 +268,7 @@
             <p>Forum-based support tickets with clean logs, auto-created channels, and proper staff workflows for fast response times.</p>
           </article>
 
-          <article class="feature-card">
+          <article class="feature-card" data-animate data-animate-delay="2">
             <div class="feature-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             </div>
@@ -174,7 +276,7 @@
             <p>Reward players for name changes, tags, invites, and boosts with expiring credits that drive engagement.</p>
           </article>
 
-          <article class="feature-card">
+          <article class="feature-card" data-animate>
             <div class="feature-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>
             </div>
@@ -182,7 +284,8 @@
             <p>Lifetime and temporary credits integrated with giveaways, events, pets, and rewards — fully tracked per user.</p>
           </article>
 
-          <article class="feature-card">
+          <article class="feature-card" data-animate data-animate-delay="1">
+            <span class="feature-included">Included</span>
             <div class="feature-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
             </div>
@@ -190,7 +293,8 @@
             <p>Per-server PayPal configuration with automatic confirmation, webhook support, and full payment logs.</p>
           </article>
 
-          <article class="feature-card">
+          <article class="feature-card" data-animate data-animate-delay="2">
+            <span class="feature-included">Included</span>
             <div class="feature-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
             </div>
@@ -198,7 +302,7 @@
             <p>Track staff earnings, payouts, and monthly logs using clean forum-based staff records anyone can audit.</p>
           </article>
 
-          <article class="feature-card">
+          <article class="feature-card" data-animate>
             <div class="feature-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 .9-4.5 4.4 1 6.2L12 16.8 6.5 19.5l1-6.2L3 8.9 9 8z"/></svg>
             </div>
@@ -206,15 +310,32 @@
             <p>Rarity-based pets with abilities, boss fights, fusion mechanics, and active leaderboards.</p>
           </article>
 
-          <article class="feature-card">
+          <article class="feature-card" data-animate data-animate-delay="1">
             <div class="feature-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </div>
-            <h3>Giveaways & Events</h3>
-            <p>Run community events, giveaways, polls, and boss-style activities to keep your community engaged.</p>
+            <h3>Giveaways</h3>
+            <p>Run community giveaways with custom entry rules, role gating, and automatic winner announcements.</p>
           </article>
 
-          <article class="feature-card">
+          <article class="feature-card" data-animate data-animate-delay="2">
+            <div class="feature-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <h3>Events</h3>
+            <p>Schedule community events, boss-style activities, and recurring server happenings with reward hooks.</p>
+          </article>
+
+          <article class="feature-card" data-animate>
+            <div class="feature-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <h3>Polls</h3>
+            <p>Quick polls with live results, role-gated voting, and clean result embeds for community decisions.</p>
+          </article>
+
+          <article class="feature-card" data-animate data-animate-delay="1">
+            <span class="feature-included">Included</span>
             <div class="feature-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </div>
@@ -222,13 +343,141 @@
             <p>Ban, kick, timeout, unban, warning tools, URL filtering, and whitelist support — production-grade moderation.</p>
           </article>
 
-          <article class="feature-card">
+          <article class="feature-card" data-animate data-animate-delay="2">
             <div class="feature-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
             </div>
-            <h3>Welcome & Auto Roles</h3>
+            <h3>Welcome &amp; Auto Roles</h3>
             <p>Welcome embeds, automatic role assignment, and sync tools for existing members — onboarding made simple.</p>
           </article>
+
+          <article class="feature-card" data-animate>
+            <div class="feature-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
+            <h3>Server Templates</h3>
+            <p>Apply pre-built channel, role, and permission templates designed for ARK PvP communities and clusters.</p>
+          </article>
+
+          <article class="feature-card" data-animate data-animate-delay="1">
+            <div class="feature-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <h3>Multi-Guild Config</h3>
+            <p>Per-guild settings, isolated configs, and independent payments — built so one owner can run many servers.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- What Makes Us Different -->
+    <section id="different">
+      <div class="container">
+        <div class="section-head" data-animate>
+          <span class="eyebrow">What Makes Us Different</span>
+          <h2>Not Just Another Discord Bot</h2>
+          <p>
+            Built for ARK communities that take their server seriously —
+            not a generic ticket-and-payment template.
+          </p>
+        </div>
+
+        <div class="diff-grid">
+          <div class="diff-card" data-animate>
+            <div class="diff-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h3>Built Around Real ARK Communities</h3>
+            <p>Most bots are generic. Quick's ARK Bot is designed around the way ARK PvP servers, clusters, staff teams, and gaming communities actually operate.</p>
+          </div>
+
+          <div class="diff-card" data-animate data-animate-delay="1">
+            <div class="diff-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
+            </div>
+            <h3>Everything Managed Through Discord</h3>
+            <p>Server owners don't need complicated dashboards just to get started. Setup panels, buttons, modals, tickets, payments, logs, and rewards happen inside Discord.</p>
+          </div>
+
+          <div class="diff-card" data-animate data-animate-delay="2">
+            <div class="diff-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <h3>Multi-Server Ready</h3>
+            <p>Per-guild configuration makes the bot ready for multiple communities, rented bot access, and future customer dashboards.</p>
+          </div>
+
+          <div class="diff-card" data-animate data-animate-delay="3">
+            <div class="diff-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+            <h3>Payment Automation Included</h3>
+            <p>PayPal payment flows, webhook confirmation, payment logs, and staff payment tracking are built into the system instead of being added as an afterthought.</p>
+          </div>
+
+          <div class="diff-card" data-animate>
+            <div class="diff-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <h3>Clean Staff Workflows</h3>
+            <p>Tickets, forum logs, staff pay, moderation, credits, and support tools are designed to reduce owner stress and keep staff actions organized.</p>
+          </div>
+
+          <div class="diff-card" data-animate data-animate-delay="1">
+            <div class="diff-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <h3>Reward Systems That Fit Gaming Servers</h3>
+            <p>Hype rewards, credits, pets, giveaways, events, and activity-based rewards keep communities active without needing multiple separate bots.</p>
+          </div>
+
+          <div class="diff-card" data-animate data-animate-delay="2">
+            <div class="diff-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+            </div>
+            <h3>Built for Scaling</h3>
+            <p>Per-guild settings, reusable modules, build diagnostics, and safe configuration patterns so the bot can grow into a full subscription service.</p>
+          </div>
+
+          <div class="diff-card" data-animate data-animate-delay="3">
+            <div class="diff-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h3>Future ARK Guard Expansion</h3>
+            <p>Advanced ARK Guard, Nitrado integration, server status, and ARK automation are planned upgrades — not fake advertised features.</p>
+          </div>
+        </div>
+
+        <!-- Comparison -->
+        <div class="compare" data-animate>
+          <div class="compare-col">
+            <div class="compare-head">
+              <span class="compare-name">Generic Discord Bots</span>
+            </div>
+            <ul class="compare-list">
+              <li><span class="ico x">✕</span> Basic ticket panels</li>
+              <li><span class="ico x">✕</span> Manual payment tracking</li>
+              <li><span class="ico x">✕</span> Scattered setup commands</li>
+              <li><span class="ico x">✕</span> No ARK-focused workflow</li>
+              <li><span class="ico x">✕</span> Hard to scale across servers</li>
+              <li><span class="ico x">✕</span> No built-in staff pay logs</li>
+            </ul>
+          </div>
+          <div class="compare-vs">VS</div>
+          <div class="compare-col us">
+            <div class="compare-head">
+              <span class="compare-name">Quick's ARK Bot</span>
+              <span class="compare-tag">Built Different</span>
+            </div>
+            <ul class="compare-list">
+              <li><span class="ico check">✓</span> Central setup hub</li>
+              <li><span class="ico check">✓</span> PayPal automation</li>
+              <li><span class="ico check">✓</span> Staff pay tracking</li>
+              <li><span class="ico check">✓</span> Hype, credits, pets systems</li>
+              <li><span class="ico check">✓</span> Multi-guild ready</li>
+              <li><span class="ico check">✓</span> Built for ARK communities</li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
@@ -236,7 +485,7 @@
     <!-- Why Choose Us -->
     <section style="padding-top: 0">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-animate>
           <span class="eyebrow">Why Choose Quick's ARK Bot</span>
           <h2>Trusted by ARK Server Owners</h2>
           <p>
@@ -245,22 +494,22 @@
           </p>
         </div>
         <div class="why-grid">
-          <div class="why-card">
+          <div class="why-card" data-animate>
             <span class="why-num">01</span>
             <h3>Built for ARK PvP</h3>
             <p>Features that map directly to how ARK communities recruit, retain, and reward players.</p>
           </div>
-          <div class="why-card">
+          <div class="why-card" data-animate data-animate-delay="1">
             <span class="why-num">02</span>
             <h3>Easy Setup</h3>
             <p>Configure every system from a Discord button-driven setup hub — no commands or YAML.</p>
           </div>
-          <div class="why-card">
+          <div class="why-card" data-animate data-animate-delay="2">
             <span class="why-num">03</span>
             <h3>Multi-Server Ready</h3>
             <p>Run the bot across multiple Discord servers, each with its own config, payments, and staff.</p>
           </div>
-          <div class="why-card">
+          <div class="why-card" data-animate data-animate-delay="3">
             <span class="why-num">04</span>
             <h3>Subscription-Ready</h3>
             <p>PayPal subscriptions activate your server automatically — built to scale with your community.</p>
@@ -272,23 +521,23 @@
     <!-- How It Works -->
     <section id="how">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-animate>
           <span class="eyebrow">How It Works</span>
           <h2>Up and Running in Three Steps</h2>
           <p>From invite to fully configured server in minutes — no technical setup required.</p>
         </div>
         <div class="steps">
-          <div class="step">
+          <div class="step" data-animate>
             <div class="step-num">1</div>
             <h3>Invite the Bot</h3>
             <p>Add Quick's ARK Bot to your Discord server with the required permissions.</p>
           </div>
-          <div class="step">
+          <div class="step" data-animate data-animate-delay="1">
             <div class="step-num">2</div>
             <h3>Subscribe</h3>
             <p>Run <code style="color:var(--text);background:rgba(255,255,255,0.05);padding:1px 6px;border-radius:4px">/subscribe</code> and complete the PayPal payment.</p>
           </div>
-          <div class="step">
+          <div class="step" data-animate data-animate-delay="2">
             <div class="step-num">3</div>
             <h3>Set Up Your Server</h3>
             <p>Run <code style="color:var(--text);background:rgba(255,255,255,0.05);padding:1px 6px;border-radius:4px">/setup</code> and configure tickets, payments, roles, and modules.</p>
@@ -301,13 +550,13 @@
     <!-- Pricing teaser -->
     <section id="pricing" style="padding-top: 0">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-animate>
           <span class="eyebrow">Pricing</span>
           <h2>Simple, Transparent Plans</h2>
           <p>Start monthly, scale to lifetime when your community grows.</p>
         </div>
         <div class="pricing-grid">
-          <div class="price-card featured">
+          <div class="price-card featured" data-animate>
             <span class="price-badge">Most Popular</span>
             <div class="price-name">Monthly</div>
             <div class="price-amount">
@@ -317,16 +566,16 @@
             <div class="price-cadence">30 days access · cancel anytime</div>
             <ul class="price-list">
               <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Full bot access</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Setup Hub & Tickets</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Setup Hub &amp; Tickets</li>
               <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Hype, Credits, Pets</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> PayPal Payments & Staff Pay</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> PayPal Payments &amp; Staff Pay</li>
               <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Giveaways, Events, Moderation</li>
               <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Standard Support</li>
             </ul>
             <a class="btn btn-primary" data-link="subscribe" href="#">Subscribe for 30 Days</a>
           </div>
 
-          <div class="price-card">
+          <div class="price-card" data-animate data-animate-delay="1">
             <div class="price-name">Custom / Lifetime</div>
             <div class="price-amount">
               <span class="num">Custom</span>
@@ -349,28 +598,28 @@
     <!-- Coming Soon -->
     <section style="padding-top: 0">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-animate>
           <span class="eyebrow">Roadmap</span>
           <h2>Coming Soon</h2>
           <p>New systems in active development. Subscribers get them on release.</p>
         </div>
         <div class="soon-grid">
-          <div class="soon-card">
+          <div class="soon-card" data-animate>
             <span class="soon-tag">Coming Soon</span>
             <h3>ARK Guard</h3>
             <p>Advanced anti-cheat and player protection tools for ARK servers.</p>
           </div>
-          <div class="soon-card">
+          <div class="soon-card" data-animate data-animate-delay="1">
             <span class="soon-tag">Coming Soon</span>
             <h3>Nitrado Integration</h3>
             <p>Direct Nitrado server control and automation from Discord.</p>
           </div>
-          <div class="soon-card">
+          <div class="soon-card" data-animate data-animate-delay="2">
             <span class="soon-tag">Coming Soon</span>
             <h3>Server Status Panel</h3>
             <p>Live ARK server status, player counts, and uptime tracking.</p>
           </div>
-          <div class="soon-card">
+          <div class="soon-card" data-animate data-animate-delay="3">
             <span class="soon-tag">Coming Soon</span>
             <h3>Advanced ARK Automation</h3>
             <p>Scheduled restarts, wipe automation, and cluster-wide actions.</p>
@@ -382,44 +631,44 @@
     <!-- FAQ -->
     <section id="faq">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-animate>
           <span class="eyebrow">FAQ</span>
           <h2>Frequently Asked Questions</h2>
         </div>
         <div class="faq-list">
-          <details class="faq-item">
+          <details class="faq-item" data-animate>
             <summary>What is Quick's ARK Bot?<span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></summary>
-            <div class="faq-body">Quick's ARK Bot is a Discord management bot built for ARK PvP servers, hosting communities, and gaming networks. It handles tickets, payments, staff pay, moderation, and player engagement systems in one place.</div>
+            <div class="faq-body">Quick's ARK Bot is a premium Discord automation bot built for ARK PvP servers, hosting communities, and gaming networks. It handles tickets, payments, staff pay, moderation, and player engagement systems in one place.</div>
           </details>
-          <details class="faq-item">
+          <details class="faq-item" data-animate>
             <summary>Do I need coding knowledge?<span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></summary>
             <div class="faq-body">No. The bot is configured entirely through a Discord button-driven setup hub. No commands, no config files, no coding required.</div>
           </details>
-          <details class="faq-item">
+          <details class="faq-item" data-animate>
             <summary>How do I subscribe?<span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></summary>
             <div class="faq-body">Invite the bot, then run <code>/subscribe</code> in your server and complete the PayPal payment. Your server is activated automatically after payment is confirmed.</div>
           </details>
-          <details class="faq-item">
+          <details class="faq-item" data-animate>
             <summary>Does it work for multiple Discord servers?<span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></summary>
             <div class="faq-body">Yes. The bot is fully multi-guild. Each server has its own configuration, payments, and staff records.</div>
           </details>
-          <details class="faq-item">
+          <details class="faq-item" data-animate>
             <summary>Can I cancel?<span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></summary>
             <div class="faq-body">Yes. Subscriptions can be cancelled at any time through your PayPal account. Your access remains active until the end of the current billing period.</div>
           </details>
-          <details class="faq-item">
+          <details class="faq-item" data-animate>
             <summary>Does PayPal activate the bot automatically?<span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></summary>
             <div class="faq-body">Yes. PayPal webhooks confirm payment instantly and your server is activated without manual approval.</div>
           </details>
-          <details class="faq-item">
+          <details class="faq-item" data-animate>
             <summary>Can I use my own PayPal for my server's payments?<span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></summary>
             <div class="faq-body">Yes. The bot supports per-server PayPal configuration so the payments your players make go directly to your PayPal account.</div>
           </details>
-          <details class="faq-item">
+          <details class="faq-item" data-animate>
             <summary>Is ARK Guard / Nitrado included?<span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></summary>
             <div class="faq-body">ARK Guard and Nitrado integration are on the roadmap and marked as Coming Soon. They are not currently active features.</div>
           </details>
-          <details class="faq-item">
+          <details class="faq-item" data-animate>
             <summary>How do I get support?<span class="faq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></summary>
             <div class="faq-body">Join the support Discord using the link in the navbar, or contact the owner directly through Discord or email.</div>
           </details>
@@ -430,7 +679,7 @@
     <!-- CTA -->
     <section id="contact" class="cta-section">
       <div class="container">
-        <div class="cta-panel">
+        <div class="cta-panel" data-animate>
           <span class="eyebrow">Get Started</span>
           <h2>Start Your Server Setup</h2>
           <p>Invite Quick's ARK Bot, subscribe, and configure your server — all within minutes.</p>
@@ -450,10 +699,18 @@
         <div class="footer-grid">
           <div>
             <div class="brand" style="margin-bottom:14px">
-              <span class="brand-mark">Q</span>
-              <span>Quick's ARK Bot</span>
+              <span class="brand-mark" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/>
+                  <path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/>
+                </svg>
+              </span>
+              <span class="brand-text">
+                <span class="name">Quick's ARK Bot</span>
+                <span class="sub">Discord Automation · ARK</span>
+              </span>
             </div>
-            <p>Advanced Discord management for ARK PvP servers, hosting communities, and gaming networks.</p>
+            <p>Premium Discord automation for gaming communities. Built for ARK PvP servers, hosting communities, and gaming networks.</p>
           </div>
           <div>
             <h4>Product</h4>
