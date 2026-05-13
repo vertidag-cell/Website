@@ -410,7 +410,15 @@
      Tutorial scene definitions — edit copy/timing here
      ============================================================ */
 
-  const TUTORIAL_ORDER = ["setup", "subscribe", "tickets", "reward", "payments"];
+  const TUTORIAL_ORDER = [
+    "setup",
+    "pop",
+    "subscribe",
+    "branding",
+    "tickets",
+    "reward",
+    "pets",
+  ];
 
   const cmdTag = (text) => `<code class="cmd">${text}</code>`;
 
@@ -778,6 +786,317 @@
       ],
     },
   };
+
+  /* --- New v3 demos: /pop, Premium Branding, Pets --- */
+
+  TUTORIALS.pop = {
+    title: "Full Cluster Population — Free",
+    sub: "/pop shows your entire ARK cluster, not just one map.",
+    channel: "cluster",
+    steps: ["Run /pop", "Cluster embed", "Maps animate", "Open chart"],
+    scenes: [
+      {
+        run: async (api) => {
+          await api.sleep(400);
+          await api.typeCmd("/pop");
+          await api.sleep(350);
+          api.userMsg(
+            cmdTag('/pop game:"ARK Survival Ascended" platform:"Steam" cluster:"Quick\'s ARK"')
+          );
+          api.sendCmd();
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(500);
+          api.botRow({
+            embed: {
+              title: "ARK Cluster Population",
+              desc: "Quick's ARK · ARK Survival Ascended · Steam",
+              fields: [
+                { name: "Total Players", value: "<strong style=\"color:#fff\">184</strong> / 620" },
+                { name: "Online Maps", value: "11 / 12" },
+                { name: "Peak Today", value: "231" },
+                { name: "Average 24h", value: "156" },
+                { name: "Best Map", value: "The Island · 42 / 70" },
+                { name: "Lowest Map", value: "Scorched Earth · 3 / 50" },
+              ],
+              footer: "Last updated 2 minutes ago",
+            },
+          });
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(500);
+          const r = api.botRow({
+            embed: {
+              title: "Map Breakdown",
+              desc:
+                "The Island · 42 / 70<br/>Ragnarok · 38 / 70<br/>Fjordur · 31 / 70<br/>" +
+                "Aberration · 22 / 70<br/>Extinction · 15 / 70<br/>Genesis 2 · 9 / 70<br/>" +
+                "Scorched Earth · 3 / 50",
+              footer: "All maps online",
+            },
+          });
+          r.addButtons([
+            { label: "Refresh", style: "primary" },
+            { label: "24h Chart" },
+            { label: "7d Chart" },
+            { label: "Map Breakdown" },
+          ]);
+          await api.sleep(1500);
+          await api.clickButton("24h Chart");
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(400);
+          api.botRow({
+            embed: {
+              title: "24h Cluster Population",
+              desc: "Players over the last 24 hours.<br/><br/>" +
+                "<svg viewBox=\"0 0 300 60\" width=\"100%\" height=\"60\" preserveAspectRatio=\"none\">" +
+                "<defs><linearGradient id=\"tg\" x1=\"0\" x2=\"0\" y1=\"0\" y2=\"1\">" +
+                "<stop offset=\"0\" stop-color=\"#ef4444\" stop-opacity=\".4\"/>" +
+                "<stop offset=\"1\" stop-color=\"#ef4444\" stop-opacity=\"0\"/>" +
+                "</linearGradient></defs>" +
+                "<path d=\"M0,45 L25,40 L50,35 L75,30 L100,20 L125,25 L150,18 L175,22 L200,12 L225,18 L250,25 L275,15 L300,20 L300,60 L0,60 Z\" fill=\"url(#tg)\"/>" +
+                "<path d=\"M0,45 L25,40 L50,35 L75,30 L100,20 L125,25 L150,18 L175,22 L200,12 L225,18 L250,25 L275,15 L300,20\" stroke=\"#ef4444\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>" +
+                "</svg>",
+              fields: [
+                { name: "Peak", value: "231 players" },
+                { name: "Low", value: "98 players" },
+                { name: "Average", value: "156 players" },
+                { name: "Now", value: "184 players" },
+              ],
+              footer: "Charts and /pop are free for everyone",
+              style: "success",
+            },
+          });
+        },
+      },
+    ],
+  };
+
+  TUTORIALS.branding = {
+    title: "Customize Your Brand (Premium)",
+    sub: "Make embeds, panels, and /pop match your community identity.",
+    channel: "general",
+    steps: ["Open dashboard", "Edit brand name", "Change color", "Embed updates"],
+    scenes: [
+      {
+        run: async (api) => {
+          await api.sleep(400);
+          api.systemMsg(
+            'Dashboard opened · <strong style="color:#dbdee1">Branding Settings</strong>'
+          );
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(500);
+          api.botRow({
+            embed: {
+              title: "Default Branding — Quick's ARK Bot",
+              desc: "This is how embeds look out of the box.",
+              fields: [
+                { name: "Brand Name", value: "Quick's ARK Bot" },
+                { name: "Accent Color", value: "Red" },
+                { name: "Footer", value: "Quick's ARK Bot · v1.0" },
+              ],
+              footer: "Quick's ARK Bot · default branding",
+            },
+          });
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(500);
+          api.systemMsg(
+            'Brand Name updated to <strong style="color:#dbdee1">Iron ARK</strong>'
+          );
+          await api.sleep(400);
+          api.systemMsg(
+            'Accent Color updated to <strong style="color:#fbbf24">#F59E0B</strong>'
+          );
+          await api.sleep(400);
+          api.systemMsg(
+            'Footer updated to <strong style="color:#dbdee1">Iron ARK · powered by Quick\'s ARK Bot</strong>'
+          );
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(500);
+          api.botRow({
+            embed: {
+              title: "Iron ARK Cluster Population",
+              desc: "Now this server's embeds carry the Iron ARK brand.",
+              fields: [
+                { name: "Brand", value: "<strong style=\"color:#fbbf24\">Iron ARK</strong>" },
+                { name: "Accent", value: "<strong style=\"color:#fbbf24\">Custom orange</strong>" },
+                { name: "Applies to", value: "Embeds · Panels · Charts" },
+                { name: "Tier", value: "Premium" },
+              ],
+              footer: "Iron ARK · powered by Quick's ARK Bot",
+              style: "warn",
+            },
+          });
+        },
+      },
+    ],
+  };
+
+  TUTORIALS.pets = {
+    title: "Pets — Free Basics, Premium Depth",
+    sub: "Basic pets are free. Advanced features unlock with Premium.",
+    channel: "pets",
+    steps: ["Open pets", "View card", "Basic action", "Premium upgrade"],
+    scenes: [
+      {
+        run: async (api) => {
+          await api.sleep(400);
+          await api.typeCmd("/pets");
+          await api.sleep(350);
+          api.userMsg(cmdTag("/pets"));
+          api.sendCmd();
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(500);
+          const r = api.botRow({
+            embed: {
+              title: "Your Pets",
+              desc: "Basic pet management is free for every server.",
+              fields: [
+                { name: "Shadow", value: "Common · Lv 4" },
+                { name: "Ember", value: "Common · Lv 2" },
+                { name: "Slots", value: "2 / 3 used" },
+                { name: "Tier", value: '<span style="color:#4ade80;font-weight:600">Free</span>' },
+              ],
+              footer: "Quick's ARK Bot · Pets",
+            },
+          });
+          r.addButtons([
+            { label: "Feed", style: "primary" },
+            { label: "Rename" },
+            { label: "Inventory" },
+          ]);
+          await api.sleep(1400);
+          await api.clickButton("Feed");
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(400);
+          api.botRow({
+            text: "<strong>Shadow</strong> grew to Level 5.",
+          });
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(500);
+          const r = api.botRow({
+            embed: {
+              title: "Boss Fights, Fusion, Leaderboards",
+              desc: "Advanced pet features unlock on Premium servers.",
+              fields: [
+                { name: "Boss Fights", value: "🔒 Premium" },
+                { name: "Fusion", value: "🔒 Premium" },
+                { name: "Rarity Tiers", value: "🔒 Premium" },
+                { name: "Leaderboard", value: "🔒 Premium" },
+              ],
+              footer: "Premium unlocks advanced pets, payments, staff pay, branding",
+              style: "warn",
+            },
+          });
+          r.addButtons([
+            { label: "Upgrade to Premium", style: "primary" },
+            { label: "View Plans" },
+          ]);
+        },
+      },
+    ],
+  };
+
+  /* --- Branding morph toggle (Premium Branding section) --- */
+  document.querySelectorAll("[data-brand-toggle]").forEach((btn) => {
+    const targetSelector = btn.getAttribute("data-brand-toggle");
+    const stateLabel = document.querySelector("[data-brand-state]");
+    btn.addEventListener("click", () => {
+      const targets = document.querySelectorAll(targetSelector);
+      const turningOn = !targets[0]?.classList.contains("branded");
+      targets.forEach((el) => el.classList.toggle("branded", turningOn));
+      if (stateLabel) {
+        stateLabel.innerHTML = turningOn
+          ? 'Showing <strong>premium</strong> branding'
+          : 'Showing <strong>default</strong> branding';
+      }
+      btn.textContent = turningOn ? "Reset to Default" : "Preview Premium Branding";
+    });
+  });
+
+  /* --- Hero word reveal: stagger via CSS variable --i --- */
+  document.querySelectorAll("[data-word-reveal]").forEach((el) => {
+    const html = el.innerHTML;
+    // Wrap each top-level token: split spaces, preserve nested elements via temp DOM walk
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    let i = 0;
+    const walk = (node) => {
+      const children = Array.from(node.childNodes);
+      for (const child of children) {
+        if (child.nodeType === 3) {
+          const words = child.textContent.split(/(\s+)/);
+          const frag = document.createDocumentFragment();
+          words.forEach((w) => {
+            if (/^\s+$/.test(w)) {
+              frag.appendChild(document.createTextNode(w));
+            } else if (w.length) {
+              const s = document.createElement("span");
+              s.className = "word";
+              s.style.setProperty("--i", i++);
+              s.textContent = w;
+              frag.appendChild(s);
+            }
+          });
+          node.replaceChild(frag, child);
+        } else if (child.nodeType === 1) {
+          // Element — wrap its text contents too but keep the element's classes
+          if (child.classList && child.classList.contains("accent")) {
+            child.classList.add("word");
+            child.style.setProperty("--i", i++);
+          } else {
+            walk(child);
+          }
+        }
+      }
+    };
+    walk(tmp);
+    el.innerHTML = tmp.innerHTML;
+    // Apply animation-delay based on --i
+    el.querySelectorAll(".word").forEach((w) => {
+      const idx = parseInt(w.style.getPropertyValue("--i") || "0", 10);
+      w.style.animationDelay = (0.06 * idx) + "s";
+    });
+  });
+
+  /* --- IntersectionObserver: also tag [data-stagger] and .pop-card --- */
+  const v3Observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in-view");
+          v3Observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
+  );
+  document.querySelectorAll("[data-stagger], .pop-card").forEach((el) => v3Observer.observe(el));
 
   // Initialise tutorial player after data is defined (avoids TDZ).
   const tutorialRoot = document.querySelector("[data-tut-root]");

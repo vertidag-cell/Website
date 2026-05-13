@@ -1,16 +1,20 @@
 /*
  * Quick's ARK Bot — Site Configuration
  * ------------------------------------------------------------
- * Edit this file to change links, pricing, and contact details
- * across the entire site. All HTML pages read from this file.
+ * Edit this file to change links, pricing, contact details, and
+ * brand info across the entire site. All HTML pages read from
+ * this file via data-link / data-text attributes.
  *
  * Brand colors live in styles.css (search for ":root").
+ * Feature copy lives in index.html.
+ * Tutorial scenes/timings live in script.js (TUTORIALS object).
  */
 
 window.SITE_CONFIG = {
   brand: {
     name: "Quick's ARK Bot",
-    tagline: "Advanced Discord Management for ARK Communities",
+    short: "Quick's",
+    tagline: "Advanced Discord automation for ARK and gaming communities.",
   },
 
   // Replace these with your real URLs when ready.
@@ -22,31 +26,51 @@ window.SITE_CONFIG = {
     contactEmail: "support@example.com",
   },
 
-  // Easy to edit later. Prices are displayed exactly as written here.
+  // Three tiers. Edit price strings exactly as they should display.
   pricing: {
+    free: {
+      name: "Free",
+      price: "£0",
+      period: "",
+      cadence: "Forever · no card required",
+      cta: "Invite the Bot",
+      ctaLink: "inviteBot",
+      featured: false,
+      features: [
+        "Welcome messages",
+        "Auto roles",
+        "Role menus (no limits)",
+        "/pop cluster population",
+        "Population charts (basic)",
+        "Basic pets system",
+        "Community setup tools",
+      ],
+    },
     monthly: {
-      name: "Monthly",
+      name: "Premium Monthly",
       price: "£X",
       period: "/ month",
-      cadence: "30 days access",
+      cadence: "30 days access · cancel anytime",
       cta: "Subscribe for 30 Days",
       ctaLink: "subscribe",
       featured: true,
       features: [
-        "Full bot access",
-        "Setup Hub",
-        "Ticket System",
-        "Hype & Credits",
-        "PayPal Payments",
-        "Staff Pay",
-        "Pets System",
+        "Everything in Free",
+        "PayPal Payments (per-server)",
+        "Staff Pay tracking",
+        "Hype Rewards system",
+        "Advanced Credits",
+        "Advanced Tickets & Logs",
         "Giveaways & Events",
-        "Moderation Tools",
-        "Standard Support",
+        "Moderation workflows",
+        "Server Templates",
+        "Premium Branding",
+        "Advanced Pets",
+        "Priority Support",
       ],
     },
-    custom: {
-      name: "Custom / Lifetime",
+    lifetime: {
+      name: "Lifetime / Custom",
       price: "Custom",
       period: "",
       cadence: "Contact for pricing",
@@ -54,17 +78,18 @@ window.SITE_CONFIG = {
       ctaLink: "supportDiscord",
       featured: false,
       features: [
+        "Long-term Premium access",
         "Best for large clusters",
         "Priority setup help",
-        "Long-term access",
         "Custom feature support",
         "Direct owner contact",
+        "Negotiated terms",
       ],
     },
   },
 };
 
-// Apply config to every element with [data-link="<key>"], [data-text="<path>"], etc.
+// Apply config to every element with [data-link="<key>"] or [data-text="<path>"]
 document.addEventListener("DOMContentLoaded", function () {
   const cfg = window.SITE_CONFIG;
 
