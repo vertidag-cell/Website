@@ -168,21 +168,47 @@
           countObserver.unobserve(el);
           return;
         }
-        const duration = 1100;
-        const start = performance.now();
-        const tick = (now) => {
-          const t = Math.min(1, (now - start) / duration);
-          const eased = 1 - Math.pow(1 - t, 3);
-          el.textContent = Math.round(eased * target);
-          if (t < 1) requestAnimationFrame(tick);
+        const startDelay = (parseFloat(el.dataset.countDelay) || 0) * 1000;
+        const launch = () => {
+          const duration = 1100;
+          const start = performance.now();
+          const tick = (now) => {
+            const t = Math.min(1, (now - start) / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            el.textContent = Math.round(eased * target);
+            if (t < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
         };
-        requestAnimationFrame(tick);
+        if (startDelay > 0) setTimeout(launch, startDelay);
+        else launch();
         countObserver.unobserve(el);
       });
     },
     { threshold: 0.5 }
   );
   document.querySelectorAll(".count-up[data-count]").forEach((el) => countObserver.observe(el));
+
+  /* -------- Hero command typing (cinematic stage 3) -------- */
+  document.querySelectorAll("[data-typer]").forEach((el) => {
+    const text = el.getAttribute("data-typer");
+    const delayMs = parseFloat(el.dataset.typerDelay || "0") * 1000;
+    const perCharMs = parseFloat(el.dataset.typerSpeed || "26");
+    if (reducedMotion) {
+      el.textContent = text;
+      return;
+    }
+    setTimeout(() => {
+      let i = 0;
+      const tick = () => {
+        if (i > text.length) return;
+        el.textContent = text.slice(0, i);
+        i++;
+        setTimeout(tick, perCharMs + Math.random() * 28);
+      };
+      tick();
+    }, delayMs);
+  });
 
   /* ============================================================
      Tutorial player
@@ -1176,9 +1202,11 @@
     walk(tmp);
     el.innerHTML = tmp.innerHTML;
     // Apply animation-delay based on --i
+    const baseDelay = parseFloat(el.dataset.revealDelay) || 0;
+    const perWord = parseFloat(el.dataset.revealStagger) || 0.08;
     el.querySelectorAll(".word").forEach((w) => {
       const idx = parseInt(w.style.getPropertyValue("--i") || "0", 10);
-      w.style.animationDelay = (0.06 * idx) + "s";
+      w.style.animationDelay = (baseDelay + perWord * idx) + "s";
     });
   });
 

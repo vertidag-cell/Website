@@ -44,16 +44,17 @@
     </header>
 
     <!-- Hero -->
-    <section class="hero">
+    <section class="hero hero-cinematic">
+      <div class="hero-bg-glow" aria-hidden="true"></div>
+      <div class="hero-bg-grid" aria-hidden="true"></div>
       <div class="container hero-grid">
         <div>
           <span class="hero-badge"><span class="dot"></span> Built for ARK PvP &amp; Gaming Communities</span>
-          <h1 data-word-reveal>Run Your ARK Discord <span class="accent">Like a Professional Server</span></h1>
+          <h1 data-word-reveal data-reveal-delay="1.2" data-reveal-stagger="0.09">Run Your ARK Discord <span class="accent">Like a Professional Server</span></h1>
           <p class="lead">
-            Free tools every community needs &mdash; welcome, role menus,
-            <code class="cmd" style="font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(74,222,128,0.12);color:#86efac;padding:2px 7px;border-radius:4px;font-size:0.92em">/pop</code> cluster
-            population, charts, and pets. Premium automation for serious server owners
-            &mdash; payments, staff pay, branding, and more.
+            Free community tools. Full cluster <code class="cmd" style="font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(74,222,128,0.12);color:#86efac;padding:2px 7px;border-radius:4px;font-size:0.92em">/pop</code>.
+            Population charts. Pets. Premium automation for serious server owners &mdash;
+            payments, staff pay, hype rewards, custom branding, and more.
           </p>
           <div class="hero-ctas">
             <a class="btn btn-primary btn-lg" data-link="inviteBot" href="#">Invite the Bot</a>
@@ -70,21 +71,82 @@
           </div>
         </div>
 
-        <!-- Hero command-center mockup -->
-        <div class="mockup" aria-hidden="true">
-          <div class="mockup-bar">
-            <div class="mockup-dots"><span></span><span></span><span></span></div>
-            <div class="mockup-title">Quick's ARK Bot · Control Panel</div>
-            <div style="width:48px"></div>
+        <!-- Cinematic hero stage (Discord-style command center) -->
+        <div class="hero-stage-wrap">
+          <div class="hero-stage" aria-hidden="true">
+            <div class="stage-titlebar">
+              <div class="stage-dots"><span></span><span></span><span></span></div>
+              <div class="stage-channel"><span class="channel-hash">#</span>&nbsp;server-status</div>
+              <div style="width:36px"></div>
+            </div>
+
+            <div class="stage-bot">
+              <div class="bot-avatar">Q</div>
+              <div>
+                <div class="bot-name">Quick's ARK Bot</div>
+                <div class="bot-online">Online</div>
+              </div>
+            </div>
+
+            <div class="stage-cmdbox">
+              <span class="slash">/</span><span class="typed" data-typer='pop game:"ARK Survival Ascended" platform:"Steam" cluster:"Quick&apos;s ARK"' data-typer-delay="2.6" data-typer-speed="22"></span><span class="caret"></span>
+            </div>
+
+            <div class="stage-embed">
+              <div class="stage-embed-title">ARK Cluster Population <span class="live">Live</span></div>
+              <div class="stage-fields">
+                <div class="stage-field">
+                  <div class="stage-field-name">Total Players</div>
+                  <div class="stage-field-value"><span class="count-up" data-count="184" data-count-delay="4.4">0</span> / 620</div>
+                </div>
+                <div class="stage-field">
+                  <div class="stage-field-name">Online Maps</div>
+                  <div class="stage-field-value">11 / 12</div>
+                </div>
+                <div class="stage-field">
+                  <div class="stage-field-name">Peak Today</div>
+                  <div class="stage-field-value"><span class="count-up" data-count="231" data-count-delay="4.6">0</span></div>
+                </div>
+                <div class="stage-field">
+                  <div class="stage-field-name">Average 24h</div>
+                  <div class="stage-field-value"><span class="count-up" data-count="156" data-count-delay="4.8">0</span></div>
+                </div>
+              </div>
+              <div class="stage-maps">
+                <div class="stage-map"><span class="stage-map-name">The Island</span><span class="stage-map-count">42 / 70</span></div>
+                <div class="stage-map"><span class="stage-map-name">Ragnarok</span><span class="stage-map-count">38 / 70</span></div>
+                <div class="stage-map"><span class="stage-map-name">Fjordur</span><span class="stage-map-count">31 / 70</span></div>
+                <div class="stage-map"><span class="stage-map-name">Aberration</span><span class="stage-map-count">22 / 70</span></div>
+                <div class="stage-map"><span class="stage-map-name">Genesis 2</span><span class="stage-map-count">9 / 70</span></div>
+              </div>
+              <div class="stage-chart">
+                <div class="stage-chart-label">24h Cluster Population</div>
+                <div class="stage-chart-peak">Peak 231</div>
+                <svg viewBox="0 0 300 60" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="stageChartGrad" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0" stop-color="#ef4444" stop-opacity=".42"/>
+                      <stop offset="1" stop-color="#ef4444" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path class="stage-chart-fill" d="M0,45 L25,40 L50,34 L75,28 L100,18 L125,24 L150,16 L175,21 L200,10 L225,17 L250,24 L275,14 L300,19 L300,60 L0,60 Z"/>
+                  <path class="stage-chart-line" d="M0,45 L25,40 L50,34 L75,28 L100,18 L125,24 L150,16 L175,21 L200,10 L225,17 L250,24 L275,14 L300,19"/>
+                </svg>
+              </div>
+              <div class="stage-buttons">
+                <button class="stage-btn primary" type="button" tabindex="-1" disabled>Refresh</button>
+                <button class="stage-btn" type="button" tabindex="-1" disabled>24h Chart</button>
+                <button class="stage-btn" type="button" tabindex="-1" disabled>7d Chart</button>
+                <button class="stage-btn" type="button" tabindex="-1" disabled>Map Breakdown</button>
+              </div>
+            </div>
           </div>
-          <div class="mockup-grid">
-            <div class="mockup-card"><div class="mockup-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg></div><div class="mockup-card-title">/pop Cluster</div><div class="mockup-card-sub"><span class="dot"></span> 184/620</div></div>
-            <div class="mockup-card"><div class="mockup-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="mockup-card-title">Branding</div><div class="mockup-card-sub"><span class="dot"></span> Premium</div></div>
-            <div class="mockup-card"><div class="mockup-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="mockup-card-title">Staff Pay</div><div class="mockup-card-sub"><span class="dot"></span> Premium</div></div>
-            <div class="mockup-card"><div class="mockup-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><div class="mockup-card-title">PayPal</div><div class="mockup-card-sub"><span class="dot"></span> Auto-confirm</div></div>
-            <div class="mockup-card"><div class="mockup-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 .9-4.5 4.4 1 6.2L12 16.8 6.5 19.5l1-6.2L3 8.9 9 8z"/></svg></div><div class="mockup-card-title">Pets</div><div class="mockup-card-sub"><span class="dot"></span> Active</div></div>
-            <div class="mockup-card"><div class="mockup-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="mockup-card-title">Role Menus</div><div class="mockup-card-sub"><span class="dot"></span> No limits</div></div>
-          </div>
+
+          <!-- Floating feature cards drift in at Stage 6 -->
+          <div class="float-card float-1 green" aria-hidden="true"><span class="float-dot"></span> Free /pop</div>
+          <div class="float-card float-2" aria-hidden="true"><span class="float-dot"></span> Premium Branding</div>
+          <div class="float-card float-3 green" aria-hidden="true"><span class="float-dot"></span> Role Menus</div>
+          <div class="float-card float-4" aria-hidden="true"><span class="float-dot"></span> PayPal · Staff Pay</div>
         </div>
       </div>
     </section>
