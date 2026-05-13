@@ -1,13 +1,18 @@
 /*
- * Quick's ARK Bot — Site Configuration
+ * Quick's ARK Bot — Site Configuration (central, public)
  * ------------------------------------------------------------
  * Edit this file to change links, pricing, contact details, and
  * brand info across the entire site. All HTML pages read from
  * this file via data-link / data-text attributes.
  *
- * Brand colors live in styles.css (search for ":root").
- * Feature copy lives in index.html.
- * Tutorial scenes/timings live in script.js (TUTORIALS object).
+ * SAFE TO EXPOSE: this is a public config. Nothing here is secret.
+ * Do not add Discord bot tokens, PayPal secrets, OAuth client secrets,
+ * webhook secrets, database URLs, or API keys to this file.
+ *
+ * SUBSCRIBE FLOW: subscriptions happen inside Discord via the
+ * /subscribe command after inviting the bot. The website does not
+ * process payments. Subscribe buttons link to the pricing page
+ * which documents the Discord-only flow.
  */
 
 window.SITE_CONFIG = {
@@ -17,13 +22,20 @@ window.SITE_CONFIG = {
     tagline: "Advanced Discord automation for ARK and gaming communities.",
   },
 
-  // Replace these with your real URLs when ready.
+  websiteUrl: "https://50bf9296.website-1h0.pages.dev/",
+
   links: {
-    inviteBot: "#",
-    supportDiscord: "#",
-    subscribe: "#",
-    dashboardLogin: "#",
-    contactEmail: "support@example.com",
+    // External — opens in new tab
+    inviteBot:
+      "https://discord.com/oauth2/authorize?client_id=1487468686150336614",
+    supportDiscord: "https://discord.gg/MXS3ZcsCSH",
+
+    // Internal — same tab, points to pages that explain the flow
+    subscribe: "pricing.html",
+    dashboardLogin: "dashboard.html",
+
+    // Email — auto-converted to mailto: with subject
+    contactEmail: "QuicksARKPP@gmail.com",
   },
 
   // Three tiers. Edit price strings exactly as they should display.
@@ -51,7 +63,7 @@ window.SITE_CONFIG = {
       price: "£X",
       period: "/ month",
       cadence: "30 days access · cancel anytime",
-      cta: "Subscribe for 30 Days",
+      cta: "Subscribe in Discord",
       ctaLink: "subscribe",
       featured: true,
       features: [
@@ -89,25 +101,49 @@ window.SITE_CONFIG = {
   },
 };
 
-// Apply config to every element with [data-link="<key>"] or [data-text="<path>"]
-document.addEventListener("DOMContentLoaded", function () {
+/**
+ * Apply config to any DOM root.
+ *  - [data-link="<key>"]      → sets href; external links get target="_blank"
+ *                                and rel="noopener noreferrer"; email becomes
+ *                                mailto: with optional subject from
+ *                                [data-email-subject].
+ *  - [data-text="<a.b.c>"]    → sets text content from SITE_CONFIG path.
+ * Called automatically on DOMContentLoaded, and re-callable from script.js
+ * when new DOM is injected (e.g. the slide-in menu panel).
+ */
+window.applySiteConfig = function (root) {
+  root = root || document;
   const cfg = window.SITE_CONFIG;
+  if (!cfg) return;
 
-  document.querySelectorAll("[data-link]").forEach((el) => {
+  const EXTERNAL = ["inviteBot", "supportDiscord"];
+  const EMAIL = ["contactEmail"];
+
+  root.querySelectorAll("[data-link]").forEach((el) => {
     const key = el.getAttribute("data-link");
-    if (cfg.links[key]) {
-      if (key === "contactEmail") {
-        el.setAttribute("href", "mailto:" + cfg.links[key]);
-      } else {
-        el.setAttribute("href", cfg.links[key]);
-      }
+    const val = cfg.links[key];
+    if (!val) return;
+
+    if (EMAIL.indexOf(key) !== -1) {
+      const subject = el.getAttribute("data-email-subject") || "Quick's ARK Bot Support";
+      el.setAttribute("href", "mailto:" + val + "?subject=" + encodeURIComponent(subject));
+    } else if (EXTERNAL.indexOf(key) !== -1) {
+      el.setAttribute("href", val);
+      el.setAttribute("target", "_blank");
+      el.setAttribute("rel", "noopener noreferrer");
+    } else {
+      el.setAttribute("href", val);
     }
   });
 
-  document.querySelectorAll("[data-text]").forEach((el) => {
+  root.querySelectorAll("[data-text]").forEach((el) => {
     const path = el.getAttribute("data-text").split(".");
-    let val = cfg;
-    for (const k of path) val = val ? val[k] : undefined;
-    if (val !== undefined) el.textContent = val;
+    let v = cfg;
+    for (const k of path) v = v ? v[k] : undefined;
+    if (v !== undefined) el.textContent = v;
   });
+};
+
+document.addEventListener("DOMContentLoaded", function () {
+  window.applySiteConfig(document);
 });

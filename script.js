@@ -94,13 +94,11 @@
       </aside>`;
     document.body.appendChild(panel);
 
-    // Re-apply config.js bindings on the newly-injected menu nodes
-    if (window.SITE_CONFIG) {
-      panel.querySelectorAll("[data-link]").forEach((el) => {
-        const key = el.getAttribute("data-link");
-        const v = window.SITE_CONFIG.links && window.SITE_CONFIG.links[key];
-        if (v) el.setAttribute("href", key === "contactEmail" ? "mailto:" + v : v);
-      });
+    // Re-apply config.js bindings on the newly-injected menu nodes.
+    // Uses the shared applySiteConfig() so external links get target/rel,
+    // emails become mailto: with subjects, etc.
+    if (typeof window.applySiteConfig === "function") {
+      window.applySiteConfig(panel);
     }
 
     let lastFocus = null;
