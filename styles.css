@@ -3025,3 +3025,264 @@ section.short {
 @media (prefers-reduced-motion: reduce) {
   .cluster-tile-bar > span { transition: none !important; }
 }
+
+/* ============================================================
+   v5 — Hamburger-only navigation + cinematic page intro
+   ============================================================ */
+
+/* Hide the old desktop nav links everywhere. Menu panel handles all nav. */
+.nav-links {
+  display: none !important;
+}
+
+/* Hamburger button (re-uses existing .nav-toggle on every page) */
+.nav-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  color: var(--text);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.nav-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.08);
+}
+.nav-toggle:focus-visible {
+  outline: 2px solid var(--red-bright);
+  outline-offset: 2px;
+}
+.nav-toggle svg { display: none; } /* hide pre-existing hamburger SVG; bars replace it via JS */
+.nav-toggle .bar {
+  position: absolute;
+  width: 18px;
+  height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.2s;
+}
+.nav-toggle .bar:nth-child(1) { transform: translateY(-5px); }
+.nav-toggle .bar:nth-child(3) { transform: translateY(5px); }
+.nav-toggle.open .bar:nth-child(1) { transform: rotate(45deg); }
+.nav-toggle.open .bar:nth-child(2) { opacity: 0; }
+.nav-toggle.open .bar:nth-child(3) { transform: rotate(-45deg); }
+
+/* Hide nav-cta text buttons on small screens — keep only the hamburger */
+@media (max-width: 720px) {
+  .nav-cta > .btn { display: none; }
+}
+
+/* ============================================================
+   Slide-in menu panel
+   ============================================================ */
+.menu-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+.menu-panel.open {
+  pointer-events: auto;
+  opacity: 1;
+}
+.menu-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.menu-inner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 100vw);
+  background: linear-gradient(180deg, rgba(10, 10, 13, 0.97), rgba(8, 8, 12, 0.99));
+  border-left: 1px solid var(--border);
+  box-shadow:
+    -30px 0 80px rgba(0, 0, 0, 0.6),
+    inset 1px 0 0 rgba(220, 38, 38, 0.22);
+  display: flex;
+  flex-direction: column;
+  padding: 22px 24px 24px;
+  transform: translateX(40px);
+  transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+  overflow-y: auto;
+}
+.menu-panel.open .menu-inner {
+  transform: none;
+}
+.menu-inner::before {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.28), transparent 65%);
+  pointer-events: none;
+  filter: blur(20px);
+}
+
+.menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+.menu-close {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+.menu-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-strong);
+  transform: rotate(90deg);
+}
+.menu-close:focus-visible {
+  outline: 2px solid var(--red-bright);
+  outline-offset: 2px;
+}
+
+.menu-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+.menu-links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  opacity: 0;
+  transform: translateX(20px);
+}
+.menu-panel.open .menu-links a {
+  animation: menuItemIn 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation-delay: calc(0.12s + var(--i, 0) * 0.035s);
+}
+@keyframes menuItemIn {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.menu-links a:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(220, 38, 38, 0.25);
+  color: #fff;
+}
+.menu-links a.active {
+  background: linear-gradient(90deg, rgba(220, 38, 38, 0.16), transparent);
+  border-color: rgba(220, 38, 38, 0.35);
+  color: var(--red-bright);
+}
+.menu-links a::after {
+  content: "→";
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  transition: transform 0.22s, color 0.22s;
+}
+.menu-links a:hover::after,
+.menu-links a.active::after {
+  color: var(--red-bright);
+  transform: translateX(4px);
+}
+
+.menu-cta-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+  position: relative;
+  z-index: 1;
+}
+.menu-cta-mobile .btn { width: 100%; justify-content: center; }
+.menu-foot {
+  margin-top: 16px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+body.menu-open {
+  overflow: hidden;
+}
+
+/* ============================================================
+   Cinematic page-load intro
+   ============================================================ */
+.page-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #000;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: introFade 1.5s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+.page-intro-glow {
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.85) 0%, rgba(220, 38, 38, 0) 70%);
+  filter: blur(36px);
+  animation: introGlow 1.3s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+@keyframes introGlow {
+  0% { transform: scale(0.25); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: scale(3); opacity: 0; }
+}
+@keyframes introFade {
+  0%, 55% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-intro,
+  .page-intro-glow { animation: none; opacity: 0; visibility: hidden; }
+  .menu-panel,
+  .menu-inner { transition: none; }
+  .menu-links a {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+  .menu-close:hover { transform: none; }
+}

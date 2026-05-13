@@ -14,29 +14,127 @@
   const reducedMotion =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* -------- Mobile menu -------- */
-  const toggle = document.querySelector(".nav-toggle");
-  const menu = document.querySelector(".nav-links");
-  if (toggle && menu) {
-    toggle.addEventListener("click", () => {
-      menu.classList.toggle("open");
-      const open = menu.classList.contains("open");
-      toggle.setAttribute("aria-expanded", String(open));
-    });
-    menu.querySelectorAll("a").forEach((a) =>
-      a.addEventListener("click", () => menu.classList.remove("open"))
-    );
+  /* -------- Cinematic page-load intro --------
+     One-time per session. Disabled under prefers-reduced-motion. */
+  if (!reducedMotion && !sessionStorage.getItem("introSeen")) {
+    const intro = document.createElement("div");
+    intro.className = "page-intro";
+    intro.setAttribute("aria-hidden", "true");
+    intro.innerHTML = '<div class="page-intro-glow"></div>';
+    document.body.appendChild(intro);
+    setTimeout(() => intro.remove(), 1500);
+    sessionStorage.setItem("introSeen", "1");
   }
 
-  /* -------- Active nav link -------- */
-  const path = location.pathname.split("/").pop() || "index.html";
-  document.querySelectorAll(".nav-links a").forEach((a) => {
-    const href = a.getAttribute("href");
-    if (!href) return;
-    if (href === path || (path === "" && href === "index.html")) {
-      a.classList.add("active");
+  /* -------- Hamburger menu panel --------
+     Single source of truth for site navigation. The .nav-links block in
+     each HTML page is hidden by CSS but kept for no-JS / crawler fallback. */
+  const MENU_LINKS = [
+    { href: "index.html", label: "Home" },
+    { href: "features.html", label: "Features" },
+    { href: "pop.html", label: "/pop" },
+    { href: "premium.html", label: "Premium" },
+    { href: "branding.html", label: "Branding" },
+    { href: "demos.html", label: "Demos" },
+    { href: "pricing.html", label: "Pricing" },
+    { href: "dashboard.html", label: "Dashboard" },
+    { href: "faq.html", label: "FAQ" },
+    { href: "support.html", label: "Support" },
+    { href: "terms.html", label: "Terms" },
+    { href: "privacy.html", label: "Privacy" },
+  ];
+
+  const trigger = document.querySelector(".nav-toggle");
+  if (trigger) {
+    // Replace existing SVG with bar spans (CSS morphs them into an X)
+    trigger.innerHTML =
+      '<span class="bar"></span><span class="bar"></span><span class="bar"></span>';
+    trigger.setAttribute("aria-controls", "menuPanel");
+    trigger.setAttribute("aria-label", "Open menu");
+    trigger.setAttribute("aria-expanded", "false");
+
+    const here = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+    const panel = document.createElement("div");
+    panel.className = "menu-panel";
+    panel.id = "menuPanel";
+    panel.setAttribute("aria-hidden", "true");
+    panel.innerHTML = `
+      <div class="menu-backdrop" data-menu-close></div>
+      <aside class="menu-inner" role="dialog" aria-modal="true" aria-label="Site menu">
+        <div class="menu-head">
+          <a class="brand" href="index.html">
+            <span class="brand-mark" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/>
+                <path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/>
+              </svg>
+            </span>
+            <span class="brand-text">
+              <span class="name">Quick's ARK Bot</span>
+              <span class="sub">Discord Automation · ARK</span>
+            </span>
+          </a>
+          <button class="menu-close" aria-label="Close menu" data-menu-close>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+          </button>
+        </div>
+        <nav class="menu-links" aria-label="Main navigation">
+          ${MENU_LINKS.map((l, i) => {
+            const active = l.href.toLowerCase() === here ? " active" : "";
+            return `<a class="${active.trim()}" href="${l.href}" style="--i:${i}">${l.label}</a>`;
+          }).join("")}
+        </nav>
+        <div class="menu-cta-mobile">
+          <a class="btn btn-primary" data-link="inviteBot" href="#">Invite Bot</a>
+          <a class="btn btn-ghost" data-link="subscribe" href="#">Subscribe</a>
+          <a class="btn btn-outline" data-link="supportDiscord" href="#">Join Support Discord</a>
+        </div>
+        <div class="menu-foot">Quick's ARK Bot · Discord Automation</div>
+      </aside>`;
+    document.body.appendChild(panel);
+
+    // Re-apply config.js bindings on the newly-injected menu nodes
+    if (window.SITE_CONFIG) {
+      panel.querySelectorAll("[data-link]").forEach((el) => {
+        const key = el.getAttribute("data-link");
+        const v = window.SITE_CONFIG.links && window.SITE_CONFIG.links[key];
+        if (v) el.setAttribute("href", key === "contactEmail" ? "mailto:" + v : v);
+      });
     }
-  });
+
+    let lastFocus = null;
+    function openMenu() {
+      lastFocus = document.activeElement;
+      panel.classList.add("open");
+      trigger.classList.add("open");
+      panel.setAttribute("aria-hidden", "false");
+      trigger.setAttribute("aria-expanded", "true");
+      document.body.classList.add("menu-open");
+      setTimeout(() => {
+        const closer = panel.querySelector(".menu-close");
+        if (closer) closer.focus();
+      }, 60);
+    }
+    function closeMenu() {
+      panel.classList.remove("open");
+      trigger.classList.remove("open");
+      panel.setAttribute("aria-hidden", "true");
+      trigger.setAttribute("aria-expanded", "false");
+      document.body.classList.remove("menu-open");
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    trigger.addEventListener("click", () => {
+      if (panel.classList.contains("open")) closeMenu();
+      else openMenu();
+    });
+    panel.addEventListener("click", (e) => {
+      if (e.target.closest("[data-menu-close]")) closeMenu();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && panel.classList.contains("open")) closeMenu();
+    });
+  }
 
   /* -------- Copyright year -------- */
   document.querySelectorAll("[data-year]").forEach((el) => {
