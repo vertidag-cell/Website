@@ -53,9 +53,9 @@
           <span class="hero-badge"><span class="dot"></span> Built for ARK PvP &amp; Gaming Communities</span>
           <h1 data-word-reveal data-reveal-delay="1.2" data-reveal-stagger="0.09">Run Your ARK Discord <span class="accent">Like a Professional Server</span></h1>
           <p class="lead">
-            Free community tools. Full cluster <code class="cmd" style="font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(74,222,128,0.12);color:#86efac;padding:2px 7px;border-radius:4px;font-size:0.92em">/pop</code>.
-            Population charts. Pets. Premium automation for serious server owners &mdash;
-            payments, staff pay, hype rewards, custom branding, and more.
+            Welcome tools, role menus, pets, cluster population, charts, payments,
+            staff tools, hype rewards, tickets, and premium branding &mdash;
+            all inside Discord.
           </p>
           <div class="hero-ctas">
             <a class="btn btn-primary btn-lg" data-link="inviteBot" href="#">Invite the Bot</a>
@@ -90,64 +90,44 @@
             </div>
 
             <div class="stage-cmdbox">
-              <span class="slash">/</span><span class="typed" data-typer='pop game:"ARK Survival Ascended" platform:"Steam" cluster:"Quick&apos;s ARK"' data-typer-delay="2.6" data-typer-speed="22"></span><span class="caret"></span>
+              <span class="slash">/</span><span class="typed" data-typer="setup" data-typer-delay="2.6" data-typer-speed="80"></span><span class="caret"></span>
             </div>
 
             <div class="stage-embed">
-              <div class="stage-embed-title">ARK Cluster Population <span class="live">Live</span></div>
-              <div class="stage-fields">
-                <div class="stage-field">
-                  <div class="stage-field-name">Total Players</div>
-                  <div class="stage-field-value"><span class="count-up" data-count="184" data-count-delay="4.4">0</span> / 620</div>
-                </div>
-                <div class="stage-field">
-                  <div class="stage-field-name">Online Maps</div>
-                  <div class="stage-field-value">11 / 12</div>
-                </div>
-                <div class="stage-field">
-                  <div class="stage-field-name">Peak Today</div>
-                  <div class="stage-field-value"><span class="count-up" data-count="231" data-count-delay="4.6">0</span></div>
-                </div>
-                <div class="stage-field">
-                  <div class="stage-field-name">Average 24h</div>
-                  <div class="stage-field-value"><span class="count-up" data-count="156" data-count-delay="4.8">0</span></div>
-                </div>
+              <div class="stage-embed-title">Setup Hub <span class="live">14 Modules</span></div>
+              <div class="stage-embed-desc">Configure every module from one place. No commands required.</div>
+              <div class="setup-grid">
+                <button class="setup-btn free" type="button" tabindex="-1" disabled>Welcome</button>
+                <button class="setup-btn free" type="button" tabindex="-1" disabled>Auto Roles</button>
+                <button class="setup-btn free" type="button" tabindex="-1" disabled>Role Menus</button>
+                <button class="setup-btn free" type="button" tabindex="-1" disabled>Cluster &middot; /pop</button>
+                <button class="setup-btn free" type="button" tabindex="-1" disabled>Pets</button>
+                <button class="setup-btn premium" type="button" tabindex="-1" disabled>Payments</button>
+                <button class="setup-btn premium" type="button" tabindex="-1" disabled>Staff Pay</button>
+                <button class="setup-btn premium" type="button" tabindex="-1" disabled>Hype Rewards</button>
+                <button class="setup-btn premium" type="button" tabindex="-1" disabled>Tickets</button>
+                <button class="setup-btn premium" type="button" tabindex="-1" disabled>Branding</button>
               </div>
-              <div class="stage-maps">
-                <div class="stage-map"><span class="stage-map-name">The Island</span><span class="stage-map-count">42 / 70</span></div>
-                <div class="stage-map"><span class="stage-map-name">Ragnarok</span><span class="stage-map-count">38 / 70</span></div>
-                <div class="stage-map"><span class="stage-map-name">Fjordur</span><span class="stage-map-count">31 / 70</span></div>
-                <div class="stage-map"><span class="stage-map-name">Aberration</span><span class="stage-map-count">22 / 70</span></div>
-                <div class="stage-map"><span class="stage-map-name">Genesis 2</span><span class="stage-map-count">9 / 70</span></div>
-              </div>
-              <div class="stage-chart">
-                <div class="stage-chart-label">24h Cluster Population</div>
-                <div class="stage-chart-peak">Peak 231</div>
-                <svg viewBox="0 0 300 60" preserveAspectRatio="none" aria-hidden="true">
-                  <defs>
-                    <linearGradient id="stageChartGrad" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0" stop-color="#ef4444" stop-opacity=".42"/>
-                      <stop offset="1" stop-color="#ef4444" stop-opacity="0"/>
-                    </linearGradient>
-                  </defs>
-                  <path class="stage-chart-fill" d="M0,45 L25,40 L50,34 L75,28 L100,18 L125,24 L150,16 L175,21 L200,10 L225,17 L250,24 L275,14 L300,19 L300,60 L0,60 Z"/>
-                  <path class="stage-chart-line" d="M0,45 L25,40 L50,34 L75,28 L100,18 L125,24 L150,16 L175,21 L200,10 L225,17 L250,24 L275,14 L300,19"/>
+              <div class="stage-mini-status">
+                <span class="status-dot"></span>
+                <span>Live cluster: <strong><span class="count-up" data-count="184" data-count-delay="6.0">0</span> / 620</strong> &middot; Peak today <strong><span class="count-up" data-count="231" data-count-delay="6.2">0</span></strong></span>
+                <svg class="mini-sparkline" viewBox="0 0 80 18" preserveAspectRatio="none" aria-hidden="true">
+                  <path d="M0,13 L8,11 L16,8 L24,10 L32,6 L40,9 L48,4 L56,7 L64,5 L72,8 L80,3"/>
                 </svg>
               </div>
-              <div class="stage-buttons">
-                <button class="stage-btn primary" type="button" tabindex="-1" disabled>Refresh</button>
-                <button class="stage-btn" type="button" tabindex="-1" disabled>24h Chart</button>
-                <button class="stage-btn" type="button" tabindex="-1" disabled>7d Chart</button>
-                <button class="stage-btn" type="button" tabindex="-1" disabled>Map Breakdown</button>
+              <div class="stage-embed-footer-row">
+                <span>Quick's ARK Bot &middot; 14+ modules</span>
+                <strong>0 commands needed</strong>
               </div>
             </div>
           </div>
 
           <!-- Floating feature cards drift in at Stage 6 -->
-          <div class="float-card float-1 green" aria-hidden="true"><span class="float-dot"></span> Free /pop</div>
-          <div class="float-card float-2" aria-hidden="true"><span class="float-dot"></span> Premium Branding</div>
-          <div class="float-card float-3 green" aria-hidden="true"><span class="float-dot"></span> Role Menus</div>
-          <div class="float-card float-4" aria-hidden="true"><span class="float-dot"></span> PayPal · Staff Pay</div>
+          <!-- Balanced Free + Premium float cards -->
+          <div class="float-card float-1 green" aria-hidden="true"><span class="float-dot"></span> Welcome · Auto Roles</div>
+          <div class="float-card float-2" aria-hidden="true"><span class="float-dot"></span> PayPal · Staff Pay</div>
+          <div class="float-card float-3 green" aria-hidden="true"><span class="float-dot"></span> /pop · Charts</div>
+          <div class="float-card float-4" aria-hidden="true"><span class="float-dot"></span> Premium Branding</div>
         </div>
       </div>
     </section>
@@ -200,51 +180,91 @@
       </div>
     </section>
 
-    <!-- /pop Highlight -->
+    <!-- Bot Ecosystem -->
     <section class="short">
       <div class="container">
         <div class="section-head" data-animate>
-          <span class="eyebrow">Full Cluster · Free</span>
-          <h2>Full cluster population. Free.</h2>
-          <p><code class="cmd" style="font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(74,222,128,0.12);color:#86efac;padding:2px 8px;border-radius:5px">/pop</code> aggregates every map in your cluster. Total players, per-map breakdown, animated charts &mdash; free for everyone.</p>
+          <span class="eyebrow">Bot Ecosystem</span>
+          <h2>One Bot. Multiple Systems.</h2>
+          <p>Free community tools, premium server-owner tools, and a roadmap for ARK Guard and Nitrado &mdash; one bot, every system.</p>
         </div>
-
-        <div class="pop-wrap">
-          <div class="pop-explainer" data-animate>
-            <h3>Built around full ARK clusters &mdash; not single maps.</h3>
-            <p>Unlike basic server tools, <code>/pop</code> shows the whole cluster picture out of the box.</p>
-            <ul class="pop-bullets">
-              <li><span class="ico"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Total cluster players &amp; max slots</li>
-              <li><span class="ico"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Per-map online &amp; capacity</li>
-              <li><span class="ico"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Peak today &amp; 24h average</li>
-              <li><span class="ico"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Animated 24h &amp; 7d charts</li>
+        <div class="ecosystem-grid" data-animate data-stagger>
+          <div class="eco-col free">
+            <div class="eco-tier">Free</div>
+            <h3>For every community</h3>
+            <p class="eco-sub">Forever free. No card. No limits.</p>
+            <ul class="eco-list">
+              <li>Welcome messages</li>
+              <li>Auto roles</li>
+              <li>Role menus</li>
+              <li>/pop cluster population</li>
+              <li>Population charts</li>
+              <li>Basic pets</li>
             </ul>
-            <p style="margin-top:18px"><a class="btn btn-primary" href="pop.html">Explore /pop</a></p>
           </div>
-
-          <!-- Compact /pop card -->
-          <div class="pop-card" data-animate>
-            <div class="pop-card-cmd">/pop game:"ARK Survival Ascended" cluster:"Quick's ARK"</div>
-            <div class="pop-title">
-              ARK Cluster Population
-              <span class="pop-live"><span class="dot"></span> Live</span>
-            </div>
-            <div class="pop-stats">
-              <div><div class="pop-stat-name">Total Players</div><div class="pop-stat-value pop-stat-big"><span class="count-up" data-count="184">0</span> / 620</div></div>
-              <div><div class="pop-stat-name">Online Maps</div><div class="pop-stat-value pop-stat-big">11 / 12</div></div>
-              <div><div class="pop-stat-name">Peak Today</div><div class="pop-stat-value"><span class="count-up" data-count="231">0</span></div></div>
-              <div><div class="pop-stat-name">Average 24h</div><div class="pop-stat-value"><span class="count-up" data-count="156">0</span></div></div>
-            </div>
-            <div class="pop-chart">
-              <div class="pop-chart-label">24h Cluster Population</div>
-              <svg viewBox="0 0 600 100" preserveAspectRatio="none" aria-hidden="true">
-                <defs><linearGradient id="chartGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ef4444" stop-opacity=".45"/><stop offset="1" stop-color="#ef4444" stop-opacity="0"/></linearGradient></defs>
-                <path class="chart-fill" d="M0,75 L50,68 L100,60 L150,52 L200,40 L250,46 L300,32 L350,38 L400,24 L450,30 L500,42 L550,28 L600,36 L600,100 L0,100 Z"/>
-                <path class="chart-line" d="M0,75 L50,68 L100,60 L150,52 L200,40 L250,46 L300,32 L350,38 L400,24 L450,30 L500,42 L550,28 L600,36"/>
-              </svg>
-            </div>
+          <div class="eco-col premium">
+            <div class="eco-tier">Premium</div>
+            <h3>For server owners</h3>
+            <p class="eco-sub">Monetization &amp; automation.</p>
+            <ul class="eco-list">
+              <li>PayPal payments</li>
+              <li>Staff Pay tracking</li>
+              <li>Hype rewards</li>
+              <li>Advanced tickets &amp; logs</li>
+              <li>Advanced pets</li>
+              <li>Premium branding</li>
+            </ul>
+          </div>
+          <div class="eco-col soon">
+            <div class="eco-tier">Coming Soon</div>
+            <h3>On the roadmap</h3>
+            <p class="eco-sub">Planned upgrades.</p>
+            <ul class="eco-list">
+              <li>ARK Guard anti-cheat</li>
+              <li>Nitrado integration</li>
+              <li>Server status panel</li>
+              <li>Cluster automation</li>
+              <li>Scheduled wipes</li>
+            </ul>
           </div>
         </div>
+        <div style="text-align:center;margin-top:32px">
+          <a class="btn btn-ghost" href="features.html">See All Features →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- /pop short highlight card -->
+    <section class="short">
+      <div class="container">
+        <a class="highlight-card free" href="pop.html" data-animate>
+          <div class="highlight-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <div>
+            <div class="highlight-tier">Free · Included</div>
+            <h3>Full Cluster Population, Included Free</h3>
+            <p>Track your whole ARK cluster with live population embeds and animated charts. <code>/pop</code> is one of the free tools included with Quick's ARK Bot.</p>
+          </div>
+          <span class="btn btn-ghost">Explore /pop →</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Premium Branding short highlight card -->
+    <section class="short">
+      <div class="container">
+        <a class="highlight-card premium" href="branding.html" data-animate>
+          <div class="highlight-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M5 5l2 2M17 17l2 2M3 12h3M18 12h3M5 19l2-2M17 7l2-2"/></svg>
+          </div>
+          <div>
+            <div class="highlight-tier">Premium</div>
+            <h3>Make the Bot Match Your Server Brand</h3>
+            <p>Premium servers customize embeds, panels, /pop titles, tickets, and welcome messages with their own brand name, colors, logo, and footer.</p>
+          </div>
+          <span class="btn btn-ghost">Explore Branding →</span>
+        </a>
       </div>
     </section>
 
@@ -301,6 +321,51 @@
               <div class="dd">Premium active for 30 days</div>
             </div>
             <span class="demo-mini-cta">Watch the /subscribe demo →</span>
+          </a>
+          <a class="demo-mini" href="demos.html#tickets">
+            <div class="demo-mini-head">
+              <span class="demo-mini-badge">Roles</span>
+              <span class="demo-mini-name">Role Menus &amp; Welcome</span>
+            </div>
+            <div class="demo-mini-stage">
+              <div class="dt">Welcome embed posted</div>
+              <div class="dd">Auto-role assigned · @Member granted</div>
+            </div>
+            <div class="demo-mini-stage">
+              <div class="dt">Role menu opened</div>
+              <div class="dd">No artificial limits · button-driven</div>
+            </div>
+            <span class="demo-mini-cta">Watch the free tools demo →</span>
+          </a>
+          <a class="demo-mini" href="demos.html#pets">
+            <div class="demo-mini-head">
+              <span class="demo-mini-badge">Pets</span>
+              <span class="demo-mini-name">Pet System</span>
+            </div>
+            <div class="demo-mini-stage">
+              <div class="dt">Shadow · Lv 5</div>
+              <div class="dd">Free: feed, rename, inventory</div>
+            </div>
+            <div class="demo-mini-stage">
+              <div class="dt">Boss Fights 🔒 Premium</div>
+              <div class="dd">Fusion · rarity tiers · leaderboards</div>
+            </div>
+            <span class="demo-mini-cta">Watch the pets demo →</span>
+          </a>
+          <a class="demo-mini" href="demos.html#branding">
+            <div class="demo-mini-head">
+              <span class="demo-mini-badge">Branding</span>
+              <span class="demo-mini-name">Premium Branding</span>
+            </div>
+            <div class="demo-mini-stage">
+              <div class="dt">Default → Iron ARK</div>
+              <div class="dd">Brand name · accent · footer morph</div>
+            </div>
+            <div class="demo-mini-stage">
+              <div class="dt">Embeds rebranded</div>
+              <div class="dd">Applies to /pop, panels, tickets, welcome</div>
+            </div>
+            <span class="demo-mini-cta">Watch the branding demo →</span>
           </a>
         </div>
         <div style="text-align:center;margin-top:32px">
