@@ -26,15 +26,14 @@ window.SITE_CONFIG = {
 
   /*
    * Backend API base URL for the customer dashboard.
-   * Point this at your bot's Square Cloud HTTPS endpoint.
-   * Example: "https://quicksarkpp.squareweb.app"
+   * Points at the bot's Square Cloud HTTPS endpoint.
    *
-   * Leave empty until the backend is deployed — the dashboard will
-   * show a clear "backend not configured" notice rather than failing.
-   *
-   * No trailing slash. Must be HTTPS in production.
+   * Note: until the backend/ scaffold is mounted on the Square Cloud
+   * Express app, all /api/dashboard/* routes return 404 and the
+   * dashboard will show "Dashboard API not found" — that's the
+   * expected state until backend deployment completes.
    */
-  backendApiUrl: "",
+  backendApiUrl: "https://quicksark.squareweb.app",
 
   links: {
     // External — opens in new tab
