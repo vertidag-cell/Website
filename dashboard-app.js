@@ -477,16 +477,20 @@
         h("div", { class: "dash-card" },
           h("h3", null, "Setup status"),
           h("div", { class: "dash-feat" },
-            ...Object.entries(o.setup?.flags || {}).map(([k, v]) =>
-              h("button", {
-                type: "button",
-                class: `dash-feat-card ${v ? "ok" : "missing"}`,
-                onclick: () => { state.activeTab = mapFlagToModule(k); render(); },
-                style: { cursor: "pointer", textAlign: "left", border: "1px solid var(--border)" },
-              },
-                h("span", { class: "name" }, prettyName(k)),
-                h("span", { class: "state" }, v ? "Configured" : "Missing")
-              )
+            ...Object.entries(o.setup?.flags || {})
+              // /pop is configured in Discord only — don't surface it as a
+              // dashboard module the user can click into.
+              .filter(([k]) => k !== "population")
+              .map(([k, v]) =>
+                h("button", {
+                  type: "button",
+                  class: `dash-feat-card ${v ? "ok" : "missing"}`,
+                  onclick: () => { state.activeTab = mapFlagToModule(k); render(); },
+                  style: { cursor: "pointer", textAlign: "left", border: "1px solid var(--border)" },
+                },
+                  h("span", { class: "name" }, prettyName(k)),
+                  h("span", { class: "state" }, v ? "Configured" : "Missing")
+                )
             )
           )
         ),
@@ -495,7 +499,7 @@
           h("div", { class: "dash-actions" },
             btn("Configure Welcome", { kind: "btn-primary", onclick: () => { state.activeTab = "welcome"; render(); } }),
             btn("Configure Role Menus", { kind: "btn-ghost", onclick: () => { state.activeTab = "roleMenus"; render(); } }),
-            btn("Configure /pop", { kind: "btn-ghost", onclick: () => { state.activeTab = "population"; render(); } }),
+            btn("Configure Tickets", { kind: "btn-ghost", onclick: () => { state.activeTab = "tickets"; render(); } }),
             btn("Branding", { kind: "btn-ghost", onclick: () => { state.activeTab = "branding"; render(); } }),
             btn("Open Support", { kind: "btn-outline", href: cfg.links?.supportDiscord, external: true })
           )
@@ -591,6 +595,7 @@
 
     const statusBox = h("div");
     const form = h("form", { class: "dash-form" });
+    form.dataset.module = mod.name;
 
     mod.fields.forEach((f) => form.appendChild(renderField(f, values[f.key])));
 
@@ -600,7 +605,7 @@
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      doSaveModule(form, mod, statusBox, saveBtn);
+      doSaveModule(form, mod, statusBox, saveBtn, content);
     });
 
     card.append(statusBox, form);
@@ -823,20 +828,88 @@
     }
     return sel;
   }
+  /**
+   * Multi-picker (channels / roles) — search box + selected-on-top + scroll.
+   *
+   * Why the rewrite: with 30+ roles (Hall-of-Fame Quicks setup) the original
+   * "flex-wrap chip cloud" was unusable — chips overflowed the 220px box,
+   * users had no way to find a specific role, and selected ones were buried
+   * inside the cloud. New layout:
+   *   - sticky search input that filters in-place
+   *   - "Selected (N)" header above the picked chips (so they're always visible)
+   *   - "All N roles" header above the rest
+   *   - taller scrollable container (max 360px)
+   * `collectFormValues` still reads
+   *   wrap.querySelectorAll('input[type="checkbox"]:checked')
+   * so the data contract is unchanged.
+   */
   function renderMultiPicker(id, name, kind, value) {
     const items = kind === "channels" ? (state.channels || []) : (state.roles || []);
-    const selected = new Set(Array.isArray(value) ? value : []);
+    const selectedSet = new Set(Array.isArray(value) ? value : []);
+
     const wrap = h("div", { class: "dash-multi", id });
-    items.forEach((it) => {
-      const checked = selected.has(it.id);
-      const lbl = h("label", { class: "dash-chip" },
-        h("input", { type: "checkbox", name: `${name}[]`, value: it.id, checked: checked || null }),
-        kind === "channels" ? channelHash(it) + " " + it.name : "@" + it.name
-      );
-      wrap.appendChild(lbl);
-    });
     wrap.dataset.kind = kind;
     wrap.dataset.field = name;
+
+    const search = h("input", {
+      type: "search",
+      class: "dash-multi-search",
+      placeholder: kind === "channels" ? "Search channels…" : "Search roles…",
+      autocomplete: "off",
+      spellcheck: "false",
+    });
+    const selectedHeader = h("div", { class: "dash-multi-section" }, "Selected (0)");
+    const selectedBox = h("div", { class: "dash-multi-chips" });
+    const allHeader = h("div", { class: "dash-multi-section" }, "All");
+    const allBox = h("div", { class: "dash-multi-chips" });
+    const empty = h("div", { class: "dash-multi-empty" }, "No matches.");
+    empty.style.display = "none";
+
+    function labelFor(it) {
+      return kind === "channels" ? channelHash(it) + " " + it.name : "@" + it.name;
+    }
+
+    function makeChip(it) {
+      const checked = selectedSet.has(it.id);
+      const cb = h("input", { type: "checkbox", name: `${name}[]`, value: it.id, checked: checked || null });
+      const chip = h("label", { class: "dash-chip" + (checked ? " selected" : "") }, cb, labelFor(it));
+      cb.addEventListener("change", () => {
+        if (cb.checked) selectedSet.add(it.id); else selectedSet.delete(it.id);
+        chip.classList.toggle("selected", cb.checked);
+        layout(); // re-bucket after toggle
+      });
+      return chip;
+    }
+
+    function layout() {
+      const q = (search.value || "").trim().toLowerCase();
+      const matches = (it) => !q || it.name.toLowerCase().includes(q);
+      clear(selectedBox);
+      clear(allBox);
+      let selCount = 0;
+      let allCount = 0;
+      items.forEach((it) => {
+        if (!matches(it)) return;
+        const chip = makeChip(it);
+        if (selectedSet.has(it.id)) {
+          selectedBox.appendChild(chip);
+          selCount++;
+        } else {
+          allBox.appendChild(chip);
+          allCount++;
+        }
+      });
+      selectedHeader.textContent = `Selected (${selCount})`;
+      selectedHeader.style.display = selCount ? "" : "none";
+      selectedBox.style.display = selCount ? "" : "none";
+      allHeader.textContent = q ? `Matches (${allCount})` : `All ${items.length} ${kind === "channels" ? "channels" : "roles"}`;
+      empty.style.display = (selCount + allCount === 0) ? "" : "none";
+    }
+
+    search.addEventListener("input", layout);
+
+    wrap.append(search, selectedHeader, selectedBox, allHeader, allBox, empty);
+    layout();
     return wrap;
   }
 
@@ -873,8 +946,29 @@
     return out;
   }
 
-  async function doSaveModule(form, mod, statusBox, saveBtn) {
+  /** Map a server-returned `invalid_<fieldKey>` token back to a human label
+   *  from the module schema so the user knows what to fix. */
+  function fieldLabelFromErrorToken(mod, token) {
+    if (typeof token !== "string" || !token.startsWith("invalid_")) return token;
+    const key = token.slice("invalid_".length);
+    const f = (mod.fields || []).find((x) => x.key === key);
+    return f ? (f.label || key) : key;
+  }
+
+  /** Clear any "invalid" highlight added by a prior save attempt. */
+  function clearFieldErrors(form) {
+    form.querySelectorAll(".dash-field.has-error").forEach((el) => el.classList.remove("has-error"));
+  }
+  function markFieldError(form, key) {
+    const f = form.querySelector(`#field-${key}`);
+    if (!f) return;
+    const wrap = f.closest(".dash-field");
+    if (wrap) wrap.classList.add("has-error");
+  }
+
+  async function doSaveModule(form, mod, statusBox, saveBtn, content) {
     clear(statusBox);
+    clearFieldErrors(form);
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving…";
     try {
@@ -884,6 +978,20 @@
       saveBtn.disabled = false;
       toast("success", `${mod.label} saved`);
       statusBox.append(notice("success", "Saved", "Settings are live for this server."));
+      // Re-render the form from the server's merged values so the user
+      // visibly sees that the change persisted (and so multi-pickers /
+      // checkboxes show the exact state the backend now has). Falls back
+      // to refetching if the response doesn't include `values`.
+      if (content) {
+        if (res && res.values) {
+          // Lightweight: just refetch the whole module GET so any
+          // server-side normalization (e.g. dedupe, default fill) is
+          // reflected in the visible form fields.
+          loadModule(content, mod.name);
+        } else {
+          loadModule(content, mod.name);
+        }
+      }
     } catch (e) {
       saveBtn.textContent = "Save changes";
       saveBtn.disabled = false;
@@ -892,7 +1000,19 @@
         return;
       }
       if (e.code === 400 && Array.isArray(e.data?.errors)) {
-        statusBox.append(notice("error", "Validation failed", `Check these fields: ${e.data.errors.join(", ")}`));
+        // Highlight each invalid field on the form so user can find it
+        const labels = [];
+        e.data.errors.forEach((tok) => {
+          const key = typeof tok === "string" && tok.startsWith("invalid_") ? tok.slice("invalid_".length) : null;
+          if (key) markFieldError(form, key);
+          labels.push(fieldLabelFromErrorToken(mod, tok));
+        });
+        toast("error", `${mod.label}: fix ${labels.length} field${labels.length === 1 ? "" : "s"}`, 4500);
+        statusBox.append(notice("error", "Some fields are invalid",
+          `Fix and try again: ${labels.join(", ")}`));
+        // Scroll first invalid into view so user notices it
+        const firstBad = form.querySelector(".dash-field.has-error");
+        if (firstBad) firstBad.scrollIntoView({ behavior: "smooth", block: "center" });
         return;
       }
       toast("error", e.message || "Save failed");
@@ -926,7 +1046,7 @@
     const resetBtn = h("button", { type: "button", class: "btn btn-ghost", onclick: () => doResetModule(mod, content) }, "Reset to default");
     form.appendChild(h("div", { class: "dash-actions" }, saveBtn, resetBtn));
 
-    form.addEventListener("submit", (e) => { e.preventDefault(); doSaveModule(form, mod, statusBox, saveBtn); });
+    form.addEventListener("submit", (e) => { e.preventDefault(); doSaveModule(form, mod, statusBox, saveBtn, content); });
 
     const previewWrap = h("div", { class: "dash-card" }, h("h3", null, "Live preview"), h("div", { id: "brand-preview-host" }));
     function refresh() {
@@ -1011,7 +1131,9 @@
       const menus = r.menus || [];
       clear(content);
 
-      // Header
+      // Header card — only show "+ New Menu" CTA here when at least one
+      // menu exists. When empty, the empty-state below owns the CTA so we
+      // don't have two competing buttons on one screen.
       const header = h("div", { class: "dash-card" },
         h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" } },
           h("div", null,
@@ -1019,8 +1141,9 @@
             h("p", { style: { margin: "4px 0 0", color: "var(--text-muted)" } },
               "Build role-selection panels — dropdowns or buttons — and post them to any channel. No artificial limits.")
           ),
-          h("button", { type: "button", class: "btn btn-primary", onclick: () => openCreateMenuModal(content) },
-            "+ New Menu")
+          menus.length
+            ? h("button", { type: "button", class: "btn btn-primary", onclick: () => openCreateMenuModal(content) }, "+ New Menu")
+            : null
         )
       );
       content.append(header);
@@ -1030,19 +1153,18 @@
         if (mod.module?.quickSetupAvailable) {
           const card = h("div", { class: "dash-card" });
           card.append(renderQuickSetupBanner(mod.module, content));
-          // place it right after header
           header.after(card);
         }
       }).catch(() => {});
 
-      // Empty state
+      // Empty state — owns the create CTA when no menus exist
       if (!menus.length) {
         content.append(
-          h("div", { class: "dash-card", style: { textAlign: "center", padding: "40px 24px" } },
-            h("div", { style: { fontSize: "2rem", marginBottom: "8px" } }, "🎭"),
-            h("h4", { style: { margin: "0 0 6px" } }, "No role menus yet"),
-            h("p", { style: { color: "var(--text-muted)", margin: "0 0 18px" } },
-              "Create one to let members pick roles from a dropdown or button panel."),
+          h("div", { class: "dash-card", style: { textAlign: "center", padding: "44px 24px" } },
+            h("div", { style: { fontSize: "2.4rem", marginBottom: "10px" } }, "🎭"),
+            h("h4", { style: { margin: "0 0 6px", fontSize: "1.08rem" } }, "No role menus yet"),
+            h("p", { style: { color: "var(--text-muted)", margin: "0 0 20px", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" } },
+              "Create one to let members pick roles from a dropdown or button panel. You can post it to any channel and update it any time."),
             h("button", { type: "button", class: "btn btn-primary", onclick: () => openCreateMenuModal(content) },
               "+ Create your first menu")
           )

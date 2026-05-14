@@ -4870,9 +4870,21 @@ section a.highlight-card {
 .dash-field input:focus,
 .dash-field textarea:focus,
 .dash-field select:focus {
-  outline: 2px solid var(--red-bright);
-  outline-offset: 1px;
-  border-color: var(--red-tint);
+  outline: none;
+  border-color: rgba(220,38,38,0.55);
+  box-shadow: 0 0 0 3px rgba(220,38,38,0.16);
+}
+/* Field error state — used after a save returns validation_failed.
+   Highlights the specific input so the user can find what to fix. */
+.dash-field.has-error > input,
+.dash-field.has-error > textarea,
+.dash-field.has-error > select,
+.dash-field.has-error > .dash-multi {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.18) !important;
+}
+.dash-field.has-error > label {
+  color: #f87171 !important;
 }
 /* Dropdown options in native select — force dark background.
    Most browsers expose only background-color/color on <option>. */
@@ -4881,10 +4893,13 @@ section a.highlight-card {
   background: #18181b;
   color: var(--text);
 }
+/* Color input — keep it a swatch, not a full-width bar. */
 .dash-field input[type="color"] {
   padding: 4px;
-  height: 40px;
+  height: 42px;
+  width: 88px !important;     /* override the generic width: 100% above */
   cursor: pointer;
+  border-radius: 8px;
 }
 /* Number / date / time inputs get the same treatment by default,
    plus a custom spinner color */
@@ -5092,19 +5107,58 @@ section a.highlight-card {
 }
 
 /* Multi-picker chips */
+/* Multi-picker (v24): search + selected-on-top + scrollable.
+   The wrapper is now a column (search → selected → all → empty) and the
+   chip clouds live inside .dash-multi-chips which is the actual flex-wrap
+   container. */
 .dash-multi {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
   background: rgba(255,255,255,0.025);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  max-height: 220px;
+  border-radius: 10px;
+  max-height: 360px;
   overflow-y: auto;
 }
 .dash-multi::-webkit-scrollbar { width: 6px; }
 .dash-multi::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.dash-multi-search {
+  position: sticky;
+  top: -10px;        /* sit flush against container top while scrolling */
+  z-index: 2;
+  background: rgba(20,20,24,0.95) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  color: var(--text) !important;
+  font-size: 0.88rem !important;
+  width: 100% !important;
+  margin: 0 !important;
+  backdrop-filter: blur(4px);
+}
+.dash-multi-search::placeholder { color: var(--text-dim); }
+.dash-multi-search:focus { outline: 1px solid var(--red-tint); outline-offset: 0; }
+.dash-multi-section {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 4px 2px 0;
+}
+.dash-multi-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dash-multi-empty {
+  padding: 14px 8px;
+  text-align: center;
+  font-size: 0.84rem;
+  color: var(--text-dim);
+}
 .dash-chip {
   display: inline-flex;
   align-items: center;
@@ -5117,9 +5171,14 @@ section a.highlight-card {
   color: var(--text-muted);
   background: rgba(255,255,255,0.02);
   user-select: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dash-chip:hover { background: rgba(255,255,255,0.05); color: var(--text); }
 .dash-chip input { accent-color: var(--red); margin: 0; }
+.dash-chip.selected,
 .dash-chip:has(input:checked) {
   background: var(--red-tint);
   border-color: rgba(220,38,38,0.4);
