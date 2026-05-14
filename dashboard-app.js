@@ -621,7 +621,7 @@
         input = h("input", { id, name: f.key, type: "url", value: value ?? "", placeholder: "https://…" });
         break;
       case "channel":
-        input = renderSelect(id, f.key, [{ id: "", name: "— none —" }, ...(state.channels || [])], value, (c) => `${channelHash(c)} ${c.name}`);
+        input = renderChannelSelect(id, f.key, state.channels || [], value);
         break;
       case "role":
         input = renderSelect(id, f.key, [{ id: "", name: "— none —" }, ...(state.roles || [])], value, (r) => `@${r.name}`);
@@ -645,10 +645,9 @@
 
   function channelHash(c) {
     if (c.id === "") return "";
-    if (c.type === 4) return "▾"; // category
     if (c.type === 15) return "📋"; // forum
     if (c.type === 5) return "📢"; // announcement
-    return "#";
+    return "#";          // text (categories never appear in channels list)
   }
   function renderSelect(id, name, options, value, labelFn) {
     const sel = h("select", { id, name });
@@ -656,6 +655,42 @@
       const opt = h("option", { value: o.id, selected: (o.id === value) || null }, labelFn ? labelFn(o) : o.name);
       sel.appendChild(opt);
     });
+    return sel;
+  }
+
+  /** Channel picker — groups channels under their parent category as
+      <optgroup> for clearer scanning. Channels without a parent go
+      into an "Uncategorized" group at the bottom. */
+  function renderChannelSelect(id, name, channels, value) {
+    const sel = h("select", { id, name });
+    sel.appendChild(h("option", { value: "", selected: !value || null }, "— none —"));
+    const byParent = new Map();
+    const noParent = [];
+    for (const c of channels) {
+      if (c.parentName) {
+        if (!byParent.has(c.parentName)) byParent.set(c.parentName, []);
+        byParent.get(c.parentName).push(c);
+      } else {
+        noParent.push(c);
+      }
+    }
+    const sortedParents = Array.from(byParent.keys()).sort((a, b) => a.localeCompare(b));
+    for (const parent of sortedParents) {
+      const group = h("optgroup", { label: parent });
+      for (const c of byParent.get(parent)) {
+        group.appendChild(h("option", { value: c.id, selected: (c.id === value) || null },
+          `${channelHash(c)} ${c.name}`));
+      }
+      sel.appendChild(group);
+    }
+    if (noParent.length) {
+      const group = h("optgroup", { label: "Uncategorized" });
+      for (const c of noParent) {
+        group.appendChild(h("option", { value: c.id, selected: (c.id === value) || null },
+          `${channelHash(c)} ${c.name}`));
+      }
+      sel.appendChild(group);
+    }
     return sel;
   }
   function renderMultiPicker(id, name, kind, value) {
