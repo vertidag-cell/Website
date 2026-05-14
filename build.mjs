@@ -1,46 +1,62 @@
 /*
- * Optional production build — minifies HTML, CSS, JS into dist/.
+ * Production build — minifies HTML, CSS, JS into dist/.
  *
- * Run:  npm install && npm run build
+ * Run:    npm install && npm run build
  * Preview: npm run preview
  *
- * Deployment note: the root files (index.html, styles.css, etc.) are
- * already production-ready. This build step is optional and only
- * produces smaller files. You can deploy either the root or dist/.
+ * Auto-discovers every .html and .js file in the project root so new
+ * pages and scripts get picked up without editing this file. Skips
+ * build.mjs itself and anything under backend/, dist/, or node_modules/.
  */
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { minify as minifyJs } from 'terser';
-import { minify as minifyHtml } from 'html-minifier-terser';
-import CleanCSS from 'clean-css';
+import fs from "node:fs/promises";
+import path from "node:path";
+import { minify as minifyJs } from "terser";
+import { minify as minifyHtml } from "html-minifier-terser";
+import CleanCSS from "clean-css";
 
-const dist = 'dist';
+const ROOT = ".";
+const DIST = "dist";
+const SKIP_FILES = new Set(["build.mjs"]);
+const SKIP_DIRS = new Set(["dist", "node_modules", "backend", ".git"]);
 
-await fs.rm(dist, { recursive: true, force: true });
-await fs.mkdir(dist, { recursive: true });
+await fs.rm(DIST, { recursive: true, force: true });
+await fs.mkdir(DIST, { recursive: true });
 
-// CSS ---
-const css = await fs.readFile('styles.css', 'utf8');
-const minCss = new CleanCSS({ level: 2 }).minify(css);
-await fs.writeFile(path.join(dist, 'styles.css'), minCss.styles);
+const entries = await fs.readdir(ROOT, { withFileTypes: true });
 
-// JS — terser handles compression + name mangling (a form of light obfuscation)
+const htmlFiles = entries.filter((e) => e.isFile() && e.name.endsWith(".html")).map((e) => e.name);
+const jsFiles = entries
+  .filter((e) => e.isFile() && e.name.endsWith(".js") && !SKIP_FILES.has(e.name))
+  .map((e) => e.name);
+const cssFiles = entries.filter((e) => e.isFile() && e.name.endsWith(".css")).map((e) => e.name);
+
+console.log(`[build] HTML: ${htmlFiles.length} · JS: ${jsFiles.length} · CSS: ${cssFiles.length}`);
+
+// --- CSS ---
+for (const f of cssFiles) {
+  const css = await fs.readFile(f, "utf8");
+  const out = new CleanCSS({ level: 2 }).minify(css);
+  await fs.writeFile(path.join(DIST, f), out.styles);
+  console.log(`[build] css  ${f}  (${out.styles.length} bytes)`);
+}
+
+// --- JS ---
 const jsOptions = {
-  compress: { drop_console: true, passes: 2 },
+  compress: { drop_console: false, passes: 2 },
   mangle: { toplevel: false },
   format: { comments: false },
 };
-for (const f of ['config.js', 'script.js']) {
-  const code = await fs.readFile(f, 'utf8');
+for (const f of jsFiles) {
+  const code = await fs.readFile(f, "utf8");
   const out = await minifyJs(code, jsOptions);
-  await fs.writeFile(path.join(dist, f), out.code);
+  await fs.writeFile(path.join(DIST, f), out.code);
+  console.log(`[build] js   ${f}  (${(out.code || "").length} bytes)`);
 }
 
-// HTML
-const htmlFiles = ['index.html', 'pricing.html', 'dashboard.html', 'terms.html', 'privacy.html'];
+// --- HTML ---
 for (const f of htmlFiles) {
-  const html = await fs.readFile(f, 'utf8');
+  const html = await fs.readFile(f, "utf8");
   const min = await minifyHtml(html, {
     collapseWhitespace: true,
     removeComments: true,
@@ -51,16 +67,19 @@ for (const f of htmlFiles) {
     sortAttributes: true,
     sortClassName: true,
   });
-  await fs.writeFile(path.join(dist, f), min);
+  await fs.writeFile(path.join(DIST, f), min);
+  console.log(`[build] html ${f}  (${min.length} bytes)`);
 }
 
-// Static assets
-for (const f of ['robots.txt', '_headers', 'vercel.json']) {
+// --- Static assets that aren't .html/.css/.js ---
+const STATIC = ["robots.txt", "_headers", "vercel.json", ".env.example"];
+for (const f of STATIC) {
   try {
-    await fs.copyFile(f, path.join(dist, f));
+    await fs.copyFile(f, path.join(DIST, f));
+    console.log(`[build] copy ${f}`);
   } catch {
-    /* file may not exist */
+    /* file may not exist; skip silently */
   }
 }
 
-console.log('✓ Built to ./dist (deploy this folder for the minified version)');
+console.log(`✓ Built ${htmlFiles.length + jsFiles.length + cssFiles.length} files to ./${DIST}`);
