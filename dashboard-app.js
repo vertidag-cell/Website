@@ -1355,17 +1355,180 @@
     const labelIn = h("input", { id: "rm-add-label", type: "text", placeholder: "Label shown in menu", maxlength: 80 });
     const descIn = h("input", { id: "rm-add-desc", type: "text", placeholder: "Description (optional)", maxlength: 100 });
     const emojiIn = h("input", { id: "rm-add-emoji", type: "text", placeholder: "🎮", maxlength: 32, style: { textAlign: "center" } });
+    const emojiBtn = h("button", {
+      type: "button",
+      class: "btn btn-ghost emoji-pick-btn",
+      title: "Pick an emoji",
+      onclick: (e) => openEmojiPicker(emojiIn, e.currentTarget),
+    }, "😀");
     const wrap = h("div", { class: "rm-add-form" },
       h("div", { class: "dash-field" }, h("label", { for: "rm-add-role" }, "Role"), roleSel),
       h("div", { class: "dash-field" }, h("label", { for: "rm-add-label" }, "Label"), labelIn),
       h("div", { class: "rm-add-grid" },
-        h("div", { class: "dash-field" }, h("label", { for: "rm-add-emoji" }, "Emoji"), emojiIn),
+        h("div", { class: "dash-field" },
+          h("label", { for: "rm-add-emoji" }, "Emoji"),
+          h("div", { class: "emoji-input-group" }, emojiIn, emojiBtn)
+        ),
         h("div", { class: "dash-field" }, h("label", { for: "rm-add-desc" }, "Description"), descIn)
       ),
       h("button", { type: "button", class: "btn btn-primary",
         onclick: () => doAddOption(m.id, roleSel, labelIn, descIn, emojiIn, content) }, "+ Add option")
     );
     return wrap;
+  }
+
+  /* ============================================================
+     Emoji picker — categorized unicode emoji popover
+     ============================================================
+     Used by role-menu option rows. Click the 😀 button next to an
+     emoji input to open the picker; click an emoji to insert it
+     into the bound input. Escape / click-outside dismisses it.
+  */
+  const EMOJI_CATEGORIES = [
+    {
+      name: "ARK & Gaming",
+      emojis: ["🦖","🦕","🐉","🐲","🦅","🦁","🐺","🐗","🐍","🕷️","🦂","🦴","💀","☠️","⚔️","🗡️","🛡️","🏹","🪓","⛏️","🔫","💣","🎮","🕹️","🎯","🏆","🏅","🥇","🥈","🥉","🎖️","🏟️"]
+    },
+    {
+      name: "Pings & Hype",
+      emojis: ["📢","📣","🔔","🔕","🎉","🎊","🎁","🎀","🪅","🪩","✨","⭐","🌟","💫","🔥","⚡","💥","🚀","💎","🪙","💰","💵","💸","🎈","🎆","🎇"]
+    },
+    {
+      name: "Roles & Staff",
+      emojis: ["👑","🛡️","⚔️","🎖️","🏆","🥇","🥈","🥉","🎗️","📛","💼","🧑‍💼","👨‍💻","🧑‍💻","🧙‍♂️","🧙","🧝‍♂️","🦸‍♂️","🦹‍♂️","🥷","🧛","🏴‍☠️"]
+    },
+    {
+      name: "Tickets & Support",
+      emojis: ["🎫","🎟️","📩","📨","💬","🗨️","🆘","⛑️","🔧","🛠️","⚙️","📋","📝","✉️","📞","☎️","📡","🗣️","👂","🙋","🙋‍♂️","🙋‍♀️"]
+    },
+    {
+      name: "Status & Reactions",
+      emojis: ["✅","❌","⚠️","ℹ️","❓","❗","‼️","⁉️","✔️","❎","✳️","❇️","🟢","🟡","🔴","🟠","🟣","🔵","⚫","⚪","🔘","🚫","⛔","📵"]
+    },
+    {
+      name: "Hearts & Faces",
+      emojis: ["❤️","🧡","💛","💚","💙","💜","🤎","🖤","🤍","💖","💗","💓","💞","💕","💔","💯","💢","💨","💦","💤","🫶","🤝","👍","👎","👏","🙏","🤘","✊","✌️","🫡","🤔","😎","😅","😂","🤣","😤","😡","🥳","🤩","😍","😭","🥺"]
+    },
+    {
+      name: "Communication",
+      emojis: ["💬","🗨️","🗯️","💭","🔊","🔇","📡","📨","📩","📧","📮","📬","📭","📪","📫","✏️","📌","📍","🔖","🏷️"]
+    },
+    {
+      name: "Misc",
+      emojis: ["🌍","🌎","🌏","🌐","🗺️","⏰","⏳","⌛","🔒","🔓","🔑","🗝️","💾","💿","📀","💼","📁","📂","🧰","🧲","🔗","⚗️","🧪","🔬","🔭","📊","📈","📉"]
+    },
+  ];
+
+  let _emojiPickerEl = null;
+
+  function closeEmojiPicker() {
+    if (_emojiPickerEl) {
+      _emojiPickerEl.remove();
+      _emojiPickerEl = null;
+      document.removeEventListener("click", _emojiPickerOutside, true);
+      document.removeEventListener("keydown", _emojiPickerEsc, true);
+    }
+  }
+  function _emojiPickerOutside(ev) {
+    if (_emojiPickerEl && !_emojiPickerEl.contains(ev.target) && !ev.target.closest(".emoji-pick-btn")) {
+      closeEmojiPicker();
+    }
+  }
+  function _emojiPickerEsc(ev) {
+    if (ev.key === "Escape") closeEmojiPicker();
+  }
+
+  /** Open the emoji picker above the given button, inserting the chosen
+   *  emoji into `targetInput.value`. */
+  function openEmojiPicker(targetInput, anchorBtn) {
+    closeEmojiPicker();
+    const popover = h("div", { class: "emoji-popover" });
+
+    const search = h("input", {
+      type: "search",
+      class: "emoji-search",
+      placeholder: "Search emojis…",
+      autocomplete: "off",
+    });
+    const tabs = h("div", { class: "emoji-tabs" });
+    const grid = h("div", { class: "emoji-grid" });
+    const empty = h("div", { class: "emoji-empty" }, "No matches.");
+    empty.style.display = "none";
+
+    function pick(e) {
+      targetInput.value = e;
+      targetInput.dispatchEvent(new Event("input", { bubbles: true }));
+      closeEmojiPicker();
+    }
+
+    function renderCategory(cat) {
+      clear(grid);
+      cat.emojis.forEach((e) => {
+        grid.appendChild(h("button", { type: "button", class: "emoji-btn", title: e, onclick: () => pick(e) }, e));
+      });
+      empty.style.display = "none";
+    }
+
+    function renderSearch(q) {
+      clear(grid);
+      const needle = q.trim().toLowerCase();
+      let hits = 0;
+      EMOJI_CATEGORIES.forEach((cat) => {
+        cat.emojis.forEach((e) => {
+          // Crude name match using category name as label hint
+          if (cat.name.toLowerCase().includes(needle) || e.includes(needle)) {
+            grid.appendChild(h("button", { type: "button", class: "emoji-btn", title: e, onclick: () => pick(e) }, e));
+            hits++;
+          }
+        });
+      });
+      empty.style.display = hits ? "none" : "";
+    }
+
+    EMOJI_CATEGORIES.forEach((cat, i) => {
+      const tab = h("button", {
+        type: "button",
+        class: "emoji-tab" + (i === 0 ? " active" : ""),
+        title: cat.name,
+        onclick: () => {
+          tabs.querySelectorAll(".emoji-tab").forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          search.value = "";
+          renderCategory(cat);
+        },
+      }, cat.emojis[0]); // use first emoji as the tab icon
+      tabs.appendChild(tab);
+    });
+
+    search.addEventListener("input", () => {
+      if (search.value.trim()) renderSearch(search.value);
+      else renderCategory(EMOJI_CATEGORIES[0]);
+    });
+
+    popover.append(search, tabs, grid, empty);
+    document.body.appendChild(popover);
+    _emojiPickerEl = popover;
+
+    // Position above anchor button (prefer above; fall back to below)
+    const rect = anchorBtn.getBoundingClientRect();
+    const popH = 320;
+    const popW = 320;
+    const top = rect.top + window.scrollY - popH - 8;
+    const left = Math.max(8, Math.min(rect.left + window.scrollX, window.innerWidth - popW - 8));
+    if (top > window.scrollY + 8) {
+      popover.style.top = top + "px";
+    } else {
+      popover.style.top = (rect.bottom + window.scrollY + 8) + "px";
+    }
+    popover.style.left = left + "px";
+
+    renderCategory(EMOJI_CATEGORIES[0]);
+
+    // Bind close handlers (deferred so this click doesn't immediately close)
+    setTimeout(() => {
+      document.addEventListener("click", _emojiPickerOutside, true);
+      document.addEventListener("keydown", _emojiPickerEsc, true);
+    }, 0);
   }
 
   async function doAddOption(menuId, roleSel, labelIn, descIn, emojiIn, content) {
