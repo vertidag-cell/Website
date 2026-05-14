@@ -4845,19 +4845,27 @@ section a.highlight-card {
   letter-spacing: 0.08em;
   font-weight: 600;
 }
-.dash-field input[type="text"],
-.dash-field input[type="url"],
-.dash-field input[type="color"],
+/* Form inputs in the dashboard — cover ALL input types so browser
+   defaults (white bg + dark text) never bleed through on dark theme. */
+.dash-field input,
 .dash-field textarea,
 .dash-field select {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 12px;
-  color: var(--text);
+  color: var(--text) !important;
   font-family: inherit;
   font-size: 0.94rem;
   width: 100%;
+  box-sizing: border-box;
+  -webkit-text-fill-color: var(--text); /* Safari autofill */
+  caret-color: var(--text);
+}
+.dash-field input::placeholder,
+.dash-field textarea::placeholder {
+  color: var(--text-dim);
+  opacity: 1;
 }
 .dash-field input:focus,
 .dash-field textarea:focus,
@@ -4866,14 +4874,46 @@ section a.highlight-card {
   outline-offset: 1px;
   border-color: var(--red-tint);
 }
+/* Dropdown options in native select — force dark background.
+   Most browsers expose only background-color/color on <option>. */
+.dash-field select option,
+.dash-field select optgroup {
+  background: #18181b;
+  color: var(--text);
+}
 .dash-field input[type="color"] {
   padding: 4px;
   height: 40px;
   cursor: pointer;
 }
+/* Number / date / time inputs get the same treatment by default,
+   plus a custom spinner color */
+.dash-field input[type="number"] {
+  appearance: textfield;
+}
+.dash-field input[type="number"]::-webkit-outer-spin-button,
+.dash-field input[type="number"]::-webkit-inner-spin-button {
+  appearance: auto;
+  filter: invert(0.85);
+}
+/* Autofill in WebKit forces yellow + black text — neutralize it. */
+.dash-field input:-webkit-autofill,
+.dash-field textarea:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px rgba(22, 22, 28, 0.95) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
 .dash-field .hint {
   font-size: 0.78rem;
   color: var(--text-dim);
+}
+/* The toggle switch wraps an <input type="checkbox"> — exempt it
+   from the generic input styling above so it stays a slider. */
+.dash-switch input,
+.dash-multi input {
+  background: transparent !important;
+  border: none !important;
+  width: auto !important;
+  padding: 0 !important;
 }
 .dash-form-row {
   display: grid;
@@ -5184,4 +5224,157 @@ section a.highlight-card {
   background: linear-gradient(180deg, transparent 0%, var(--surface) 25%, var(--surface) 100%);
   padding-top: 12px;
   margin-top: 8px;
+}
+
+/* ============================================================
+   Setup Hub — mirrors Discord /setup category grid
+   ============================================================ */
+.dash-hub-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 16px 0 10px;
+}
+.hub-stat {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.hub-stat-num {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, var(--white), var(--silver));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hub-stat-lbl {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+.setup-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.setup-hub-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.setup-hub-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--red-tint);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 12px 32px rgba(220, 38, 38, 0.08);
+}
+.setup-hub-card.configured {
+  border-color: rgba(34, 197, 94, 0.32);
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.05), var(--surface));
+}
+.setup-hub-card.configured:hover {
+  box-shadow: 0 12px 32px rgba(34, 197, 94, 0.1);
+}
+.setup-hub-card.locked {
+  opacity: 0.85;
+}
+.setup-hub-card.soon {
+  border-style: dashed;
+}
+.setup-hub-icon {
+  font-size: 1.6rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+.setup-hub-card.configured .setup-hub-icon {
+  background: rgba(34, 197, 94, 0.12);
+}
+.setup-hub-card.locked .setup-hub-icon {
+  background: rgba(220, 38, 38, 0.1);
+}
+.setup-hub-body {
+  flex: 1;
+  min-width: 0;
+}
+.setup-hub-name {
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.setup-hub-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.setup-hub-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.setup-hub-tag.ok {
+  background: rgba(34, 197, 94, 0.14);
+  color: var(--success);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+.setup-hub-tag.missing {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+.setup-hub-tag.premium {
+  background: rgba(220, 38, 38, 0.14);
+  color: var(--red-bright);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+.setup-hub-tag.soon {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+.setup-hub-arrow {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+.setup-hub-card:hover .setup-hub-arrow {
+  color: var(--red-bright);
+  transform: translateX(3px);
+}
+@media (max-width: 520px) {
+  .setup-hub-grid { grid-template-columns: 1fr; }
+  .dash-hub-stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .hub-stat-num { font-size: 1.3rem; }
 }

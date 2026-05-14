@@ -291,8 +291,9 @@
 
     const layout = h("div", { class: "dash-layout" });
 
-    // Sidebar — Overview + each module + Audit
+    // Sidebar — Setup Hub + Overview + each module + Audit
     const sideTabs = [
+      { id: "setup-hub", label: "Setup Hub", group: "core" },
       { id: "overview", label: "Overview", group: "core" },
       ...state.modules.map((m) => ({ id: m.name, label: m.label, tier: m.tier, group: m.tier === "premium" ? "premium" : "free" })),
       { id: "premium", label: "Premium", group: "core" },
@@ -322,11 +323,120 @@
   function renderActiveTab(content) {
     content.append(h("div", { class: "dash-loading" }, h("div", { class: "dash-spinner" }), "Loading…"));
     const tab = state.activeTab;
+    if (tab === "setup-hub") return loadSetupHub(content);
     if (tab === "overview") return loadOverview(content);
     if (tab === "premium") return renderPremium(content);
     if (tab === "audit") return loadAudit(content);
     if (tab === "support") return renderSupportTab(content);
     return loadModule(content, tab);
+  }
+
+  /* ============================================================
+     Tab: Setup Hub — mirrors the Discord /setup category grid.
+     15 cards, same emojis, status pills, click-to-configure.
+     ============================================================ */
+  // Mirrors handlers/setup.js HUB_CATEGORIES on the bot. Order
+  // matches Discord layout. Each `module` maps the card to a real
+  // dashboard module tab; `comingSoon: true` means the dashboard
+  // tab isn't wired yet (configure in Discord for now).
+  const SETUP_HUB = [
+    { id: "levels",      label: "Levels",      emoji: "⚡", module: "xp",            flag: "xp" },
+    { id: "giveaways",   label: "Giveaways",   emoji: "🎉", module: "giveaways",     flag: null,         tier: "premium" },
+    { id: "welcome",     label: "Welcome",     emoji: "👋", module: "welcome",       flag: "welcome" },
+    { id: "roleMenus",   label: "Role Menus",  emoji: "🎭", module: "roleMenus",     flag: "roleMenus" },
+    { id: "suggestions", label: "Suggestions", emoji: "🔔", module: null,            flag: null,         comingSoon: true },
+    { id: "events",      label: "Events",      emoji: "📋", module: "events",        flag: null,         tier: "premium" },
+    { id: "polls",       label: "Polls",       emoji: "📊", module: "polls",         flag: null },
+    { id: "sticky",      label: "Sticky",      emoji: "📌", module: null,            flag: null,         comingSoon: true },
+    { id: "credits",     label: "Credits",     emoji: "💰", module: "credits",       flag: "credits" },
+    { id: "tickets",     label: "Tickets",     emoji: "🎫", module: "tickets",       flag: "tickets" },
+    { id: "payments",    label: "Payments",    emoji: "💳", module: "payments",      flag: "payments",   tier: "premium" },
+    { id: "staffPay",    label: "Staff Pay",   emoji: "💷", module: "staffPay",      flag: "staffPay",   tier: "premium" },
+    { id: "hype",        label: "Hype System", emoji: "🔥", module: "hype",          flag: "hype",       tier: "premium" },
+    { id: "population",  label: "Cluster Pop", emoji: "📡", module: "population",    flag: "population" },
+    { id: "branding",    label: "Branding",    emoji: "🎨", module: "branding",      flag: "branding",   tier: "premium" },
+  ];
+
+  async function loadSetupHub(content) {
+    try {
+      const o = await data.overview(state.selectedGuildId);
+      const flags = o.setup?.flags || {};
+      const isPremium = !!o.premiumActive;
+      clear(content);
+
+      content.append(
+        h("div", { class: "dash-card" },
+          h("h3", null, "Setup Hub"),
+          h("p", null,
+            "Same categories as ", h("code", null, "/setup"), " in Discord. Each card jumps to its configuration tab — or click ",
+            h("code", null, "/setup"), " inside Discord to use the original guided flow."),
+          h("div", { class: "dash-hub-stats" },
+            h("div", { class: "hub-stat" },
+              h("div", { class: "hub-stat-num" }, o.setup?.completedCount ?? "—"),
+              h("div", { class: "hub-stat-lbl" }, "Configured")
+            ),
+            h("div", { class: "hub-stat" },
+              h("div", { class: "hub-stat-num" }, o.setup?.total ?? "—"),
+              h("div", { class: "hub-stat-lbl" }, "Total")
+            ),
+            h("div", { class: "hub-stat" },
+              h("div", { class: "hub-stat-num" }, `${o.setup?.percent ?? 0}%`),
+              h("div", { class: "hub-stat-lbl" }, "Complete")
+            )
+          ),
+          renderProgress(o.setup?.percent ?? 0)
+        )
+      );
+
+      const grid = h("div", { class: "setup-hub-grid" });
+      SETUP_HUB.forEach((cat) => {
+        const isConfigured = cat.flag ? !!flags[cat.flag] : null;
+        const isLocked = cat.tier === "premium" && !isPremium;
+        const card = h("button", {
+          type: "button",
+          class: `setup-hub-card ${isConfigured ? "configured" : ""} ${isLocked ? "locked" : ""} ${cat.comingSoon ? "soon" : ""}`,
+          onclick: () => {
+            if (cat.comingSoon) {
+              toast("warn", `${cat.label} is configured in Discord via /setup for now.`, 4500);
+              return;
+            }
+            if (cat.module) {
+              state.activeTab = cat.module;
+              render();
+            }
+          },
+        },
+          h("div", { class: "setup-hub-icon" }, cat.emoji),
+          h("div", { class: "setup-hub-body" },
+            h("div", { class: "setup-hub-name" }, cat.label),
+            h("div", { class: "setup-hub-meta" },
+              cat.tier === "premium" ? h("span", { class: "setup-hub-tag premium" }, "Premium") : null,
+              cat.comingSoon
+                ? h("span", { class: "setup-hub-tag soon" }, "Discord only")
+                : isConfigured === true
+                  ? h("span", { class: "setup-hub-tag ok" }, "Configured")
+                  : isConfigured === false
+                    ? h("span", { class: "setup-hub-tag missing" }, "Not set up")
+                    : h("span", { class: "setup-hub-tag" }, "Ready")
+            )
+          ),
+          h("div", { class: "setup-hub-arrow" }, "→")
+        );
+        grid.appendChild(card);
+      });
+      content.append(grid);
+
+      content.append(
+        h("div", { class: "dash-card" },
+          h("h3", null, "Prefer Discord?"),
+          h("p", null, "Every category here is also configurable inside Discord with ", h("code", null, "/setup"), ". The dashboard and ", h("code", null, "/setup"), " write to the same database — use whichever you prefer."),
+          h("div", { class: "dash-actions" },
+            btn("Open Discord", { kind: "btn-ghost", href: cfg.links?.inviteBot, external: true }),
+            btn("Support", { kind: "btn-outline", href: cfg.links?.supportDiscord, external: true })
+          )
+        )
+      );
+    } catch (e) { renderTabError(content, e); }
   }
 
   /* ============================================================
