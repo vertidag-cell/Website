@@ -42,7 +42,12 @@
         <div id="dashboard-root">
           <div class="dash-loading">
             <div class="dash-spinner"></div>
-            Loading dashboard…
+            <div style="margin-top:4px">Initializing dashboard…</div>
+            <div style="font-size:0.78rem;color:var(--text-dim);margin-top:10px;max-width:380px;text-align:center;line-height:1.5">
+              If this stays for more than 3 seconds, hard-refresh
+              (<kbd style="background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:4px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.9em">Ctrl + Shift + R</kbd>)
+              or open in an incognito window. Browser cache may be holding an older build.
+            </div>
           </div>
         </div>
       </div>
@@ -66,8 +71,11 @@
       </div>
     </footer>
 
-    <script src="config.js"></script>
-    <script src="script.js"></script>
-    <script src="dashboard-app.js"></script>
+    <!-- Cache-bust query string forces fresh fetch when these files change.
+         Bump ?v=N every time dashboard JS/config is updated. -->
+    <script src="config.js?v=16"></script>
+    <script src="script.js?v=16"></script>
+    <script src="dashboard-boot.js?v=16"></script>
+    <script src="dashboard-app.js?v=16"></script>
   </body>
 </html>
