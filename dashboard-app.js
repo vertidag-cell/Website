@@ -1,11 +1,12 @@
 /*
- * Quick's ARK Bot — Dashboard SPA
+ * Quick's ARK Bot — Dashboard SPA (schema-driven)
  * ------------------------------------------------------------
- * Vanilla JS single-page dashboard. Talks to a backend at
- * window.SITE_CONFIG.backendApiUrl over fetch + cookies.
+ * Renders ~20 module pages from a single backend schema endpoint.
+ * Talks to the bot's Express server (Square Cloud) over fetch +
+ * cookies. No secrets in this file.
  *
- * No secrets in this file. The backend handles Discord OAuth and
- * permission checks. This file only renders state.
+ * Loads after dashboard-boot.js which provides a 4-second safety
+ * timer in case this script fails to boot.
  */
 
 (function () {
@@ -16,48 +17,31 @@
   const root = document.getElementById("dashboard-root");
   if (!root) return;
 
-  // Mark that the SPA script ran (used by the HTML safety timer below
-  // to know whether to show a "script failed to load" message).
   window.__DASH_TOUCHED__ = true;
 
-  /* Console diagnostics — sanitized, never logs tokens. */
-  const DEBUG = true; // flip to false for quiet prod logs
+  const DEBUG = true;
   if (DEBUG) {
     console.log("[dashboard] backendApiUrl:", cfg.backendApiUrl || "(empty)");
     console.log("[dashboard] resolved API_BASE:", API_BASE || "(empty)");
-    console.log(
-      "[dashboard] config keys present:",
-      Object.keys((cfg.links) || {})
-    );
   }
 
   /* ============================================================
-     API client — timeout, status mapping, clear error codes
-     ============================================================
-     Throws errors with a `.code` field:
-       "no_backend"  — SITE_CONFIG.backendApiUrl is empty
-       "timeout"     — fetch did not respond within 8s
-       "network"     — fetch threw (CORS, DNS, offline, …)
-       401, 403, 404, 500, …  — HTTP status from backend
-  */
+     API client with timeout + structured errors
+     ============================================================ */
   const API_TIMEOUT_MS = 8000;
 
   async function api(path, opts) {
     opts = opts || {};
-    if (!API_BASE) {
-      throw Object.assign(new Error("Dashboard backend not configured"), { code: "no_backend" });
-    }
+    if (!API_BASE) throw Object.assign(new Error("backend not configured"), { code: "no_backend" });
     const url = API_BASE + path;
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
-
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
     let res;
     try {
       res = await fetch(url, {
         method: opts.method || "GET",
         credentials: "include",
-        signal: controller.signal,
+        signal: ctrl.signal,
         headers: opts.body
           ? { "Content-Type": "application/json", Accept: "application/json" }
           : { Accept: "application/json" },
@@ -65,87 +49,58 @@
       });
     } catch (e) {
       clearTimeout(timer);
-      if (e && e.name === "AbortError") {
-        if (DEBUG) console.warn(`[dashboard] ${path} timed out after ${API_TIMEOUT_MS}ms`);
-        throw Object.assign(new Error("Backend timed out"), { code: "timeout" });
-      }
-      // TypeError "Failed to fetch" — usually CORS, network, or DNS.
-      if (DEBUG) console.warn(`[dashboard] ${path} fetch failed:`, e && e.message);
-      throw Object.assign(new Error("Backend unreachable (network or CORS)"), { code: "network" });
+      if (e?.name === "AbortError") throw Object.assign(new Error("Backend timed out"), { code: "timeout" });
+      throw Object.assign(new Error("Backend unreachable"), { code: "network" });
     }
     clearTimeout(timer);
-
-    const ctype = res.headers.get("content-type") || "";
+    const ct = res.headers.get("content-type") || "";
     let body = null;
     try {
-      if (ctype.includes("application/json")) body = await res.json();
+      if (ct.includes("application/json")) body = await res.json();
       else { const t = await res.text(); body = t ? { error: t.slice(0, 200) } : null; }
     } catch {}
-
-    if (DEBUG) console.log(`[dashboard] ${path} → ${res.status} ${ctype.split(";")[0] || ""}`, body || "(no body)");
-
+    if (DEBUG) console.log(`[dashboard] ${path} → ${res.status}`, body || "");
     if (res.ok) return body;
-
-    const err = new Error((body && (body.error || body.message)) || res.statusText || `HTTP ${res.status}`);
+    const err = new Error((body?.error) || (body?.message) || res.statusText || `HTTP ${res.status}`);
     err.code = res.status;
     err.data = body;
     throw err;
   }
 
-  const auth = {
-    loginUrl: () => API_BASE + "/auth/discord/login",
-    logout: () => api("/auth/logout", { method: "POST" }),
-  };
-
-  const data = {
-    me: () => api("/api/dashboard/me"),
-    guilds: () => api("/api/dashboard/guilds"),
-    overview: (gid) => api(`/api/dashboard/guilds/${gid}/overview`),
-    branding: (gid) => api(`/api/dashboard/guilds/${gid}/branding`),
-    saveBranding: (gid, payload) => api(`/api/dashboard/guilds/${gid}/branding`, { method: "POST", body: payload }),
-    resetBranding: (gid) => api(`/api/dashboard/guilds/${gid}/branding/reset`, { method: "POST" }),
-    population: (gid) => api(`/api/dashboard/guilds/${gid}/population`),
-    setupStatus: (gid) => api(`/api/dashboard/guilds/${gid}/settings/status`),
-  };
-
   /* ============================================================
-     Tiny render helpers
+     DOM helpers
      ============================================================ */
   function h(tag, attrs, ...children) {
     const el = document.createElement(tag);
     if (attrs) for (const k in attrs) {
-      if (k === "class") el.className = attrs[k];
-      else if (k === "style" && typeof attrs[k] === "object") Object.assign(el.style, attrs[k]);
-      else if (k.startsWith("on") && typeof attrs[k] === "function") el.addEventListener(k.slice(2), attrs[k]);
-      else if (k === "html") el.innerHTML = attrs[k];
-      else if (attrs[k] === true) el.setAttribute(k, "");
-      else if (attrs[k] !== false && attrs[k] != null) el.setAttribute(k, attrs[k]);
+      const v = attrs[k];
+      if (v == null || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k === "style" && typeof v === "object") Object.assign(el.style, v);
+      else if (k === "html") el.innerHTML = v;
+      else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2), v);
+      else if (v === true) el.setAttribute(k, "");
+      else el.setAttribute(k, v);
     }
     for (const c of children) {
       if (c == null || c === false) continue;
-      if (Array.isArray(c)) c.forEach((cc) => cc != null && el.append(cc.nodeType ? cc : document.createTextNode(cc)));
+      if (Array.isArray(c)) c.forEach((cc) => cc != null && cc !== false && el.append(cc.nodeType ? cc : document.createTextNode(cc)));
       else el.append(c.nodeType ? c : document.createTextNode(c));
     }
     return el;
   }
-
   function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+  function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
-  function userAvatar(user) {
-    if (user.avatar) {
-      return h("div", { class: "dash-avatar" }, h("img", { src: `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`, alt: "" }));
-    }
-    return h("div", { class: "dash-avatar" }, (user.username || "U").charAt(0).toUpperCase());
+  function userAvatar(u) {
+    if (u.avatar) return h("div", { class: "dash-avatar" }, h("img", { src: `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128`, alt: "" }));
+    return h("div", { class: "dash-avatar" }, (u.username || "U").charAt(0).toUpperCase());
   }
-
-  function guildIcon(guild) {
-    if (guild.icon) {
-      return h("div", { class: "gico" }, h("img", { src: `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`, alt: "" }));
-    }
-    const initials = (guild.name || "?").split(/\s+/).map(s => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+  function guildIcon(g) {
+    if (g.icon) return h("div", { class: "gico" }, h("img", { src: `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=128`, alt: "" }));
+    const initials = (g.name || "?").split(/\s+/).map((s) => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
     return h("div", { class: "gico" }, initials);
   }
-
   function notice(kind, title, detail) {
     return h("div", { class: `dash-notice ${kind}` },
       h("span", { class: "ni" }, kind === "warn" ? "!" : kind === "error" ? "✕" : kind === "success" ? "✓" : "i"),
@@ -155,18 +110,31 @@
       )
     );
   }
-
   function btn(label, opts) {
     opts = opts || {};
-    const a = h(opts.href ? "a" : "button", {
+    return h(opts.href ? "a" : "button", {
       class: `btn ${opts.kind || "btn-primary"}`,
       type: opts.href ? null : "button",
       href: opts.href || null,
       target: opts.external ? "_blank" : null,
       rel: opts.external ? "noopener noreferrer" : null,
       onclick: opts.onclick || null,
+      disabled: opts.disabled || null,
     }, label);
-    return a;
+  }
+  function toast(kind, msg, ms) {
+    let host = document.getElementById("dash-toasts");
+    if (!host) {
+      host = h("div", { id: "dash-toasts" });
+      document.body.appendChild(host);
+    }
+    const t = h("div", { class: `dash-toast ${kind || ""}` }, msg);
+    host.appendChild(t);
+    setTimeout(() => t.classList.add("show"), 10);
+    setTimeout(() => {
+      t.classList.remove("show");
+      setTimeout(() => t.remove(), 300);
+    }, ms || 3200);
   }
 
   /* ============================================================
@@ -176,7 +144,24 @@
     user: null,
     guilds: [],
     selectedGuildId: null,
-    activeTab: "overview",
+    modules: null,         // schema list from /api/dashboard/modules
+    channels: null,        // per-selected-guild
+    roles: null,           // per-selected-guild
+    activeTab: "overview", // module name OR "overview" OR "audit"
+  };
+
+  const auth = { loginUrl: () => API_BASE + "/auth/discord/login" };
+  const data = {
+    me: () => api("/api/dashboard/me"),
+    guilds: () => api("/api/dashboard/guilds"),
+    modules: () => api("/api/dashboard/modules"),
+    overview: (gid) => api(`/api/dashboard/guilds/${gid}/overview`),
+    module: (gid, name) => api(`/api/dashboard/guilds/${gid}/modules/${name}`),
+    saveModule: (gid, name, body) => api(`/api/dashboard/guilds/${gid}/modules/${name}`, { method: "POST", body }),
+    resetModule: (gid, name) => api(`/api/dashboard/guilds/${gid}/modules/${name}/reset`, { method: "POST" }),
+    audit: (gid) => api(`/api/dashboard/guilds/${gid}/audit-log`),
+    channels: (gid) => api(`/api/dashboard/guilds/${gid}/discord/channels`),
+    roles: (gid) => api(`/api/dashboard/guilds/${gid}/discord/roles`),
   };
 
   /* ============================================================
@@ -193,18 +178,17 @@
     clear(root);
     root.append(
       notice("warn", "Backend not configured",
-        "The dashboard frontend is deployed but the backend API URL is empty. Set SITE_CONFIG.backendApiUrl in config.js to your bot's Square Cloud HTTPS URL once the backend is live."),
+        "Set SITE_CONFIG.backendApiUrl in config.js to your bot's Square Cloud URL."),
       h("div", { class: "dash-card", style: { marginTop: "16px" } },
-        h("h3", null, "What you can do today"),
-        h("p", null, "Until the dashboard backend is live, manage everything inside Discord:"),
-        h("ul", { style: { color: "var(--text-muted)", paddingLeft: "20px", margin: "0 0 16px" } },
-          h("li", null, h("code", null, "/setup"), " — open the Setup Hub and configure every module."),
-          h("li", null, h("code", null, "/subscribe"), " — start or renew a Premium subscription."),
-          h("li", null, h("code", null, "/pop"), " — show full cluster population in any channel.")
+        h("h3", null, "Manage the bot in Discord"),
+        h("ul", { style: { color: "var(--text-muted)", paddingLeft: "20px" } },
+          h("li", null, h("code", null, "/setup"), " — Setup Hub"),
+          h("li", null, h("code", null, "/subscribe"), " — start Premium"),
+          h("li", null, h("code", null, "/pop"), " — cluster population")
         ),
-        h("div", { class: "dash-actions" },
-          btn("Invite Bot", { kind: "btn-primary", href: cfg.links && cfg.links.inviteBot, external: true }),
-          btn("Join Support Discord", { kind: "btn-ghost", href: cfg.links && cfg.links.supportDiscord, external: true })
+        h("div", { class: "dash-actions", style: { marginTop: "16px" } },
+          btn("Invite Bot", { href: cfg.links?.inviteBot, external: true }),
+          btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
         )
       )
     );
@@ -214,64 +198,43 @@
     clear(root);
     root.append(
       h("div", { class: "dash-card", style: { textAlign: "center", maxWidth: "560px", margin: "0 auto" } },
-        h("div", { style: { display: "inline-flex", alignItems: "center", gap: "8px", padding: "5px 12px", background: "var(--red-tint)", color: "var(--red-bright)", border: "1px solid rgba(220,38,38,0.3)", borderRadius: "999px", fontSize: "0.72rem", fontWeight: "700", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "16px" } },
-          h("span", { style: { width: "6px", height: "6px", borderRadius: "50%", background: "var(--red-bright)" } }),
-          "Customer Dashboard"
-        ),
-        h("h2", { style: { margin: "0 0 8px", fontSize: "1.5rem" } }, "Log in with Discord"),
+        h("h2", { style: { margin: "0 0 8px", fontSize: "1.5rem" } }, "Customer Dashboard"),
         h("p", { style: { color: "var(--text-muted)", margin: "0 0 22px" } },
-          "Manage your server's subscription, branding, /pop clusters, and setup status from one place."),
-        h("a", {
-          class: "btn btn-primary btn-lg",
-          href: auth.loginUrl(),
-          style: { background: "#5865f2", boxShadow: "0 8px 24px rgba(88,101,242,0.45)" }
-        },
-          h("span", { html: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px;vertical-align:-3px"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.331c-1.182 0-2.156-1.085-2.156-2.418 0-1.333.955-2.419 2.156-2.419 1.21 0 2.175 1.095 2.156 2.419 0 1.333-.955 2.418-2.156 2.418zm7.974 0c-1.183 0-2.156-1.085-2.156-2.418 0-1.333.955-2.419 2.156-2.419 1.21 0 2.175 1.095 2.156 2.419 0 1.333-.946 2.418-2.156 2.418z"/></svg>' }),
-          "Continue with Discord"
-        ),
+          "Log in with Discord to manage your bot's setup, branding, /pop, subscriptions, and every module."),
+        h("a", { class: "btn btn-lg", href: auth.loginUrl(), style: { background: "#5865f2", color: "#fff", boxShadow: "0 8px 24px rgba(88,101,242,0.45)" } }, "Continue with Discord"),
         h("p", { style: { fontSize: "0.74rem", color: "var(--text-dim)", margin: "18px 0 0" } },
-          "We request only ", h("code", null, "identify"), " and ", h("code", null, "guilds"), " scopes. No tokens are stored in your browser.")
-      ),
-      h("div", { class: "dash-card", style: { marginTop: "16px" } },
-        h("h3", null, "What you can manage"),
-        h("ul", { style: { color: "var(--text-muted)", paddingLeft: "20px", margin: "0" } },
-          h("li", null, "Subscription status and expiry"),
-          h("li", null, "Premium branding (Premium only)"),
-          h("li", null, "/pop cluster population settings"),
-          h("li", null, "Setup status across modules"),
-          h("li", null, "Quick links to support and pricing")
-        )
+          "We request only ", h("code", null, "identify"), " and ", h("code", null, "guilds"), " scopes.")
       )
     );
   }
 
   function renderGuildPicker() {
     clear(root);
-
-    const top = h("div", { class: "dash-userbar" },
-      userAvatar(state.user),
-      h("div", { class: "who" },
-        h("div", { class: "who-name" }, state.user.globalName || state.user.username),
-        h("div", { class: "who-sub" }, `@${state.user.username}`)
-      ),
-      btn("Log out", { kind: "btn-ghost", onclick: handleLogout })
+    root.append(
+      h("div", { class: "dash-userbar" },
+        userAvatar(state.user),
+        h("div", { class: "who" },
+          h("div", { class: "who-name" }, state.user.globalName || state.user.username),
+          h("div", { class: "who-sub" }, `@${state.user.username}`)
+        ),
+        btn("Log out", { kind: "btn-ghost", onclick: handleLogout })
+      )
     );
-    root.append(top);
-
     if (!state.guilds.length) {
-      root.append(notice("warn", "No manageable servers",
-        "We didn't find any Discord servers where you have Manage Server or Administrator permissions. Invite the bot to a server you own, then refresh."));
-      root.append(h("div", { class: "dash-actions", style: { marginTop: "16px" } },
-        btn("Invite Bot", { kind: "btn-primary", href: cfg.links && cfg.links.inviteBot, external: true }),
-        btn("Refresh", { kind: "btn-ghost", onclick: () => loadInitial(true) })
-      ));
+      root.append(
+        notice("warn", "No manageable servers",
+          "We didn't find any Discord servers where you have Manage Server / Administrator AND the bot is installed. Invite the bot to a server you own, then refresh."),
+        h("div", { class: "dash-actions", style: { marginTop: "16px" } },
+          btn("Invite Bot", { href: cfg.links?.inviteBot, external: true }),
+          btn("Refresh", { kind: "btn-ghost", onclick: () => boot(true) })
+        )
+      );
       return;
     }
-
     root.append(
       h("div", { class: "dash-card" },
         h("h3", null, "Pick a server to manage"),
-        h("p", null, "Only servers where you have Manage Server or Administrator permission are listed. Servers without the bot show an Invite button.")
+        h("p", null, "Only servers where the bot is installed AND you have Manage Server or Administrator are shown.")
       ),
       h("div", { class: "dash-guilds" }, ...state.guilds.map(renderGuildCard))
     );
@@ -279,34 +242,11 @@
 
   function renderGuildCard(g) {
     const tags = [];
-    if (g.plan === "premium") tags.push(h("span", { class: "dash-tag premium" }, "Premium"));
-    else if (g.plan === "lifetime") tags.push(h("span", { class: "dash-tag lifetime" }, "Lifetime"));
+    if (g.plan === "lifetime") tags.push(h("span", { class: "dash-tag lifetime" }, "Lifetime"));
+    else if (g.plan === "monthly" || g.plan === "premium") tags.push(h("span", { class: "dash-tag premium" }, "Premium"));
     else tags.push(h("span", { class: "dash-tag free" }, "Free"));
-    if (!g.botInstalled) tags.push(h("span", { class: "dash-tag no-bot" }, "Bot not installed"));
     if (g.owner) tags.push(h("span", { class: "dash-tag" }, "Owner"));
-
-    if (!g.botInstalled) {
-      return h("a", {
-        class: "dash-guild",
-        href: cfg.links && cfg.links.inviteBot,
-        target: "_blank",
-        rel: "noopener noreferrer",
-        title: "Invite the bot to this server",
-      },
-        guildIcon(g),
-        h("div", { class: "gmeta" },
-          h("div", { class: "gname" }, g.name),
-          h("div", { class: "gtags" }, ...tags)
-        ),
-        h("span", { style: { color: "var(--red-bright)", fontWeight: "700", fontSize: "0.82rem" } }, "Invite →")
-      );
-    }
-
-    return h("button", {
-      class: "dash-guild",
-      type: "button",
-      onclick: () => selectGuild(g.id),
-    },
+    return h("button", { class: "dash-guild", type: "button", onclick: () => selectGuild(g.id) },
       guildIcon(g),
       h("div", { class: "gmeta" },
         h("div", { class: "gname" }, g.name),
@@ -317,117 +257,489 @@
   }
 
   /* ============================================================
-     Guild dashboard with tabs
+     Per-guild dashboard
      ============================================================ */
-  const TABS = [
-    { id: "overview",    label: "Overview" },
-    { id: "subscription",label: "Subscription" },
-    { id: "branding",    label: "Branding" },
-    { id: "population",  label: "Cluster Population" },
-    { id: "features",    label: "Features" },
-    { id: "setup",       label: "Setup Status" },
-    { id: "support",     label: "Support" },
-  ];
-
-  function renderGuildDashboard() {
+  async function renderGuildDashboard() {
     clear(root);
     const guild = state.guilds.find((g) => g.id === state.selectedGuildId);
 
-    const top = h("div", { class: "dash-userbar" },
-      h("button", { type: "button", class: "btn btn-ghost", onclick: () => { state.selectedGuildId = null; render(); } }, "← Servers"),
-      guild ? guildIcon(guild) : userAvatar(state.user),
-      h("div", { class: "who" },
-        h("div", { class: "who-name" }, guild ? guild.name : "Loading…"),
-        h("div", { class: "who-sub" }, state.user.globalName || state.user.username)
-      ),
-      btn("Log out", { kind: "btn-ghost", onclick: handleLogout })
+    // Top bar
+    root.append(
+      h("div", { class: "dash-userbar" },
+        h("button", { type: "button", class: "btn btn-ghost", onclick: () => { state.selectedGuildId = null; render(); } }, "← Servers"),
+        guild ? guildIcon(guild) : userAvatar(state.user),
+        h("div", { class: "who" },
+          h("div", { class: "who-name" }, guild?.name || "Loading…"),
+          h("div", { class: "who-sub" }, state.user.globalName || state.user.username)
+        ),
+        guild?.plan === "lifetime" ? h("span", { class: "dash-tag lifetime", style: { fontSize: "0.74rem" } }, "Lifetime")
+          : (guild?.plan === "monthly" || guild?.plan === "premium") ? h("span", { class: "dash-tag premium", style: { fontSize: "0.74rem" } }, "Premium")
+          : h("span", { class: "dash-tag free", style: { fontSize: "0.74rem" } }, "Free"),
+        btn("Log out", { kind: "btn-ghost", onclick: handleLogout })
+      )
     );
-    root.append(top);
+
+    // Load modules schema once
+    if (!state.modules) {
+      try {
+        const m = await data.modules();
+        state.modules = m.modules || [];
+      } catch (e) {
+        return renderTabError(root, e);
+      }
+    }
 
     const layout = h("div", { class: "dash-layout" });
 
-    const side = h("div", { class: "dash-sidebar", role: "tablist" }, ...TABS.map((t) =>
-      h("button", {
+    // Sidebar — Overview + each module + Audit
+    const sideTabs = [
+      { id: "overview", label: "Overview", group: "core" },
+      ...state.modules.map((m) => ({ id: m.name, label: m.label, tier: m.tier, group: m.tier === "premium" ? "premium" : "free" })),
+      { id: "premium", label: "Premium", group: "core" },
+      { id: "audit", label: "Audit Log", group: "core" },
+      { id: "support", label: "Support", group: "core" },
+    ];
+    const side = h("div", { class: "dash-sidebar", role: "tablist" },
+      ...sideTabs.map((t) => h("button", {
         type: "button",
         class: `dash-tab ${t.id === state.activeTab ? "active" : ""}`,
         role: "tab",
         onclick: () => { state.activeTab = t.id; render(); },
       },
         h("span", { class: "badge-dot" }),
-        t.label
-      )
-    ));
+        t.label,
+        t.tier === "premium" ? h("span", { class: "dash-tab-tier" }, "PRO") : null
+      ))
+    );
     layout.append(side);
 
     const content = h("div", { class: "dash-content" });
     layout.append(content);
     root.append(layout);
-
-    renderTab(content, state.activeTab);
+    renderActiveTab(content);
   }
 
-  function renderTab(content, tabId) {
+  function renderActiveTab(content) {
     content.append(h("div", { class: "dash-loading" }, h("div", { class: "dash-spinner" }), "Loading…"));
-
-    switch (tabId) {
-      case "overview":     return loadOverview(content);
-      case "subscription": return renderSubscription(content);
-      case "branding":     return loadBranding(content);
-      case "population":   return loadPopulation(content);
-      case "features":     return loadFeatures(content);
-      case "setup":        return loadSetupStatus(content);
-      case "support":      return renderSupport(content);
-    }
+    const tab = state.activeTab;
+    if (tab === "overview") return loadOverview(content);
+    if (tab === "premium") return renderPremium(content);
+    if (tab === "audit") return loadAudit(content);
+    if (tab === "support") return renderSupportTab(content);
+    return loadModule(content, tab);
   }
 
-  /* ---- Tab: Overview ---- */
+  /* ============================================================
+     Tab: Overview
+     ============================================================ */
   async function loadOverview(content) {
     try {
       const o = await data.overview(state.selectedGuildId);
       clear(content);
-      const plan = (o.plan || "free");
-      const planLabel = plan === "lifetime" ? "Lifetime" : plan === "premium" ? "Premium Monthly" : "Free";
-      const status = (o.subscription && o.subscription.status) || "free";
-      const expires = (o.subscription && o.subscription.expiresAt) ? new Date(o.subscription.expiresAt) : null;
+      const plan = o.plan || "free";
+      const planLabel = plan === "lifetime" ? "Lifetime" : (plan === "monthly" || plan === "premium") ? "Premium" : "Free";
+      const expires = o.subscription?.expiresAt ? new Date(o.subscription.expiresAt) : null;
+      const setup = o.setup || { percent: 0, completed: [], missing: [], total: 0 };
+
       content.append(
         h("div", { class: "dash-card" },
           h("h3", null, "Overview"),
           h("dl", { class: "meta" },
             h("dt", null, "Plan"), h("dd", null, planLabel),
-            h("dt", null, "Status"), h("dd", null, status),
+            h("dt", null, "Status"), h("dd", null, o.subscription?.status || "—"),
             h("dt", null, "Expires"), h("dd", null, expires ? expires.toLocaleString() : "—"),
             h("dt", null, "Bot installed"), h("dd", null, o.botInstalled ? "Yes" : "No"),
-            h("dt", null, "Enabled modules"), h("dd", null, (o.enabledFeatures && o.enabledFeatures.length) ? o.enabledFeatures.join(", ") : "—")
-          )
+            h("dt", null, "Setup completion"), h("dd", null, `${setup.percent}% · ${setup.completedCount || setup.completed.length} / ${setup.total} modules`)
+          ),
+          renderProgress(setup.percent)
         ),
-        (o.missingConfig && o.missingConfig.length)
-          ? h("div", { class: "dash-card" },
-              h("h3", null, "Missing setup"),
-              h("p", null, "Run ", h("code", null, "/setup"), " in your Discord server to configure these:"),
-              h("ul", { style: { color: "var(--text-muted)", paddingLeft: "20px", margin: "8px 0 0" } },
-                ...o.missingConfig.map((k) => h("li", null, k))
+        h("div", { class: "dash-card" },
+          h("h3", null, "Setup status"),
+          h("div", { class: "dash-feat" },
+            ...Object.entries(o.setup?.flags || {}).map(([k, v]) =>
+              h("button", {
+                type: "button",
+                class: `dash-feat-card ${v ? "ok" : "missing"}`,
+                onclick: () => { state.activeTab = mapFlagToModule(k); render(); },
+                style: { cursor: "pointer", textAlign: "left", border: "1px solid var(--border)" },
+              },
+                h("span", { class: "name" }, prettyName(k)),
+                h("span", { class: "state" }, v ? "Configured" : "Missing")
               )
             )
-          : null,
+          )
+        ),
         h("div", { class: "dash-card" },
           h("h3", null, "Quick actions"),
           h("div", { class: "dash-actions" },
-            btn("Manage in Discord (/setup)", { kind: "btn-primary", href: cfg.links && cfg.links.inviteBot, external: true }),
-            btn("View /pop Settings", { kind: "btn-ghost", onclick: () => { state.activeTab = "population"; render(); } }),
+            btn("Configure Welcome", { kind: "btn-primary", onclick: () => { state.activeTab = "welcome"; render(); } }),
+            btn("Configure Role Menus", { kind: "btn-ghost", onclick: () => { state.activeTab = "roleMenus"; render(); } }),
+            btn("Configure /pop", { kind: "btn-ghost", onclick: () => { state.activeTab = "population"; render(); } }),
             btn("Branding", { kind: "btn-ghost", onclick: () => { state.activeTab = "branding"; render(); } }),
-            btn("Join Support", { kind: "btn-outline", href: cfg.links && cfg.links.supportDiscord, external: true })
+            btn("Open Support", { kind: "btn-outline", href: cfg.links?.supportDiscord, external: true })
           )
         )
       );
     } catch (e) { renderTabError(content, e); }
   }
 
-  /* ---- Tab: Subscription (no fake payment) ---- */
-  function renderSubscription(content) {
+  function renderProgress(pct) {
+    return h("div", { style: { height: "8px", background: "rgba(255,255,255,0.06)", borderRadius: "999px", overflow: "hidden", marginTop: "12px" } },
+      h("div", { style: { height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, var(--red), var(--red-bright))", transition: "width 0.5s" } })
+    );
+  }
+
+  function mapFlagToModule(flag) {
+    const map = { welcome: "welcome", autoRoles: "autoRoles", roleMenus: "roleMenus", population: "population", branding: "branding", payments: "payments", staffPay: "staffPay", hype: "hype", tickets: "tickets", xp: "xp", pets: "pets", credits: "credits", moderation: "moderation" };
+    return map[flag] || "overview";
+  }
+  function prettyName(s) {
+    return ({
+      welcome: "Welcome", autoRoles: "Auto Roles", roleMenus: "Role Menus", population: "/pop Cluster",
+      branding: "Branding", payments: "Payments", staffPay: "Staff Pay", hype: "Hype",
+      tickets: "Tickets", xp: "XP / Leaderboards", pets: "Pets", credits: "Credits", moderation: "Moderation"
+    }[s]) || s;
+  }
+
+  /* ============================================================
+     Tab: Module (schema-driven form)
+     ============================================================ */
+  async function loadModule(content, name) {
+    try {
+      // Make sure channel/role pickers are ready
+      if (!state.channels || !state.roles) await loadDiscordLists();
+
+      const m = await data.module(state.selectedGuildId, name);
+      clear(content);
+      const mod = m.module;
+
+      // Premium gate
+      if (m.tierLocked) {
+        content.append(
+          h("div", { class: "dash-card" },
+            h("h3", null, mod.label),
+            h("p", null, mod.description),
+            notice("warn", "Premium required",
+              "This module is part of the Premium plan. Free modules remain active. Use /subscribe inside Discord to activate Premium."),
+            h("div", { class: "dash-actions", style: { marginTop: "12px" } },
+              btn("View subscribe flow", { kind: "btn-primary", onclick: () => { state.activeTab = "premium"; render(); } }),
+              btn("Invite Bot", { kind: "btn-ghost", href: cfg.links?.inviteBot, external: true })
+            )
+          )
+        );
+        return;
+      }
+
+      // Custom UI modules — render dedicated handlers
+      if (mod.customUi) {
+        if (mod.name === "branding") return renderBrandingForm(content, mod, m.values);
+        if (mod.name === "population") return renderPopulationView(content);
+        if (mod.name === "roleMenus") return renderRoleMenusInfo(content);
+        if (mod.name === "logs") return loadAudit(content);
+      }
+
+      // Generic schema-driven form
+      renderModuleForm(content, mod, m.values);
+    } catch (e) { renderTabError(content, e); }
+  }
+
+  async function loadDiscordLists() {
+    try {
+      const [c, r] = await Promise.all([
+        data.channels(state.selectedGuildId),
+        data.roles(state.selectedGuildId),
+      ]);
+      state.channels = c.channels || [];
+      state.roles = r.roles || [];
+    } catch (e) {
+      state.channels = [];
+      state.roles = [];
+    }
+  }
+
+  function renderModuleForm(content, mod, values) {
+    const card = h("div", { class: "dash-card" },
+      h("h3", null, mod.label, mod.tier === "premium" ? h("span", { class: "dash-tag premium", style: { marginLeft: "10px", fontSize: "0.66rem" } }, "Premium") : null),
+      mod.description ? h("p", null, mod.description) : null
+    );
+    const statusBox = h("div");
+    const form = h("form", { class: "dash-form" });
+
+    mod.fields.forEach((f) => form.appendChild(renderField(f, values[f.key])));
+
+    const saveBtn = h("button", { type: "submit", class: "btn btn-primary" }, "Save changes");
+    const resetBtn = h("button", { type: "button", class: "btn btn-ghost", onclick: () => doResetModule(mod, content) }, "Reset to default");
+    form.appendChild(h("div", { class: "dash-actions" }, saveBtn, resetBtn));
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      doSaveModule(form, mod, statusBox, saveBtn);
+    });
+
+    card.append(statusBox, form);
+    content.append(card);
+  }
+
+  function renderField(f, value) {
+    const id = `field-${f.key}`;
+    const label = h("label", { for: id }, f.label || f.key);
+    let input;
+    switch (f.type) {
+      case "text":
+        input = h("input", { id, name: f.key, type: "text", value: value ?? "" });
+        if (f.max) input.setAttribute("maxlength", f.max);
+        break;
+      case "textarea":
+        input = h("textarea", { id, name: f.key, rows: 4 }, value ?? "");
+        if (f.max) input.setAttribute("maxlength", f.max);
+        break;
+      case "boolean":
+        input = h("label", { class: "dash-switch" },
+          h("input", { id, name: f.key, type: "checkbox", checked: !!value }),
+          h("span", { class: "slider" }),
+          h("span", { class: "switch-label" }, value ? "On" : "Off"));
+        break;
+      case "integer":
+        input = h("input", { id, name: f.key, type: "number", value: value ?? 0,
+          min: f.min ?? null, max: f.max ?? null, step: 1 });
+        break;
+      case "hex":
+        input = h("input", { id, name: f.key, type: "color", value: value || "#dc2626" });
+        break;
+      case "url":
+      case "image-url":
+        input = h("input", { id, name: f.key, type: "url", value: value ?? "", placeholder: "https://…" });
+        break;
+      case "channel":
+        input = renderSelect(id, f.key, [{ id: "", name: "— none —" }, ...(state.channels || [])], value, (c) => `${channelHash(c)} ${c.name}`);
+        break;
+      case "role":
+        input = renderSelect(id, f.key, [{ id: "", name: "— none —" }, ...(state.roles || [])], value, (r) => `@${r.name}`);
+        break;
+      case "channels":
+      case "roles":
+        input = renderMultiPicker(id, f.key, f.type, value);
+        break;
+      case "choice":
+        input = renderSelect(id, f.key, (f.options || []).map((o) => ({ id: o, name: o })), value);
+        break;
+      case "keywords":
+        input = h("input", { id, name: f.key, type: "text", value: (value || []).join(", "), placeholder: "comma-separated" });
+        input.dataset.kind = "keywords";
+        break;
+      default:
+        input = h("div", { style: { fontSize: "0.84rem", color: "var(--text-dim)" } }, `(unsupported field type: ${f.type})`);
+    }
+    return h("div", { class: "dash-field" }, label, input, f.help ? h("div", { class: "hint" }, f.help) : null);
+  }
+
+  function channelHash(c) {
+    if (c.id === "") return "";
+    if (c.type === 4) return "▾"; // category
+    if (c.type === 15) return "📋"; // forum
+    if (c.type === 5) return "📢"; // announcement
+    return "#";
+  }
+  function renderSelect(id, name, options, value, labelFn) {
+    const sel = h("select", { id, name });
+    options.forEach((o) => {
+      const opt = h("option", { value: o.id, selected: (o.id === value) || null }, labelFn ? labelFn(o) : o.name);
+      sel.appendChild(opt);
+    });
+    return sel;
+  }
+  function renderMultiPicker(id, name, kind, value) {
+    const items = kind === "channels" ? (state.channels || []) : (state.roles || []);
+    const selected = new Set(Array.isArray(value) ? value : []);
+    const wrap = h("div", { class: "dash-multi", id });
+    items.forEach((it) => {
+      const checked = selected.has(it.id);
+      const lbl = h("label", { class: "dash-chip" },
+        h("input", { type: "checkbox", name: `${name}[]`, value: it.id, checked: checked || null }),
+        kind === "channels" ? channelHash(it) + " " + it.name : "@" + it.name
+      );
+      wrap.appendChild(lbl);
+    });
+    wrap.dataset.kind = kind;
+    wrap.dataset.field = name;
+    return wrap;
+  }
+
+  function collectFormValues(form, mod) {
+    const out = {};
+    for (const f of mod.fields) {
+      if (f.type === "boolean") {
+        const el = form.querySelector(`#field-${f.key}`);
+        out[f.key] = !!(el && el.checked);
+        continue;
+      }
+      if (f.type === "integer") {
+        const el = form.querySelector(`#field-${f.key}`);
+        const v = el ? parseInt(el.value, 10) : NaN;
+        out[f.key] = Number.isFinite(v) ? v : 0;
+        continue;
+      }
+      if (f.type === "channels" || f.type === "roles") {
+        const wrap = form.querySelector(`#field-${f.key}`);
+        if (!wrap) { out[f.key] = []; continue; }
+        const ids = Array.from(wrap.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+        out[f.key] = ids;
+        continue;
+      }
+      if (f.type === "keywords") {
+        const el = form.querySelector(`#field-${f.key}`);
+        const raw = el ? el.value : "";
+        out[f.key] = raw.split(",").map((s) => s.trim()).filter(Boolean);
+        continue;
+      }
+      const el = form.querySelector(`#field-${f.key}`);
+      out[f.key] = el ? el.value : "";
+    }
+    return out;
+  }
+
+  async function doSaveModule(form, mod, statusBox, saveBtn) {
+    clear(statusBox);
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+    try {
+      const payload = collectFormValues(form, mod);
+      const res = await data.saveModule(state.selectedGuildId, mod.name, payload);
+      saveBtn.textContent = "Save changes";
+      saveBtn.disabled = false;
+      toast("success", `${mod.label} saved`);
+      statusBox.append(notice("success", "Saved", "Settings are live for this server."));
+    } catch (e) {
+      saveBtn.textContent = "Save changes";
+      saveBtn.disabled = false;
+      if (e.code === 403 && e.data?.error === "premium_required") {
+        statusBox.append(notice("warn", "Premium required", e.data?.message || "Activate Premium with /subscribe in Discord."));
+        return;
+      }
+      if (e.code === 400 && Array.isArray(e.data?.errors)) {
+        statusBox.append(notice("error", "Validation failed", `Check these fields: ${e.data.errors.join(", ")}`));
+        return;
+      }
+      toast("error", e.message || "Save failed");
+      statusBox.append(notice("error", "Save failed", e.message));
+    }
+  }
+
+  async function doResetModule(mod, content) {
+    if (!confirm(`Reset all ${mod.label} settings to default?`)) return;
+    try {
+      await data.resetModule(state.selectedGuildId, mod.name);
+      toast("success", `${mod.label} reset`);
+      loadModule(content, mod.name);
+    } catch (e) {
+      toast("error", e.message || "Reset failed");
+    }
+  }
+
+  /* ============================================================
+     Tab: Branding (bespoke with live preview)
+     ============================================================ */
+  function renderBrandingForm(content, mod, values) {
+    const v = values || {};
+    const card = h("div", { class: "dash-card" }, h("h3", null, "Branding"), h("p", null, mod.description));
+    const statusBox = h("div");
+    const form = h("form", { class: "dash-form" });
+
+    mod.fields.forEach((f) => form.appendChild(renderField(f, v[f.key])));
+
+    const saveBtn = h("button", { type: "submit", class: "btn btn-primary" }, "Save changes");
+    const resetBtn = h("button", { type: "button", class: "btn btn-ghost", onclick: () => doResetModule(mod, content) }, "Reset to default");
+    form.appendChild(h("div", { class: "dash-actions" }, saveBtn, resetBtn));
+
+    form.addEventListener("submit", (e) => { e.preventDefault(); doSaveModule(form, mod, statusBox, saveBtn); });
+
+    const previewWrap = h("div", { class: "dash-card" }, h("h3", null, "Live preview"), h("div", { id: "brand-preview-host" }));
+    function refresh() {
+      const color = form.querySelector("#field-embedColor")?.value || "#dc2626";
+      const brand = form.querySelector("#field-brandName")?.value || "Quick's ARK Bot";
+      const footer = form.querySelector("#field-footerText")?.value || `${brand} · v1`;
+      const host = previewWrap.querySelector("#brand-preview-host");
+      clear(host);
+      host.append(
+        h("div", { class: "preview-embed", style: { "--brand-accent": color, borderLeftColor: color } },
+          h("div", { class: "pe-title" }, `${brand} · /pop Cluster Population`),
+          h("div", { class: "pe-desc" }, "Total players: 184 / 620 · 11 / 12 maps online · Peak today 231"),
+          h("div", { class: "pe-footer" }, footer)
+        )
+      );
+    }
+    form.addEventListener("input", refresh);
+
+    card.append(statusBox, form);
+    content.append(card, previewWrap);
+    refresh();
+  }
+
+  /* ============================================================
+     Tab: /pop Population (read-only with link to Discord)
+     ============================================================ */
+  async function renderPopulationView(content) {
+    try {
+      const p = await api(`/api/dashboard/guilds/${state.selectedGuildId}/population`);
+      clear(content);
+      content.append(
+        h("div", { class: "dash-card" },
+          h("h3", null, "/pop Cluster Population"),
+          h("p", null, "Free for every server. Cluster CRUD currently lives in Discord — run ", h("code", null, "/setup › Cluster Population"), ". The dashboard previews configured clusters.")
+        )
+      );
+      if (p.notice === "population_config_not_wired" || !p.clusters?.length) {
+        content.append(
+          notice("info", "No clusters configured", "Run /setup in Discord to add your first cluster. The dashboard will list them here."),
+          h("div", { class: "dash-actions", style: { marginTop: "12px" } },
+            btn("Open in Discord", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true })
+          )
+        );
+        return;
+      }
+      (p.clusters || []).forEach((c) => {
+        content.append(
+          h("div", { class: "dash-card" },
+            h("h3", null, c.name || "Unnamed cluster"),
+            h("dl", { class: "meta" },
+              h("dt", null, "Provider"), h("dd", null, c.provider || "manual"),
+              h("dt", null, "Visibility"), h("dd", null, c.public ? "Public" : "Private"),
+              h("dt", null, "Maps"), h("dd", null, (c.maps && c.maps.length) || 0),
+              h("dt", null, "Last updated"), h("dd", null, c.lastUpdated ? new Date(c.lastUpdated).toLocaleString() : "—"),
+              h("dt", null, "Cached total"), h("dd", null, c.cachedTotal != null ? c.cachedTotal : "—")
+            )
+          )
+        );
+      });
+    } catch (e) { renderTabError(content, e); }
+  }
+
+  /* ============================================================
+     Tab: Role Menus (info card, deeper UI on roadmap)
+     ============================================================ */
+  function renderRoleMenusInfo(content) {
+    clear(content);
+    content.append(
+      h("div", { class: "dash-card" },
+        h("h3", null, "Role Menus"),
+        h("p", null, "No artificial limits — make as many role menus as you need."),
+        notice("info", "Configured in Discord", "Role menu CRUD currently lives in /setup → Role Menus inside Discord. Dashboard read-only listing + create flow are on the roadmap."),
+        h("div", { class: "dash-actions", style: { marginTop: "12px" } },
+          btn("Open Discord", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
+          btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
+        )
+      )
+    );
+  }
+
+  /* ============================================================
+     Tab: Premium (subscribe flow info)
+     ============================================================ */
+  function renderPremium(content) {
     clear(content);
     const g = state.guilds.find((x) => x.id === state.selectedGuildId) || {};
     const plan = g.plan || "free";
-    const planLabel = plan === "lifetime" ? "Lifetime" : plan === "premium" ? "Premium Monthly" : "Free";
+    const planLabel = plan === "lifetime" ? "Lifetime" : (plan === "premium" || plan === "monthly") ? "Premium" : "Free";
     content.append(
       h("div", { class: "dash-card" },
         h("h3", null, "Current Plan"),
@@ -441,267 +753,75 @@
         "The website does not process payments directly. Premium activates automatically inside Discord after PayPal confirms."),
       h("div", { class: "dash-card" },
         h("h3", null, "How to subscribe"),
-        h("ol", { style: { color: "var(--text-muted)", paddingLeft: "20px", margin: "0 0 16px", lineHeight: "1.8" } },
-          h("li", null, "Invite Quick's ARK Bot to your Discord server."),
-          h("li", null, "Open your server and run ", h("code", null, "/subscribe"), "."),
+        h("ol", { style: { color: "var(--text-muted)", paddingLeft: "20px", lineHeight: "1.8" } },
+          h("li", null, "Make sure Quick's ARK Bot is in your server."),
+          h("li", null, "Run ", h("code", null, "/subscribe"), " in your Discord server."),
           h("li", null, "Select the Premium plan."),
-          h("li", null, "Complete the PayPal checkout that opens from the bot."),
-          h("li", null, "Your server activates automatically after payment.")
+          h("li", null, "Complete the PayPal checkout the bot opens."),
+          h("li", null, "Your server activates automatically.")
         ),
         h("div", { class: "dash-actions" },
-          btn("Invite Bot", { kind: "btn-primary", href: cfg.links && cfg.links.inviteBot, external: true }),
-          btn("Join Support Discord", { kind: "btn-ghost", href: cfg.links && cfg.links.supportDiscord, external: true })
+          btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
+          btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
         )
       )
     );
   }
 
-  /* ---- Tab: Branding ---- */
-  async function loadBranding(content) {
+  /* ============================================================
+     Tab: Audit log
+     ============================================================ */
+  async function loadAudit(content) {
     try {
-      const b = await data.branding(state.selectedGuildId);
+      const a = await data.audit(state.selectedGuildId);
       clear(content);
-
-      if (!b.isPremium) {
-        content.append(
-          h("div", { class: "dash-card" },
-            h("h3", null, "Premium Branding"),
-            notice("warn", "Premium required",
-              "Premium branding requires a Premium subscription. Free features remain active on this server."),
-            h("div", { class: "dash-actions", style: { marginTop: "16px" } },
-              btn("View Subscribe Flow", { kind: "btn-primary", onclick: () => { state.activeTab = "subscription"; render(); } }),
-              btn("Learn more", { kind: "btn-ghost", href: "branding.html" })
-            )
-          )
-        );
+      content.append(h("div", { class: "dash-card" }, h("h3", null, "Audit Log"), h("p", null, "Recent dashboard actions. Last 50 entries.")));
+      if (!a.entries || !a.entries.length) {
+        content.append(notice("info", "No entries yet", "Dashboard actions you take will appear here."));
         return;
       }
-
-      const v = b.branding || {};
-      const card = h("div", { class: "dash-card" }, h("h3", null, "Branding"));
-      const status = h("div");
-      const form = h("form", { class: "dash-form" });
-
-      function field(id, label, type, value, hint, attrs) {
-        attrs = attrs || {};
-        return h("div", { class: "dash-field" },
-          h("label", { for: id }, label),
-          h(type === "textarea" ? "textarea" : "input", Object.assign({ id, name: id, type: type === "textarea" ? null : type, value: value || "" }, attrs)),
-          hint ? h("div", { class: "hint" }, hint) : null
-        );
-      }
-
-      const inputs = [
-        field("brandName", "Brand Name", "text", v.brandName, "Up to 64 chars. Replaces \"Quick's ARK Bot\" in embeds."),
-        field("brandShort", "Short Name", "text", v.brandShort, "Up to 16 chars. Used in compact contexts."),
-      ];
-      form.append(h("div", { class: "dash-form-row" }, ...inputs));
-
-      const colors = [
-        field("embedColor", "Embed Color", "color", v.embedColor || "#dc2626", "Hex color for embed strip."),
-        field("accentColor", "Accent Color", "color", v.accentColor || "#ef4444", "Hex color for action highlights."),
-      ];
-      form.append(h("div", { class: "dash-form-row" }, ...colors));
-
-      form.append(
-        field("logoUrl", "Logo URL", "url", v.logoUrl, "HTTPS only. PNG/JPG/WebP. Up to 256x256 recommended."),
-        field("iconUrl", "Icon URL", "url", v.iconUrl, "HTTPS only. Small thumbnail."),
-        field("footerText", "Footer Text", "text", v.footerText, "Up to 128 chars."),
-        field("supportUrl", "Support URL", "url", v.supportUrl, "HTTPS only.")
-      );
-
-      const titles = [
-        field("ticketTitle", "Ticket Panel Title", "text", v.ticketTitle),
-        field("paymentTitle", "Payment Panel Title", "text", v.paymentTitle),
-        field("welcomeTitle", "Welcome Title", "text", v.welcomeTitle),
-        field("populationTitle", "/pop Title", "text", v.populationTitle),
-      ];
-      form.append(h("div", { class: "dash-form-row" }, titles[0], titles[1]));
-      form.append(h("div", { class: "dash-form-row" }, titles[2], titles[3]));
-
-      form.append(h("div", { class: "dash-field" },
-        h("label", { for: "hideDefault" }, h("input", { type: "checkbox", id: "hideDefault", name: "hideDefault", checked: !!v.hideDefault, style: { width: "auto", marginRight: "8px" } }), "Hide default Quick's ARK Bot branding (where permitted)")
-      ));
-
-      form.append(h("div", { class: "dash-actions" },
-        h("button", { type: "submit", class: "btn btn-primary" }, "Save Changes"),
-        h("button", { type: "button", class: "btn btn-ghost", onclick: () => resetBranding(content) }, "Reset to Default")
-      ));
-
-      form.addEventListener("submit", (e) => { e.preventDefault(); submitBranding(form, status, content); });
-
-      // Live preview embed
-      function makePreview() {
-        const color = form.embedColor.value || "#dc2626";
-        const brand = form.brandName.value || "Quick's ARK Bot";
-        const footer = form.footerText.value || `${brand} · v1`;
-        return h("div", { class: "preview-embed", style: { "--brand-accent": color, borderLeftColor: color } },
-          h("div", { class: "pe-title" }, `${brand} · /pop Cluster Population`),
-          h("div", { class: "pe-desc" }, "Total players: 184 / 620 · 11 / 12 maps online · Peak today 231"),
-          h("div", { class: "pe-footer" }, footer)
-        );
-      }
-      const previewWrap = h("div", { class: "dash-card" },
-        h("h3", null, "Live preview"),
-        h("p", null, "Approximate render of an embed using your branding values."),
-        h("div", { id: "brand-preview-host" })
-      );
-      function refreshPreview() {
-        const host = previewWrap.querySelector("#brand-preview-host");
-        clear(host); host.append(makePreview());
-      }
-      form.addEventListener("input", refreshPreview);
-
-      card.append(status, form);
-      content.append(card, previewWrap);
-      refreshPreview();
-    } catch (e) { renderTabError(content, e); }
-  }
-
-  async function submitBranding(form, statusHost, content) {
-    const payload = {};
-    Array.from(form.elements).forEach((el) => {
-      if (!el.name) return;
-      if (el.type === "checkbox") payload[el.name] = el.checked;
-      else if (el.value !== "") payload[el.name] = el.value;
-    });
-    clear(statusHost);
-    statusHost.append(h("div", { class: "dash-loading", style: { padding: "12px 0" } }, h("div", { class: "dash-spinner" }), "Saving…"));
-    try {
-      await data.saveBranding(state.selectedGuildId, payload);
-      clear(statusHost);
-      statusHost.append(notice("success", "Branding saved", "Your embeds and panels will use these values from the next render."));
-    } catch (e) {
-      clear(statusHost);
-      statusHost.append(notice("error", "Save failed", e.message));
-    }
-  }
-
-  async function resetBranding(content) {
-    if (!confirm("Reset all branding values to default?")) return;
-    try {
-      await data.resetBranding(state.selectedGuildId);
-      loadBranding(content);
-    } catch (e) { renderTabError(content, e); }
-  }
-
-  /* ---- Tab: Cluster Population ---- */
-  async function loadPopulation(content) {
-    try {
-      const p = await data.population(state.selectedGuildId);
-      clear(content);
-      content.append(
-        h("div", { class: "dash-card" },
-          h("h3", null, "Cluster Population (/pop)"),
-          h("p", null, "Free for every server. ", h("strong", null, "No artificial cluster limits."), " Configure clusters here or in Discord with ", h("code", null, "/setup › Cluster Population"), ".")
-        )
-      );
-      if (p.notice === "population_config_not_wired") {
-        content.append(notice("info", "Population API not wired yet",
-          "The backend's getPopulationConfig hook isn't connected. Configure clusters via /setup in Discord until the dashboard hook is wired."));
-        return;
-      }
-      const clusters = p.clusters || [];
-      if (!clusters.length) {
-        content.append(notice("warn", "No clusters configured",
-          "Use /setup in Discord to add your first cluster, or wire the dashboard's population hooks for in-browser editing."));
-        return;
-      }
-      clusters.forEach((c) => {
-        content.append(
-          h("div", { class: "dash-card" },
-            h("h3", null, c.name || "Untitled cluster"),
-            h("dl", { class: "meta" },
-              h("dt", null, "Provider"), h("dd", null, c.provider || "manual"),
-              h("dt", null, "Visibility"), h("dd", null, c.public ? "Public" : "Private"),
-              h("dt", null, "Maps"), h("dd", null, (c.maps && c.maps.length) || 0),
-              h("dt", null, "Last updated"), h("dd", null, c.lastUpdated ? new Date(c.lastUpdated).toLocaleString() : "—"),
-              h("dt", null, "Cached total"), h("dd", null, c.cachedTotal != null ? `${c.cachedTotal}` : "—")
-            )
+      const list = h("div", { class: "dash-audit-list" });
+      a.entries.forEach((e) => {
+        list.append(
+          h("div", { class: "dash-audit-row" },
+            h("span", { class: "dash-audit-time" }, new Date(e.ts).toLocaleString()),
+            h("span", { class: `dash-audit-action ${e.ok ? "ok" : "fail"}` }, e.action),
+            h("span", { class: "dash-audit-target" }, e.target || "—"),
+            h("span", { class: "dash-audit-user" }, e.userId ? `<@${e.userId.slice(-6)}>` : "—")
           )
         );
       });
+      content.append(list);
     } catch (e) { renderTabError(content, e); }
   }
 
-  /* ---- Tab: Features ---- */
-  async function loadFeatures(content) {
-    try {
-      const o = await data.overview(state.selectedGuildId);
-      const isPremium = (o.plan === "premium" || o.plan === "lifetime");
-      clear(content);
-      const FREE = ["Welcome messages","Auto roles","Role menus","/pop cluster population","Population charts","Basic pets"];
-      const PREM = ["PayPal payments","Staff Pay","Hype","Advanced credits","Advanced tickets/logs","Premium branding","Advanced pets","Server templates"];
-      const SOON = ["ARK Guard","Nitrado","Server status panel","Cluster automation"];
-      const grid = (title, items, kind) => h("div", { class: "dash-card" },
-        h("h3", null, title),
-        h("div", { class: "dash-feat" }, ...items.map((name) =>
-          h("div", { class: `dash-feat-card ${kind === "premium" && !isPremium ? "locked" : kind === "soon" ? "locked" : "ok"}` },
-            h("span", { class: "name" }, name),
-            h("span", { class: "state" }, kind === "premium" && !isPremium ? "Locked" : kind === "soon" ? "Soon" : "Active")
-          )
-        ))
-      );
-      content.append(
-        grid("Free", FREE, "free"),
-        grid("Premium", PREM, "premium"),
-        grid("Coming Soon", SOON, "soon")
-      );
-    } catch (e) { renderTabError(content, e); }
-  }
-
-  /* ---- Tab: Setup Status ---- */
-  async function loadSetupStatus(content) {
-    try {
-      const s = await data.setupStatus(state.selectedGuildId);
-      clear(content);
-      const entries = [
-        ["welcome", "Welcome messages"],
-        ["autoRoles", "Auto roles"],
-        ["roleMenus", "Role menus"],
-        ["population", "/pop clusters"],
-        ["branding", "Branding"],
-        ["payments", "Payments (PayPal)"],
-        ["staffPay", "Staff Pay"],
-        ["hype", "Hype"],
-        ["tickets", "Tickets"],
-      ];
-      content.append(
-        h("div", { class: "dash-card" },
-          h("h3", null, "Setup Status"),
-          h("p", null, "Most setup actions can also be done in Discord using ", h("code", null, "/setup"), "."),
-          h("div", { class: "dash-feat" }, ...entries.map(([k, label]) =>
-            h("div", { class: `dash-feat-card ${s[k] ? "ok" : "missing"}` },
-              h("span", { class: "name" }, label),
-              h("span", { class: "state" }, s[k] ? "Configured" : "Missing")
-            )
-          ))
-        )
-      );
-    } catch (e) { renderTabError(content, e); }
-  }
-
-  /* ---- Tab: Support ---- */
-  function renderSupport(content) {
+  /* ============================================================
+     Tab: Support
+     ============================================================ */
+  function renderSupportTab(content) {
     clear(content);
     content.append(
       h("div", { class: "dash-card" },
         h("h3", null, "Support"),
         h("p", null, "Common commands:"),
         h("ul", { style: { color: "var(--text-muted)", paddingLeft: "20px", margin: "0 0 16px" } },
-          h("li", null, h("code", null, "/setup"), " — open the Setup Hub"),
+          h("li", null, h("code", null, "/setup"), " — Setup Hub"),
           h("li", null, h("code", null, "/subscribe"), " — start or renew premium"),
           h("li", null, h("code", null, "/pop"), " — show cluster population"),
-          h("li", null, h("code", null, "/premium-admin"), " — bot owner only")
+          h("li", null, h("code", null, "/rank"), " — your XP"),
+          h("li", null, h("code", null, "/leaderboard"), " — server leaderboard")
         ),
         h("div", { class: "dash-actions" },
-          btn("Join Support Discord", { kind: "btn-primary", href: cfg.links && cfg.links.supportDiscord, external: true }),
-          btn("Email Support", { kind: "btn-ghost", href: `mailto:${(cfg.links && cfg.links.contactEmail) || ""}?subject=${encodeURIComponent("Quick's ARK Bot Support")}` })
+          btn("Join Support Discord", { kind: "btn-primary", href: cfg.links?.supportDiscord, external: true }),
+          btn("Email Support", { kind: "btn-ghost", href: `mailto:${cfg.links?.contactEmail || ""}?subject=${encodeURIComponent("Quick's ARK Bot Support")}` })
         )
       )
     );
   }
 
+  /* ============================================================
+     Error rendering
+     ============================================================ */
   function renderTabError(content, err) {
     clear(content);
     if (err.code === 401) {
@@ -709,50 +829,32 @@
       return render();
     }
     if (err.code === 403) {
-      return content.append(notice("error", "Access denied",
-        "You don't have permission to view this server's settings. Manage Server or Administrator permission is required."));
+      const msg = err.data?.message || "You don't have permission for this. Manage Server or Administrator required.";
+      return content.append(notice("error", "Access denied", msg));
     }
     if (err.code === "no_backend") {
       state.user = null;
       return renderNoBackend();
     }
     if (err.code === "timeout") {
-      return content.append(notice("error", "Backend timed out",
-        "The backend didn't respond within 8 seconds. Try again in a minute."));
+      return content.append(notice("error", "Backend timed out", "The backend didn't respond in 8 seconds."));
     }
     if (err.code === "network") {
-      return content.append(notice("error", "Backend unreachable",
-        "Couldn't connect to the dashboard backend (CORS or network)."));
+      return content.append(notice("error", "Backend unreachable", "CORS or network failure."));
     }
     if (err.code === 404) {
-      return content.append(notice("error", "Route not found",
-        "This dashboard route isn't deployed yet on the backend."));
+      return content.append(notice("error", "Route not found", "This route isn't deployed on the backend yet."));
     }
     content.append(notice("error", "Couldn't load", err.message || "Unknown error"));
   }
 
   /* ============================================================
-     Actions
+     Boot
      ============================================================ */
-  function renderError(title, detail, withRetry) {
-    clear(root);
-    root.append(notice("error", title, detail));
-    if (withRetry !== false) {
-      root.append(h("div", { class: "dash-actions", style: { justifyContent: "center", marginTop: "16px", flexWrap: "wrap" } },
-        btn("Retry", { kind: "btn-primary", onclick: () => loadInitial() }),
-        btn("Invite Bot", { kind: "btn-ghost", href: cfg.links && cfg.links.inviteBot, external: true }),
-        btn("Join Support", { kind: "btn-outline", href: cfg.links && cfg.links.supportDiscord, external: true })
-      ));
-    }
-  }
-
-  async function loadInitial() {
+  async function boot() {
     clear(root);
     root.append(h("div", { class: "dash-loading" }, h("div", { class: "dash-spinner" }), "Connecting…"));
-
-    // Empty config → no fetch, show backend-not-configured state immediately
     if (!API_BASE) return renderNoBackend();
-
     try {
       const me = await data.me();
       state.user = me.user;
@@ -760,68 +862,33 @@
       state.guilds = g.guilds || [];
       render();
     } catch (e) {
-      if (DEBUG) console.error("[dashboard] loadInitial failed:", e.code, e.message);
-
-      switch (e.code) {
-        case "no_backend":
-          return renderNoBackend();
-
-        case 401:
-          state.user = null;
-          return renderLoggedOut();
-
-        case 403:
-          return renderError(
-            "Access denied",
-            "You don't have permission to access the dashboard. If you think this is a mistake, contact support."
-          );
-
-        case 404:
-          return renderError(
-            "Dashboard API not found",
-            "The /api/dashboard/me route returned 404. The bot's dashboard backend routes may not be deployed yet. See the backend/ README for setup."
-          );
-
-        case 500:
-        case 502:
-        case 503:
-          return renderError(
-            "Dashboard backend error",
-            `The backend returned ${e.code}. Check the bot's server logs on Square Cloud.`
-          );
-
-        case "timeout":
-          return renderError(
-            "Dashboard backend timed out",
-            `The backend at ${API_BASE} did not respond within 8 seconds. It may be offline, starting up, or sleeping. Try again in a minute.`
-          );
-
-        case "network":
-          return renderError(
-            "Couldn't reach the dashboard backend",
-            `The browser couldn't connect to ${API_BASE}. Common causes: (1) the backend URL in config.js is wrong, (2) CORS blocked the request because DASHBOARD_ALLOWED_ORIGIN doesn't match this site's origin, (3) the backend is offline. Check the browser console for the exact error.`
-          );
-
-        default:
-          return renderError("Couldn't load dashboard", e.message || "Unknown error");
-      }
+      console.error("[dashboard] boot failed:", e);
+      if (e.code === 401) { state.user = null; return renderLoggedOut(); }
+      if (e.code === "no_backend") return renderNoBackend();
+      if (e.code === "timeout") return renderTabError(root, e);
+      if (e.code === "network") return renderTabError(root, e);
+      renderTabError(root, e);
     }
   }
 
   function selectGuild(id) {
     state.selectedGuildId = id;
     state.activeTab = "overview";
+    state.channels = null; // reset cached lists for new guild
+    state.roles = null;
     render();
   }
 
   async function handleLogout() {
-    try { await auth.logout(); } catch {}
+    try { await api("/auth/logout", { method: "POST" }); } catch {}
     state.user = null;
     state.guilds = [];
     state.selectedGuildId = null;
+    state.modules = null;
+    state.channels = null;
+    state.roles = null;
     render();
   }
 
-  /* Boot */
-  loadInitial();
+  boot();
 })();
