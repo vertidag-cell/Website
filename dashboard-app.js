@@ -159,6 +159,7 @@
     module: (gid, name) => api(`/api/dashboard/guilds/${gid}/modules/${name}`),
     saveModule: (gid, name, body) => api(`/api/dashboard/guilds/${gid}/modules/${name}`, { method: "POST", body }),
     resetModule: (gid, name) => api(`/api/dashboard/guilds/${gid}/modules/${name}/reset`, { method: "POST" }),
+    quickSetup: (gid, name, body) => api(`/api/dashboard/guilds/${gid}/modules/${name}/quick-setup`, { method: "POST", body: body || {} }),
     audit: (gid) => api(`/api/dashboard/guilds/${gid}/audit-log`),
     channels: (gid) => api(`/api/dashboard/guilds/${gid}/discord/channels`),
     roles: (gid) => api(`/api/dashboard/guilds/${gid}/discord/roles`),
@@ -572,6 +573,12 @@
       h("h3", null, mod.label, mod.tier === "premium" ? h("span", { class: "dash-tag premium", style: { marginLeft: "10px", fontSize: "0.66rem" } }, "Premium") : null),
       mod.description ? h("p", null, mod.description) : null
     );
+
+    // Quick Setup banner — shown only when backend reports it's available
+    if (mod.quickSetupAvailable) {
+      card.append(renderQuickSetupBanner(mod, content));
+    }
+
     const statusBox = h("div");
     const form = h("form", { class: "dash-form" });
 
@@ -588,6 +595,119 @@
 
     card.append(statusBox, form);
     content.append(card);
+  }
+
+  /* ============================================================
+     Quick Setup — wraps the same logic /setup uses in Discord.
+     One-click create channels / categories / role-menu panels.
+     ============================================================ */
+
+  // Module-specific copy. Keep short, action-oriented.
+  const QUICK_SETUP_COPY = {
+    welcome: {
+      title: "⚡ Quick Setup — Welcome",
+      blurb: "Pick a sensible welcome channel automatically (system channel → #welcome → #general → first writable text) and enable welcome messages with the default text. Idempotent — re-runs just update the channel.",
+      cta: "Run Welcome Quick Setup",
+    },
+    tickets: {
+      title: "⚡ Quick Setup — Tickets",
+      blurb: "Bootstrap the full Support layout: Support category, ticket channels, ticket-logs, staff-pay channel, and staff-earnings forum. Channels are reused if they already exist with similar names.",
+      cta: "Run Tickets Quick Setup",
+    },
+    roleMenus: {
+      title: "⚡ Quick Setup — Role Menus",
+      blurb: "Auto-create a Ping Roles dropdown using your configured Announcements / Auctions / Events / Giveaways roles, and post it to a channel of your choice. Requires those ping roles to be set (use /setup → Role Menus once if not).",
+      cta: "Run Role Menus Quick Setup",
+    },
+  };
+
+  function renderQuickSetupBanner(mod, content) {
+    const copy = QUICK_SETUP_COPY[mod.name] || {
+      title: `⚡ Quick Setup — ${mod.label}`,
+      blurb: `Run the same Quick Setup ${mod.label} uses in Discord /setup.`,
+      cta: `Run Quick Setup`,
+    };
+    return h("div", { class: "dash-quick-banner" },
+      h("div", { class: "dqb-icon" }, "⚡"),
+      h("div", { class: "dqb-body" },
+        h("div", { class: "dqb-title" }, copy.title),
+        h("div", { class: "dqb-blurb" }, copy.blurb)
+      ),
+      h("button", {
+        type: "button",
+        class: "btn btn-primary dqb-btn",
+        onclick: () => doQuickSetup(mod, content),
+      }, copy.cta)
+    );
+  }
+
+  async function doQuickSetup(mod, content) {
+    // Module-specific input gathering
+    let body = {};
+
+    if (mod.name === "roleMenus") {
+      if (!state.channels) await loadDiscordLists();
+      const channelId = await modalChannelPicker(
+        "Pick a channel for the Ping Roles menu",
+        "The bot will create a dropdown role menu and post it to this channel.",
+        state.channels || []
+      );
+      if (!channelId) return;
+      body = { channelId };
+    } else {
+      const messages = {
+        welcome: "Run Welcome Quick Setup? The bot will pick the best welcome channel and enable welcome messages.",
+        tickets: "Run Tickets Quick Setup? The bot will create (or reuse) a Support category with ticket channels, log channels, staff-pay, and staff-earnings forum. This may take a few seconds.",
+      };
+      if (!confirm(messages[mod.name] || `Run Quick Setup for ${mod.label}?`)) return;
+    }
+
+    // Run
+    const btn = content.querySelector(".dqb-btn");
+    const original = btn ? btn.textContent : null;
+    if (btn) { btn.disabled = true; btn.textContent = "Running…"; }
+    try {
+      const res = await data.quickSetup(state.selectedGuildId, mod.name, body);
+      toast("success", res.summary || `${mod.label} Quick Setup complete.`, 6000);
+      loadModule(content, mod.name); // reload to pick up new config
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.textContent = original; }
+      const msg = e.data?.summary || e.data?.message || e.message || "Quick Setup failed";
+      toast("error", msg, 6500);
+    }
+  }
+
+  /** Channel picker modal — returns Promise<string|null>. */
+  function modalChannelPicker(title, blurb, channels) {
+    return new Promise((resolve) => {
+      const overlay = h("div", { class: "dash-modal-overlay" });
+      const close = (value) => {
+        overlay.classList.remove("show");
+        setTimeout(() => overlay.remove(), 200);
+        resolve(value);
+      };
+      const sel = renderChannelSelect("modal-channel-select", "channel", channels, "");
+      const modal = h("div", { class: "dash-modal" },
+        h("h3", null, title),
+        h("p", null, blurb),
+        h("div", { class: "dash-field", style: { margin: "12px 0" } }, sel),
+        h("div", { class: "dash-modal-actions" },
+          h("button", { type: "button", class: "btn btn-ghost", onclick: () => close(null) }, "Cancel"),
+          h("button", { type: "button", class: "btn btn-primary", onclick: () => {
+            const el = document.getElementById("modal-channel-select");
+            const v = el ? el.value : "";
+            close(v || null);
+          } }, "Confirm")
+        )
+      );
+      overlay.append(modal);
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) close(null); });
+      document.addEventListener("keydown", function esc(ev) {
+        if (ev.key === "Escape") { document.removeEventListener("keydown", esc); close(null); }
+      });
+      document.body.appendChild(overlay);
+      requestAnimationFrame(() => overlay.classList.add("show"));
+    });
   }
 
   function renderField(f, value) {
@@ -864,17 +984,31 @@
      ============================================================ */
   function renderRoleMenusInfo(content) {
     clear(content);
-    content.append(
-      h("div", { class: "dash-card" },
-        h("h3", null, "Role Menus"),
-        h("p", null, "No artificial limits — make as many role menus as you need."),
-        notice("info", "Configured in Discord", "Role menu CRUD currently lives in /setup → Role Menus inside Discord. Dashboard read-only listing + create flow are on the roadmap."),
-        h("div", { class: "dash-actions", style: { marginTop: "12px" } },
-          btn("Open Discord", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
-          btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
+    // Re-fetch the module so we get quickSetupAvailable
+    data.module(state.selectedGuildId, "roleMenus").then((m) => {
+      clear(content);
+      content.append(
+        h("div", { class: "dash-card" },
+          h("h3", null, "Role Menus"),
+          h("p", null, "No artificial limits — make as many role menus as you need. The dashboard exposes Quick Setup for a Ping Roles menu today; full CRUD remains in ", h("code", null, "/setup"), " → Role Menus.")
         )
-      )
-    );
+      );
+      if (m.module?.quickSetupAvailable) {
+        const card = h("div", { class: "dash-card" });
+        card.append(renderQuickSetupBanner({ ...m.module, name: "roleMenus" }, content));
+        content.append(card);
+      }
+      content.append(
+        h("div", { class: "dash-card" },
+          h("h4", null, "Want full CRUD?"),
+          h("p", null, "Add/edit/delete menus from inside Discord with ", h("code", null, "/setup"), " → Role Menus. Settings sync with the dashboard automatically."),
+          h("div", { class: "dash-actions" },
+            btn("Open Discord", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
+            btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
+          )
+        )
+      );
+    }).catch((e) => renderTabError(content, e));
   }
 
   /* ============================================================
