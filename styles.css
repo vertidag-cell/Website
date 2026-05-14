@@ -3298,13 +3298,14 @@ body.menu-open {
    ============================================================ */
 
 :root {
+  /* v15: compressed timings — ~40% faster sequence (~6s total) */
   --stage1: 0s;     /* brand reveal */
-  --stage2: 1.2s;   /* headline word reveal */
-  --stage3: 2.5s;   /* command typing */
-  --stage4: 4s;     /* embed + fields + maps */
-  --stage5: 5.8s;   /* chart draws */
-  --stage6: 7s;     /* float cards */
-  --stage7: 8.5s;   /* CTA + trust badges settle */
+  --stage2: 0.8s;   /* headline word reveal */
+  --stage3: 1.6s;   /* command typing */
+  --stage4: 2.4s;   /* Setup Hub embed + module buttons stagger in */
+  --stage5: 3.6s;   /* live status strip + mini sparkline */
+  --stage6: 4.4s;   /* float cards drift in */
+  --stage7: 5.4s;   /* CTA + trust badges settle */
 }
 
 @keyframes stageRise {
@@ -3359,7 +3360,7 @@ body.menu-open {
 .hero-cinematic .hero-badge {
   opacity: 0;
   transform: translateY(8px);
-  animation: stageRise 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 0.85s forwards;
+  animation: stageRise 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) 0.5s forwards;
 }
 
 /* Stage 2: headline word reveal — handled in JS via data-reveal-delay */
@@ -3368,7 +3369,7 @@ body.menu-open {
 .hero-cinematic p.lead {
   opacity: 0;
   transform: translateY(8px);
-  animation: stageRise 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 2.3s forwards;
+  animation: stageRise 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) 1.4s forwards;
 }
 
 /* Stage 7: CTA buttons + trust badges settle */
@@ -3400,7 +3401,7 @@ body.menu-open {
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   opacity: 0;
   transform: translateY(24px) scale(0.97);
-  animation: stageFrameIn 1s cubic-bezier(0.22, 0.61, 0.36, 1) 0.5s forwards;
+  animation: stageFrameIn 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) 0.3s forwards;
   z-index: 1;
 }
 @keyframes stageFrameIn {
@@ -3435,7 +3436,7 @@ body.menu-open {
   gap: 10px;
   padding: 8px 0 14px;
   opacity: 0;
-  animation: stageRise 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) 2s forwards;
+  animation: stageRise 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) 1.2s forwards;
 }
 .stage-bot .bot-avatar {
   width: 32px;
@@ -3448,7 +3449,7 @@ body.menu-open {
   font-weight: 800;
   font-size: 0.86rem;
   box-shadow: 0 0 0 0 var(--red-glow);
-  animation: botPulse 2.6s ease-in-out 2.4s infinite;
+  animation: botPulse 2.4s ease-in-out 1.5s infinite;
 }
 @keyframes botPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
@@ -3534,11 +3535,11 @@ body.menu-open {
   gap: 8px 18px;
   margin-bottom: 12px;
 }
-.stage-field { opacity: 0; animation: stageRise 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
-.stage-field:nth-child(1) { animation-delay: calc(var(--stage4) + 0.20s); }
-.stage-field:nth-child(2) { animation-delay: calc(var(--stage4) + 0.35s); }
-.stage-field:nth-child(3) { animation-delay: calc(var(--stage4) + 0.50s); }
-.stage-field:nth-child(4) { animation-delay: calc(var(--stage4) + 0.65s); }
+.stage-field { opacity: 0; animation: stageRise 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
+.stage-field:nth-child(1) { animation-delay: calc(var(--stage4) + 0.10s); }
+.stage-field:nth-child(2) { animation-delay: calc(var(--stage4) + 0.20s); }
+.stage-field:nth-child(3) { animation-delay: calc(var(--stage4) + 0.30s); }
+.stage-field:nth-child(4) { animation-delay: calc(var(--stage4) + 0.40s); }
 .stage-field-name {
   font-size: 0.7rem;
   color: #949ba4;
@@ -4069,8 +4070,8 @@ footer,
   pointer-events: none;
   z-index: 3;
   animation:
-    hintAppear 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) 9.5s forwards,
-    hintBob 2.6s ease-in-out 10.5s infinite;
+    hintAppear 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 6s forwards,
+    hintBob 2.6s ease-in-out 6.8s infinite;
 }
 .hero-scroll-hint::after {
   content: "";
@@ -4179,16 +4180,16 @@ body::after {
 .setup-btn.primary::before { background: #fff; }
 .setup-btn.free::before { background: #4ade80; box-shadow: 0 0 4px rgba(74, 222, 128, 0.6); }
 .setup-btn.premium::before { background: #fbbf24; box-shadow: 0 0 4px rgba(251, 191, 36, 0.6); }
-.setup-btn:nth-child(1) { animation-delay: calc(var(--stage4) + 0.18s); }
-.setup-btn:nth-child(2) { animation-delay: calc(var(--stage4) + 0.26s); }
-.setup-btn:nth-child(3) { animation-delay: calc(var(--stage4) + 0.34s); }
-.setup-btn:nth-child(4) { animation-delay: calc(var(--stage4) + 0.42s); }
-.setup-btn:nth-child(5) { animation-delay: calc(var(--stage4) + 0.50s); }
-.setup-btn:nth-child(6) { animation-delay: calc(var(--stage4) + 0.58s); }
-.setup-btn:nth-child(7) { animation-delay: calc(var(--stage4) + 0.66s); }
-.setup-btn:nth-child(8) { animation-delay: calc(var(--stage4) + 0.74s); }
-.setup-btn:nth-child(9) { animation-delay: calc(var(--stage4) + 0.82s); }
-.setup-btn:nth-child(10) { animation-delay: calc(var(--stage4) + 0.90s); }
+.setup-btn:nth-child(1) { animation-delay: calc(var(--stage4) + 0.10s); }
+.setup-btn:nth-child(2) { animation-delay: calc(var(--stage4) + 0.15s); }
+.setup-btn:nth-child(3) { animation-delay: calc(var(--stage4) + 0.20s); }
+.setup-btn:nth-child(4) { animation-delay: calc(var(--stage4) + 0.25s); }
+.setup-btn:nth-child(5) { animation-delay: calc(var(--stage4) + 0.30s); }
+.setup-btn:nth-child(6) { animation-delay: calc(var(--stage4) + 0.35s); }
+.setup-btn:nth-child(7) { animation-delay: calc(var(--stage4) + 0.40s); }
+.setup-btn:nth-child(8) { animation-delay: calc(var(--stage4) + 0.45s); }
+.setup-btn:nth-child(9) { animation-delay: calc(var(--stage4) + 0.50s); }
+.setup-btn:nth-child(10) { animation-delay: calc(var(--stage4) + 0.55s); }
 
 /* Tiny live-status strip showing /pop and other live signals */
 .stage-mini-status {
