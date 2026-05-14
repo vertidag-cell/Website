@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Customer Dashboard — Quick's ARK Bot</title>
-    <meta name="description" content="Manage your Quick's ARK Bot subscription, linked Discord servers, billing, and bot settings." />
+    <meta name="description" content="Manage your Quick's ARK Bot subscription, branding, /pop cluster settings, and setup status. Discord login, server picker, and live previews." />
     <meta property="og:title" content="Customer Dashboard — Quick's ARK Bot" />
     <meta property="og:type" content="website" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,93 +19,30 @@
           <span class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/><path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/></svg></span>
           <span class="brand-text"><span class="name">Quick's ARK Bot</span><span class="sub">Discord Automation · ARK</span></span>
         </a>
-        <nav class="nav-links" aria-label="Main navigation">
-          <a href="index.html">Home</a>
-          <a href="features.html">Features</a>
-          <a href="pop.html">/pop</a>
-          <a href="premium.html">Premium</a>
-          <a href="branding.html">Branding</a>
-          <a href="demos.html">Demos</a>
-          <a href="pricing.html">Pricing</a>
-          <a href="dashboard.html" class="active">Dashboard</a>
-          <a href="support.html">Support</a>
-        </nav>
         <div class="nav-cta">
           <a class="btn btn-ghost nav-hide-sm" data-link="inviteBot" href="#">Invite Bot</a>
           <a class="btn btn-primary" data-link="subscribe" href="#">Subscribe</a>
-          <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+          <button class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="menuPanel">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
         </div>
       </div>
     </header>
 
-    <section class="dash-hero">
+    <section class="page-hero" style="padding:60px 0 24px">
       <div class="container">
         <span class="eyebrow">Customer Dashboard</span>
-        <h1>Manage subscriptions, branding, and bot settings</h1>
-        <p>Manage subscriptions, branding, cluster population, and settings in the future.</p>
-
-        <div class="dash-login-card" style="max-width:560px">
-          <div style="display:inline-flex;align-items:center;gap:8px;padding:5px 12px;background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);border-radius:999px;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:16px">
-            <span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;box-shadow:0 0 8px rgba(245,158,11,0.6)"></span>
-            Coming Soon
-          </div>
-          <h3>Dashboard login is coming soon</h3>
-          <p>For now, configure the bot inside Discord using <code style="background:rgba(255,255,255,0.06);color:var(--text);padding:1px 6px;border-radius:4px">/setup</code> and subscribe using <code style="background:rgba(255,255,255,0.06);color:var(--text);padding:1px 6px;border-radius:4px">/subscribe</code>.</p>
-          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px">
-            <a class="btn btn-primary" data-link="inviteBot" href="#">Invite Bot</a>
-            <a class="btn btn-ghost" data-link="supportDiscord" href="#">Join Support Discord</a>
-            <a class="btn btn-outline" href="pricing.html">View Pricing</a>
-          </div>
-          <p style="font-size:0.74rem;color:var(--text-dim);margin:20px 0 0">Discord dashboard login is planned. No payment processing happens on the website &mdash; subscriptions activate through the bot inside Discord.</p>
-        </div>
+        <h1 data-word-reveal>Manage your bot</h1>
+        <p class="lead">Subscription, branding, /pop clusters, and setup &mdash; one place after you log in with Discord.</p>
       </div>
     </section>
 
-    <section class="dash-mock">
+    <section class="dash-shell">
       <div class="container">
-        <div class="section-head" style="margin-bottom:36px">
-          <span class="eyebrow">Today's Workflow</span>
-          <h2>How to manage the bot today</h2>
-          <p>Until the dashboard ships, every setting is configured through Discord commands and panels.</p>
-        </div>
-        <div class="dash-mock-grid" data-animate data-stagger>
-          <div class="dash-mock-card">
-            <h4>Subscription Status</h4>
-            <div class="val">Manage in Discord</div>
-            <div class="sub">Run <code>/subscribe</code> in your server to start or renew a 30-day Premium subscription.</div>
-            <div class="placeholder-bar"><span style="width:0%"></span></div>
-          </div>
-          <div class="dash-mock-card">
-            <h4>Bot Setup</h4>
-            <div class="val">Manage in Discord</div>
-            <div class="sub">Run <code>/setup</code> to open the Setup Hub and configure every module via buttons.</div>
-            <div class="placeholder-bar"><span style="width:0%"></span></div>
-          </div>
-          <div class="dash-mock-card">
-            <h4>Branding</h4>
-            <div class="val">Premium</div>
-            <div class="sub">Premium branding configuration coming to this dashboard. Currently configured via <code>/setup &rsaquo; Branding</code>.</div>
-            <div class="placeholder-bar"><span style="width:0%"></span></div>
-          </div>
-          <div class="dash-mock-card">
-            <h4>Cluster Population</h4>
-            <div class="val">/pop ready</div>
-            <div class="sub">Configure with <code>/setup &rsaquo; Cluster Population</code>. Game, platform &amp; cluster name set in Discord.</div>
-            <div class="placeholder-bar"><span style="width:65%;background:linear-gradient(90deg,#22c55e,#4ade80)"></span></div>
-          </div>
-          <div class="dash-mock-card">
-            <h4>Billing</h4>
-            <div class="val">PayPal in Discord</div>
-            <div class="sub">PayPal checkout happens inside Discord when you run <code>/subscribe</code>. Webhook auto-confirms.</div>
-            <div class="placeholder-bar"><span style="width:0%"></span></div>
-          </div>
-          <div class="dash-mock-card">
-            <h4>Support</h4>
-            <div class="val">Online</div>
-            <div class="sub">Need help? <a data-link="supportDiscord" href="#" style="color:var(--red-bright);text-decoration:underline">Join the support Discord</a> for fast answers.</div>
-            <div class="placeholder-bar"><span style="width:100%;background:linear-gradient(90deg,var(--red),var(--red-bright))"></span></div>
+        <div id="dashboard-root">
+          <div class="dash-loading">
+            <div class="dash-spinner"></div>
+            Loading dashboard…
           </div>
         </div>
       </div>
@@ -119,20 +56,18 @@
               <span class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/><path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/></svg></span>
               <span class="brand-text"><span class="name">Quick's ARK Bot</span><span class="sub">Discord Automation · ARK</span></span>
             </div>
-            <p>Advanced Discord management for ARK PvP servers, hosting communities, and gaming networks.</p>
+            <p>Advanced Discord automation for ARK and gaming communities.</p>
           </div>
           <div><h4>Product</h4><ul><li><a href="features.html">Features</a></li><li><a href="pop.html">/pop Cluster</a></li><li><a href="premium.html">Premium</a></li><li><a href="branding.html">Branding</a></li><li><a href="demos.html">Demos</a></li><li><a href="pricing.html">Pricing</a></li><li><a href="dashboard.html">Dashboard</a></li></ul></div>
           <div><h4>Resources</h4><ul><li><a href="faq.html">FAQ</a></li><li><a href="support.html">Support</a></li><li><a href="terms.html">Terms</a></li><li><a href="privacy.html">Privacy</a></li></ul></div>
           <div><h4>Connect</h4><ul><li><a data-link="supportDiscord" href="#">Discord Server</a></li><li><a data-link="contactEmail" href="#">Email Support</a></li><li><a data-link="inviteBot" href="#">Invite Bot</a></li><li><a data-link="dashboardLogin" href="#">Dashboard Login</a></li></ul></div>
         </div>
-        <div class="footer-bottom">
-          <div>© <span data-year>2026</span> Quick's ARK Bot. All rights reserved.</div>
-          <div>Not affiliated with Studio Wildcard or Discord Inc.</div>
-        </div>
+        <div class="footer-bottom"><div>© <span data-year>2026</span> Quick's ARK Bot. All rights reserved.</div><div>Not affiliated with Studio Wildcard or Discord Inc.</div></div>
       </div>
     </footer>
 
     <script src="config.js"></script>
     <script src="script.js"></script>
+    <script src="dashboard-app.js"></script>
   </body>
 </html>

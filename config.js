@@ -24,6 +24,18 @@ window.SITE_CONFIG = {
 
   websiteUrl: "https://50bf9296.website-1h0.pages.dev/",
 
+  /*
+   * Backend API base URL for the customer dashboard.
+   * Point this at your bot's Square Cloud HTTPS endpoint.
+   * Example: "https://quicksarkpp.squareweb.app"
+   *
+   * Leave empty until the backend is deployed — the dashboard will
+   * show a clear "backend not configured" notice rather than failing.
+   *
+   * No trailing slash. Must be HTTPS in production.
+   */
+  backendApiUrl: "",
+
   links: {
     // External — opens in new tab
     inviteBot:

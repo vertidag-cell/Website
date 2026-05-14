@@ -1,0 +1,9 @@
+{
+  "_comment": "Add these to your existing bot's package.json. Do not replace the whole file.",
+  "dependencies": {
+    "express": "^4.18.0",
+    "express-session": "^1.17.0",
+    "cors": "^2.8.5"
+  },
+  "_note": "Node 18+ has global fetch. If you're on older Node, also add 'node-fetch' and edit discordOAuthService.js to import it."
+}
