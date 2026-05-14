@@ -16,29 +16,80 @@
   const root = document.getElementById("dashboard-root");
   if (!root) return;
 
+  // Mark that the SPA script ran (used by the HTML safety timer below
+  // to know whether to show a "script failed to load" message).
+  window.__DASH_TOUCHED__ = true;
+
+  /* Console diagnostics — sanitized, never logs tokens. */
+  const DEBUG = true; // flip to false for quiet prod logs
+  if (DEBUG) {
+    console.log("[dashboard] backendApiUrl:", cfg.backendApiUrl || "(empty)");
+    console.log("[dashboard] resolved API_BASE:", API_BASE || "(empty)");
+    console.log(
+      "[dashboard] config keys present:",
+      Object.keys((cfg.links) || {})
+    );
+  }
+
   /* ============================================================
-     Minimal API client (credentials: include for session cookie)
-     ============================================================ */
+     API client — timeout, status mapping, clear error codes
+     ============================================================
+     Throws errors with a `.code` field:
+       "no_backend"  — SITE_CONFIG.backendApiUrl is empty
+       "timeout"     — fetch did not respond within 8s
+       "network"     — fetch threw (CORS, DNS, offline, …)
+       401, 403, 404, 500, …  — HTTP status from backend
+  */
+  const API_TIMEOUT_MS = 8000;
+
   async function api(path, opts) {
     opts = opts || {};
-    if (!API_BASE) throw new Error("backend_not_configured");
-    const url = API_BASE + path;
-    const res = await fetch(url, {
-      method: opts.method || "GET",
-      credentials: "include",
-      headers: opts.body
-        ? { "Content-Type": "application/json", Accept: "application/json" }
-        : { Accept: "application/json" },
-      body: opts.body ? JSON.stringify(opts.body) : undefined,
-    });
-    if (res.status === 401) throw Object.assign(new Error("not_logged_in"), { code: 401 });
-    if (res.status === 403) throw Object.assign(new Error("forbidden"), { code: 403 });
-    if (!res.ok) {
-      let detail = res.statusText;
-      try { const j = await res.json(); detail = j.error || detail; } catch {}
-      throw Object.assign(new Error(detail), { code: res.status });
+    if (!API_BASE) {
+      throw Object.assign(new Error("Dashboard backend not configured"), { code: "no_backend" });
     }
-    return res.json();
+    const url = API_BASE + path;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+    let res;
+    try {
+      res = await fetch(url, {
+        method: opts.method || "GET",
+        credentials: "include",
+        signal: controller.signal,
+        headers: opts.body
+          ? { "Content-Type": "application/json", Accept: "application/json" }
+          : { Accept: "application/json" },
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+      });
+    } catch (e) {
+      clearTimeout(timer);
+      if (e && e.name === "AbortError") {
+        if (DEBUG) console.warn(`[dashboard] ${path} timed out after ${API_TIMEOUT_MS}ms`);
+        throw Object.assign(new Error("Backend timed out"), { code: "timeout" });
+      }
+      // TypeError "Failed to fetch" — usually CORS, network, or DNS.
+      if (DEBUG) console.warn(`[dashboard] ${path} fetch failed:`, e && e.message);
+      throw Object.assign(new Error("Backend unreachable (network or CORS)"), { code: "network" });
+    }
+    clearTimeout(timer);
+
+    const ctype = res.headers.get("content-type") || "";
+    let body = null;
+    try {
+      if (ctype.includes("application/json")) body = await res.json();
+      else { const t = await res.text(); body = t ? { error: t.slice(0, 200) } : null; }
+    } catch {}
+
+    if (DEBUG) console.log(`[dashboard] ${path} → ${res.status} ${ctype.split(";")[0] || ""}`, body || "(no body)");
+
+    if (res.ok) return body;
+
+    const err = new Error((body && (body.error || body.message)) || res.statusText || `HTTP ${res.status}`);
+    err.code = res.status;
+    err.data = body;
+    throw err;
   }
 
   const auth = {
@@ -661,9 +712,21 @@
       return content.append(notice("error", "Access denied",
         "You don't have permission to view this server's settings. Manage Server or Administrator permission is required."));
     }
-    if (err.message === "backend_not_configured") {
+    if (err.code === "no_backend") {
       state.user = null;
       return renderNoBackend();
+    }
+    if (err.code === "timeout") {
+      return content.append(notice("error", "Backend timed out",
+        "The backend didn't respond within 8 seconds. Try again in a minute."));
+    }
+    if (err.code === "network") {
+      return content.append(notice("error", "Backend unreachable",
+        "Couldn't connect to the dashboard backend (CORS or network)."));
+    }
+    if (err.code === 404) {
+      return content.append(notice("error", "Route not found",
+        "This dashboard route isn't deployed yet on the backend."));
     }
     content.append(notice("error", "Couldn't load", err.message || "Unknown error"));
   }
@@ -671,10 +734,25 @@
   /* ============================================================
      Actions
      ============================================================ */
-  async function loadInitial(force) {
+  function renderError(title, detail, withRetry) {
+    clear(root);
+    root.append(notice("error", title, detail));
+    if (withRetry !== false) {
+      root.append(h("div", { class: "dash-actions", style: { justifyContent: "center", marginTop: "16px", flexWrap: "wrap" } },
+        btn("Retry", { kind: "btn-primary", onclick: () => loadInitial() }),
+        btn("Invite Bot", { kind: "btn-ghost", href: cfg.links && cfg.links.inviteBot, external: true }),
+        btn("Join Support", { kind: "btn-outline", href: cfg.links && cfg.links.supportDiscord, external: true })
+      ));
+    }
+  }
+
+  async function loadInitial() {
     clear(root);
     root.append(h("div", { class: "dash-loading" }, h("div", { class: "dash-spinner" }), "Connecting…"));
+
+    // Empty config → no fetch, show backend-not-configured state immediately
     if (!API_BASE) return renderNoBackend();
+
     try {
       const me = await data.me();
       state.user = me.user;
@@ -682,13 +760,51 @@
       state.guilds = g.guilds || [];
       render();
     } catch (e) {
-      if (e.code === 401 || e.message === "not_logged_in") {
-        state.user = null;
-        return renderLoggedOut();
+      if (DEBUG) console.error("[dashboard] loadInitial failed:", e.code, e.message);
+
+      switch (e.code) {
+        case "no_backend":
+          return renderNoBackend();
+
+        case 401:
+          state.user = null;
+          return renderLoggedOut();
+
+        case 403:
+          return renderError(
+            "Access denied",
+            "You don't have permission to access the dashboard. If you think this is a mistake, contact support."
+          );
+
+        case 404:
+          return renderError(
+            "Dashboard API not found",
+            "The /api/dashboard/me route returned 404. The bot's dashboard backend routes may not be deployed yet. See the backend/ README for setup."
+          );
+
+        case 500:
+        case 502:
+        case 503:
+          return renderError(
+            "Dashboard backend error",
+            `The backend returned ${e.code}. Check the bot's server logs on Square Cloud.`
+          );
+
+        case "timeout":
+          return renderError(
+            "Dashboard backend timed out",
+            `The backend at ${API_BASE} did not respond within 8 seconds. It may be offline, starting up, or sleeping. Try again in a minute.`
+          );
+
+        case "network":
+          return renderError(
+            "Couldn't reach the dashboard backend",
+            `The browser couldn't connect to ${API_BASE}. Common causes: (1) the backend URL in config.js is wrong, (2) CORS blocked the request because DASHBOARD_ALLOWED_ORIGIN doesn't match this site's origin, (3) the backend is offline. Check the browser console for the exact error.`
+          );
+
+        default:
+          return renderError("Couldn't load dashboard", e.message || "Unknown error");
       }
-      clear(root);
-      root.append(notice("error", "Couldn't reach the dashboard backend",
-        `${e.message}. If this persists, the backend may be offline or the SITE_CONFIG.backendApiUrl is wrong.`));
     }
   }
 
