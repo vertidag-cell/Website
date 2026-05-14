@@ -163,6 +163,16 @@
     audit: (gid) => api(`/api/dashboard/guilds/${gid}/audit-log`),
     channels: (gid) => api(`/api/dashboard/guilds/${gid}/discord/channels`),
     roles: (gid) => api(`/api/dashboard/guilds/${gid}/discord/roles`),
+    // Role menu CRUD
+    rmList: (gid) => api(`/api/dashboard/guilds/${gid}/role-menus`),
+    rmGet: (gid, id) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}`),
+    rmCreate: (gid, body) => api(`/api/dashboard/guilds/${gid}/role-menus`, { method: "POST", body }),
+    rmUpdate: (gid, id, body) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}`, { method: "PATCH", body }),
+    rmDelete: (gid, id) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}`, { method: "DELETE" }),
+    rmOptAdd: (gid, id, body) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}/options`, { method: "POST", body }),
+    rmOptUpdate: (gid, id, oid, body) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}/options/${oid}`, { method: "PATCH", body }),
+    rmOptDelete: (gid, id, oid) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}/options/${oid}`, { method: "DELETE" }),
+    rmPost: (gid, id) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}/post`, { method: "POST" }),
   };
 
   /* ============================================================
@@ -342,20 +352,20 @@
   // tab isn't wired yet (configure in Discord for now).
   const SETUP_HUB = [
     { id: "levels",      label: "Levels",      emoji: "⚡", module: "xp",            flag: "xp" },
-    { id: "giveaways",   label: "Giveaways",   emoji: "🎉", module: "giveaways",     flag: null,         tier: "premium" },
     { id: "welcome",     label: "Welcome",     emoji: "👋", module: "welcome",       flag: "welcome" },
     { id: "roleMenus",   label: "Role Menus",  emoji: "🎭", module: "roleMenus",     flag: "roleMenus" },
-    { id: "suggestions", label: "Suggestions", emoji: "🔔", module: null,            flag: null,         comingSoon: true },
-    { id: "events",      label: "Events",      emoji: "📋", module: "events",        flag: null,         tier: "premium" },
     { id: "polls",       label: "Polls",       emoji: "📊", module: "polls",         flag: null },
-    { id: "sticky",      label: "Sticky",      emoji: "📌", module: null,            flag: null,         comingSoon: true },
-    { id: "credits",     label: "Credits",     emoji: "💰", module: "credits",       flag: "credits" },
-    { id: "tickets",     label: "Tickets",     emoji: "🎫", module: "tickets",       flag: "tickets" },
+    { id: "moderation",  label: "Moderation",  emoji: "🛡️", module: "moderation",   flag: "moderation" },
+    { id: "tickets",     label: "Tickets",     emoji: "🎫", module: "tickets",       flag: "tickets",    tier: "premium" },
+    { id: "credits",     label: "Credits",     emoji: "💰", module: "credits",       flag: "credits",    tier: "premium" },
     { id: "payments",    label: "Payments",    emoji: "💳", module: "payments",      flag: "payments",   tier: "premium" },
     { id: "staffPay",    label: "Staff Pay",   emoji: "💷", module: "staffPay",      flag: "staffPay",   tier: "premium" },
     { id: "hype",        label: "Hype System", emoji: "🔥", module: "hype",          flag: "hype",       tier: "premium" },
-    { id: "population",  label: "Cluster Pop", emoji: "📡", module: "population",    flag: "population" },
+    { id: "giveaways",   label: "Giveaways",   emoji: "🎉", module: "giveaways",     flag: null,         tier: "premium" },
+    { id: "events",      label: "Events",      emoji: "📋", module: "events",        flag: null,         tier: "premium" },
     { id: "branding",    label: "Branding",    emoji: "🎨", module: "branding",      flag: "branding",   tier: "premium" },
+    { id: "suggestions", label: "Suggestions", emoji: "🔔", module: null,            flag: null,         comingSoon: true },
+    { id: "sticky",      label: "Sticky",      emoji: "📌", module: null,            flag: null,         comingSoon: true },
   ];
 
   async function loadSetupHub(content) {
@@ -982,33 +992,336 @@
   /* ============================================================
      Tab: Role Menus (info card, deeper UI on roadmap)
      ============================================================ */
-  function renderRoleMenusInfo(content) {
-    clear(content);
-    // Re-fetch the module so we get quickSetupAvailable
-    data.module(state.selectedGuildId, "roleMenus").then((m) => {
+  /* ============================================================
+     Role Menus — full CRUD: profiles → options → post to Discord
+     ============================================================ */
+
+  // Local state for which menu we're editing (null = list view)
+  let _rmEditingId = null;
+
+  async function renderRoleMenusInfo(content) {
+    if (!state.channels || !state.roles) await loadDiscordLists();
+    if (_rmEditingId) return renderRoleMenuDetail(content, _rmEditingId);
+    return renderRoleMenuList(content);
+  }
+
+  async function renderRoleMenuList(content) {
+    try {
+      const r = await data.rmList(state.selectedGuildId);
+      const menus = r.menus || [];
       clear(content);
-      content.append(
-        h("div", { class: "dash-card" },
-          h("h3", null, "Role Menus"),
-          h("p", null, "No artificial limits — make as many role menus as you need. The dashboard exposes Quick Setup for a Ping Roles menu today; full CRUD remains in ", h("code", null, "/setup"), " → Role Menus.")
+
+      // Header
+      const header = h("div", { class: "dash-card" },
+        h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" } },
+          h("div", null,
+            h("h3", { style: { margin: 0 } }, "Role Menus"),
+            h("p", { style: { margin: "4px 0 0", color: "var(--text-muted)" } },
+              "Build role-selection panels — dropdowns or buttons — and post them to any channel. No artificial limits.")
+          ),
+          h("button", { type: "button", class: "btn btn-primary", onclick: () => openCreateMenuModal(content) },
+            "+ New Menu")
         )
       );
-      if (m.module?.quickSetupAvailable) {
-        const card = h("div", { class: "dash-card" });
-        card.append(renderQuickSetupBanner({ ...m.module, name: "roleMenus" }, content));
-        content.append(card);
+      content.append(header);
+
+      // Quick Setup banner (still useful for "auto Ping Roles menu")
+      data.module(state.selectedGuildId, "roleMenus").then((mod) => {
+        if (mod.module?.quickSetupAvailable) {
+          const card = h("div", { class: "dash-card" });
+          card.append(renderQuickSetupBanner(mod.module, content));
+          // place it right after header
+          header.after(card);
+        }
+      }).catch(() => {});
+
+      // Empty state
+      if (!menus.length) {
+        content.append(
+          h("div", { class: "dash-card", style: { textAlign: "center", padding: "40px 24px" } },
+            h("div", { style: { fontSize: "2rem", marginBottom: "8px" } }, "🎭"),
+            h("h4", { style: { margin: "0 0 6px" } }, "No role menus yet"),
+            h("p", { style: { color: "var(--text-muted)", margin: "0 0 18px" } },
+              "Create one to let members pick roles from a dropdown or button panel."),
+            h("button", { type: "button", class: "btn btn-primary", onclick: () => openCreateMenuModal(content) },
+              "+ Create your first menu")
+          )
+        );
+        return;
       }
+
+      // Menu cards
+      const grid = h("div", { class: "rm-list" });
+      menus.forEach((m) => grid.appendChild(renderMenuCard(m, content)));
+      content.append(grid);
+    } catch (e) { renderTabError(content, e); }
+  }
+
+  function renderMenuCard(m, content) {
+    const ch = (state.channels || []).find((c) => c.id === m.channelId);
+    const card = h("button", { type: "button", class: "rm-card", onclick: () => { _rmEditingId = m.id; renderActiveTab(content); } },
+      h("div", { class: "rm-card-top" },
+        h("div", { class: "rm-card-icon" }, m.type === "button" ? "▢" : "▾"),
+        h("div", { class: "rm-card-info" },
+          h("div", { class: "rm-card-name" }, m.name),
+          h("div", { class: "rm-card-sub" },
+            ch ? `${ch.type === 15 ? "📋" : "#"} ${ch.name}` : "(channel missing)",
+            " · ",
+            `${m.options.length} option${m.options.length === 1 ? "" : "s"}`
+          )
+        ),
+        m.posted
+          ? h("span", { class: "rm-tag posted" }, "Posted")
+          : h("span", { class: "rm-tag draft" }, "Draft")
+      ),
+      h("div", { class: "rm-card-meta" },
+        h("span", { class: "rm-meta-pill" }, m.type === "button" ? "Buttons" : "Dropdown"),
+        h("span", { class: "rm-card-arrow" }, "→")
+      )
+    );
+    return card;
+  }
+
+  async function openCreateMenuModal(content) {
+    const form = h("form");
+    const nameInput = h("input", { id: "rm-new-name", type: "text", placeholder: "e.g. Ping Roles", maxlength: 64 });
+    const descInput = h("input", { id: "rm-new-desc", type: "text", placeholder: "Pick the pings you want to get", maxlength: 256 });
+    const typeSelect = h("select", { id: "rm-new-type" },
+      h("option", { value: "dropdown", selected: true }, "Dropdown (single panel)"),
+      h("option", { value: "button" }, "Buttons (one per role)")
+    );
+    const channelSelect = renderChannelSelect("rm-new-channel", "channel", state.channels || [], "");
+
+    form.appendChild(h("div", { class: "dash-field" }, h("label", { for: "rm-new-name" }, "Menu name"), nameInput));
+    form.appendChild(h("div", { class: "dash-field" }, h("label", { for: "rm-new-desc" }, "Description (optional)"), descInput));
+    form.appendChild(h("div", { class: "dash-field" }, h("label", { for: "rm-new-type" }, "Type"), typeSelect));
+    form.appendChild(h("div", { class: "dash-field" }, h("label", { for: "rm-new-channel" }, "Post in channel"), channelSelect));
+
+    const result = await modalForm("Create new role menu", form);
+    if (!result) return;
+
+    try {
+      const r = await data.rmCreate(state.selectedGuildId, {
+        name: nameInput.value.trim(),
+        description: descInput.value.trim(),
+        type: typeSelect.value,
+        channelId: channelSelect.value,
+      });
+      toast("success", `Created "${r.menu.name}".`);
+      _rmEditingId = r.menu.id;
+      renderActiveTab(content);
+    } catch (e) {
+      toast("error", e.message || "Couldn't create menu");
+    }
+  }
+
+  async function renderRoleMenuDetail(content, menuId) {
+    try {
+      const r = await data.rmGet(state.selectedGuildId, menuId);
+      const m = r.menu;
+      clear(content);
+
+      // Back + identity + actions row
       content.append(
         h("div", { class: "dash-card" },
-          h("h4", null, "Want full CRUD?"),
-          h("p", null, "Add/edit/delete menus from inside Discord with ", h("code", null, "/setup"), " → Role Menus. Settings sync with the dashboard automatically."),
-          h("div", { class: "dash-actions" },
-            btn("Open Discord", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
-            btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
+          h("div", { style: { display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" } },
+            h("button", { type: "button", class: "btn btn-ghost", onclick: () => { _rmEditingId = null; renderActiveTab(content); } }, "← All menus"),
+            h("div", { style: { flex: 1 } },
+              h("h3", { style: { margin: 0 } }, m.name),
+              h("div", { style: { color: "var(--text-muted)", fontSize: "0.86rem", marginTop: "2px" } },
+                m.posted ? h("span", { class: "rm-tag posted" }, "Posted to Discord") : h("span", { class: "rm-tag draft" }, "Draft — not posted yet")
+              )
+            ),
+            h("button", { type: "button", class: "btn btn-primary", onclick: () => doPostMenu(menuId, content) },
+              m.posted ? "🔄 Re-post" : "📤 Post to Discord"),
+            h("button", { type: "button", class: "btn btn-ghost", onclick: () => doDeleteMenu(menuId, content) },
+              "Delete menu")
           )
         )
       );
-    }).catch((e) => renderTabError(content, e));
+
+      // Menu settings form
+      content.append(renderMenuSettings(m, content));
+
+      // Options editor
+      content.append(renderOptionsEditor(m, content));
+    } catch (e) { renderTabError(content, e); }
+  }
+
+  function renderMenuSettings(m, content) {
+    const nameInput = h("input", { id: "rm-edit-name", type: "text", value: m.name, maxlength: 64 });
+    const descInput = h("input", { id: "rm-edit-desc", type: "text", value: m.description || "", maxlength: 256 });
+    const typeSelect = h("select", { id: "rm-edit-type" },
+      h("option", { value: "dropdown", selected: m.type === "dropdown" || null }, "Dropdown (single panel)"),
+      h("option", { value: "button", selected: m.type === "button" || null }, "Buttons (one per role)")
+    );
+    const channelSelect = renderChannelSelect("rm-edit-channel", "channel", state.channels || [], m.channelId);
+
+    const card = h("div", { class: "dash-card" },
+      h("h4", { style: { margin: "0 0 12px" } }, "Menu settings"),
+      h("div", { class: "dash-form" },
+        h("div", { class: "dash-field" }, h("label", { for: "rm-edit-name" }, "Menu name"), nameInput),
+        h("div", { class: "dash-field" }, h("label", { for: "rm-edit-desc" }, "Description"), descInput),
+        h("div", { class: "dash-form-row" },
+          h("div", { class: "dash-field" }, h("label", { for: "rm-edit-type" }, "Type"), typeSelect),
+          h("div", { class: "dash-field" }, h("label", { for: "rm-edit-channel" }, "Post in channel"), channelSelect)
+        ),
+        h("div", { class: "dash-actions" },
+          h("button", { type: "button", class: "btn btn-primary", onclick: () => doSaveMenu(m.id, content) }, "Save settings")
+        )
+      )
+    );
+    return card;
+  }
+
+  async function doSaveMenu(menuId, content) {
+    const body = {
+      name: document.getElementById("rm-edit-name").value.trim(),
+      description: document.getElementById("rm-edit-desc").value.trim(),
+      type: document.getElementById("rm-edit-type").value,
+      channelId: document.getElementById("rm-edit-channel").value,
+    };
+    try {
+      await data.rmUpdate(state.selectedGuildId, menuId, body);
+      toast("success", "Menu settings saved");
+      renderActiveTab(content);
+    } catch (e) {
+      toast("error", e.message || "Save failed");
+    }
+  }
+
+  function renderOptionsEditor(m, content) {
+    const list = h("div", { class: "rm-options" });
+    m.options.forEach((o) => list.appendChild(renderOptionRow(m, o, content)));
+
+    // Add option form
+    const addForm = renderAddOptionForm(m, content);
+
+    return h("div", { class: "dash-card" },
+      h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" } },
+        h("h4", { style: { margin: 0 } }, "Role options"),
+        h("span", { style: { color: "var(--text-dim)", fontSize: "0.82rem" } },
+          `${m.options.length} / 25 options`)
+      ),
+      m.options.length ? list : h("div", { class: "rm-empty" }, "No options yet. Add the first role below."),
+      addForm
+    );
+  }
+
+  function renderOptionRow(m, o, content) {
+    const role = (state.roles || []).find((r) => r.id === o.roleId);
+    const row = h("div", { class: "rm-option-row" },
+      h("div", { class: "rm-option-emoji" }, o.emoji || "·"),
+      h("div", { class: "rm-option-info" },
+        h("div", { class: "rm-option-label" }, o.label),
+        h("div", { class: "rm-option-role" },
+          role ? `@${role.name}` : `(role missing: ${o.roleId})`,
+          o.description ? ` · ${o.description}` : ""
+        )
+      ),
+      h("button", { type: "button", class: "btn btn-ghost rm-option-del", title: "Remove option",
+        onclick: () => doDeleteOption(m.id, o.id, content) }, "×")
+    );
+    return row;
+  }
+
+  function renderAddOptionForm(m, content) {
+    if (m.options.length >= 25) {
+      return h("div", { class: "rm-empty" }, "Maximum of 25 options reached.");
+    }
+    const roleSel = renderSelect("rm-add-role", "role", [{ id: "", name: "— pick a role —" }, ...(state.roles || [])], "", (r) => r.id ? `@${r.name}` : r.name);
+    const labelIn = h("input", { id: "rm-add-label", type: "text", placeholder: "Label shown in menu", maxlength: 80 });
+    const descIn = h("input", { id: "rm-add-desc", type: "text", placeholder: "Description (optional)", maxlength: 100 });
+    const emojiIn = h("input", { id: "rm-add-emoji", type: "text", placeholder: "🎮", maxlength: 32, style: { textAlign: "center" } });
+    const wrap = h("div", { class: "rm-add-form" },
+      h("div", { class: "dash-field" }, h("label", { for: "rm-add-role" }, "Role"), roleSel),
+      h("div", { class: "dash-field" }, h("label", { for: "rm-add-label" }, "Label"), labelIn),
+      h("div", { class: "rm-add-grid" },
+        h("div", { class: "dash-field" }, h("label", { for: "rm-add-emoji" }, "Emoji"), emojiIn),
+        h("div", { class: "dash-field" }, h("label", { for: "rm-add-desc" }, "Description"), descIn)
+      ),
+      h("button", { type: "button", class: "btn btn-primary",
+        onclick: () => doAddOption(m.id, roleSel, labelIn, descIn, emojiIn, content) }, "+ Add option")
+    );
+    return wrap;
+  }
+
+  async function doAddOption(menuId, roleSel, labelIn, descIn, emojiIn, content) {
+    const body = {
+      roleId: roleSel.value,
+      label: labelIn.value.trim(),
+      description: descIn.value.trim(),
+      emoji: emojiIn.value.trim() || null,
+    };
+    if (!body.roleId) return toast("error", "Pick a role first");
+    if (!body.label) return toast("error", "Add a label");
+    try {
+      await data.rmOptAdd(state.selectedGuildId, menuId, body);
+      toast("success", "Option added");
+      renderActiveTab(content);
+    } catch (e) {
+      toast("error", e.message || "Couldn't add option");
+    }
+  }
+
+  async function doDeleteOption(menuId, optionId, content) {
+    if (!confirm("Remove this option from the menu?")) return;
+    try {
+      await data.rmOptDelete(state.selectedGuildId, menuId, optionId);
+      toast("success", "Option removed");
+      renderActiveTab(content);
+    } catch (e) {
+      toast("error", e.message);
+    }
+  }
+
+  async function doPostMenu(menuId, content) {
+    try {
+      const r = await data.rmPost(state.selectedGuildId, menuId);
+      toast("success", r.summary || "Menu posted to Discord", 5000);
+      renderActiveTab(content);
+    } catch (e) {
+      toast("error", e.data?.summary || e.message || "Couldn't post menu", 5500);
+    }
+  }
+
+  async function doDeleteMenu(menuId, content) {
+    if (!confirm("Delete this entire role menu? The Discord message will be deleted too.")) return;
+    try {
+      await data.rmDelete(state.selectedGuildId, menuId);
+      toast("success", "Menu deleted");
+      _rmEditingId = null;
+      renderActiveTab(content);
+    } catch (e) {
+      toast("error", e.message);
+    }
+  }
+
+  /** Generic form modal — confirms or cancels, returns Promise<boolean>. */
+  function modalForm(title, formNode) {
+    return new Promise((resolve) => {
+      const overlay = h("div", { class: "dash-modal-overlay" });
+      const close = (ok) => {
+        overlay.classList.remove("show");
+        setTimeout(() => overlay.remove(), 200);
+        resolve(ok);
+      };
+      const modal = h("div", { class: "dash-modal" },
+        h("h3", null, title),
+        formNode,
+        h("div", { class: "dash-modal-actions" },
+          h("button", { type: "button", class: "btn btn-ghost", onclick: () => close(false) }, "Cancel"),
+          h("button", { type: "button", class: "btn btn-primary", onclick: () => close(true) }, "Create")
+        )
+      );
+      overlay.append(modal);
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) close(false); });
+      document.addEventListener("keydown", function esc(ev) {
+        if (ev.key === "Escape") { document.removeEventListener("keydown", esc); close(false); }
+      });
+      document.body.appendChild(overlay);
+      requestAnimationFrame(() => overlay.classList.add("show"));
+    });
   }
 
   /* ============================================================
