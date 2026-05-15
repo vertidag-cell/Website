@@ -237,6 +237,7 @@
     selectedGuildId: null,
     modules: null,         // schema list from /api/dashboard/modules
     channels: null,        // per-selected-guild
+    categories: null,      // per-selected-guild (Discord category channels)
     roles: null,           // per-selected-guild
     activeTab: "overview", // module name OR "overview" OR "audit"
   };
@@ -253,6 +254,7 @@
     quickSetup: (gid, name, body) => api(`/api/dashboard/guilds/${gid}/modules/${name}/quick-setup`, { method: "POST", body: body || {} }),
     audit: (gid) => api(`/api/dashboard/guilds/${gid}/audit-log`),
     channels: (gid) => api(`/api/dashboard/guilds/${gid}/discord/channels`),
+    categories: (gid) => api(`/api/dashboard/guilds/${gid}/discord/categories`),
     roles: (gid) => api(`/api/dashboard/guilds/${gid}/discord/roles`),
     // Role menu CRUD
     rmList: (gid) => api(`/api/dashboard/guilds/${gid}/role-menus`),
@@ -1162,8 +1164,8 @@
      ============================================================ */
   async function loadModule(content, name) {
     try {
-      // Make sure channel/role pickers are ready
-      if (!state.channels || !state.roles) await loadDiscordLists();
+      // Make sure channel/category/role pickers are ready
+      if (!state.channels || !state.roles || !state.categories) await loadDiscordLists();
 
       const m = await data.module(state.selectedGuildId, name);
       clear(content);
@@ -1213,14 +1215,17 @@
 
   async function loadDiscordLists() {
     try {
-      const [c, r] = await Promise.all([
+      const [c, cat, r] = await Promise.all([
         data.channels(state.selectedGuildId),
+        data.categories(state.selectedGuildId),
         data.roles(state.selectedGuildId),
       ]);
       state.channels = c.channels || [];
+      state.categories = cat.categories || [];
       state.roles = r.roles || [];
     } catch (e) {
       state.channels = [];
+      state.categories = [];
       state.roles = [];
     }
   }
@@ -1550,7 +1555,25 @@
     try {
       const res = await data.quickSetup(state.selectedGuildId, mod.name, body);
       toast("success", res.summary || `${mod.label} Quick Setup complete.`, 6000);
-      loadModule(content, mod.name); // reload to pick up new config
+
+      // Quick Setup (especially Tickets) creates brand-new Discord channels
+      // and roles. The cached state.channels / state.roles lists are now
+      // stale — if we re-render the form against them, the channel/role
+      // <select>s won't contain an <option> for the freshly-created IDs and
+      // will show "— none —" even though the backend saved them correctly.
+      // Bust the cache so loadModule re-fetches the live Discord lists.
+      state.channels = null;
+      state.categories = null;
+      state.roles = null;
+
+      // Show a skeleton immediately so the reload feels responsive while
+      // we re-fetch channels/roles + module values.
+      clear(content);
+      content.append(renderGenericSkeleton());
+      await loadModule(content, mod.name); // reload to pick up new config
+      // Pulse the top-bar Saved indicator
+      const stat = document.getElementById("dash-save-status");
+      if (stat) { stat.classList.add("show"); setTimeout(() => stat.classList.remove("show"), 1800); }
     } catch (e) {
       if (btn) { btn.disabled = false; btn.textContent = original; }
       const msg = e.data?.summary || e.data?.message || e.message || "Quick Setup failed";
@@ -1623,6 +1646,11 @@
         break;
       case "channel":
         input = renderChannelSelect(id, f.key, state.channels || [], value);
+        break;
+      case "category":
+        input = renderSelect(id, f.key,
+          [{ id: "", name: "— none —" }, ...(state.categories || [])], value,
+          (c) => c.id ? "▸ " + c.name : c.name);
         break;
       case "role":
         input = renderSelect(id, f.key, [{ id: "", name: "— none —" }, ...(state.roles || [])], value, (r) => `@${r.name}`);
@@ -3173,6 +3201,7 @@
     state.selectedGuildId = id;
     state.activeTab = "overview";
     state.channels = null; // reset cached lists for new guild
+    state.categories = null;
     state.roles = null;
     render();
   }
@@ -3184,6 +3213,7 @@
     state.selectedGuildId = null;
     state.modules = null;
     state.channels = null;
+    state.categories = null;
     state.roles = null;
     render();
   }
