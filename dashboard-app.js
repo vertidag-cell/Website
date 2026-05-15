@@ -68,6 +68,97 @@
   }
 
   /* ============================================================
+     Icon library — small inline SVGs keyed by name.
+     ------------------------------------------------------------
+     Kept minimal (24x24 stroke icons) so we don't ship an icon
+     library just for the dashboard. Use icon(name, opts?) to get
+     a <span class="dash-tab-ico"> wrapping the SVG, or call
+     iconSvg(name) for the raw SVG element.
+  */
+  const ICON_PATHS = {
+    // Layout / nav
+    grid:      'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+    list:      'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+    activity:  'M22 12h-4l-3 9L9 3l-3 9H2',
+    flag:      'M4 22V4l9 5-9 5M4 4l16 6-16 6',
+    // Modules
+    hand:      'M9 11V6a2 2 0 1 1 4 0v5M13 11V4a2 2 0 1 1 4 0v9M17 11V7a2 2 0 1 1 4 0v10a6 6 0 0 1-6 6h-2a8 8 0 0 1-8-8v-3a2 2 0 0 1 4 0v4',
+    shield:    'M12 2L4 5v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V5l-8-3z',
+    palette:   'M12 2a10 10 0 1 0 10 10c0-1.66-1.34-3-3-3h-2a3 3 0 0 1-3-3V4a2 2 0 0 0-2-2z',
+    masks:     'M8 4a4 4 0 0 0-4 4v3a6 6 0 0 0 12 0V8a4 4 0 0 0-4-4zM4 11s2 2 8 2 8-2 8-2',
+    poll:      'M3 3v18h18M7 14v4M12 9v9M17 13v5',
+    sword:     'M14 14l7 7v-7zM14 14L4 4 4 11l10 10z',
+    ticket:    'M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4a2 2 0 0 0 0 4v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4a2 2 0 0 0 0-4z',
+    coin:      'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 6v12M9 9h4.5a2.5 2.5 0 0 1 0 5H9',
+    creditCard:'M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM2 10h20',
+    wallet:    'M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7V5a2 2 0 0 1 2-2h12v4M17 13h3',
+    flame:     'M14 2c0 6 4 7 4 12a6 6 0 1 1-12 0c0-4 3-5 3-9 2 2 2 4 5 6 0-3 0-6 0-9z',
+    trophy:    'M8 4h8v4a4 4 0 0 1-8 0zM4 6h4M16 6h4M12 12v4M8 20h8',
+    gift:      'M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7',
+    calendar:  'M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18M8 2v4M16 2v4',
+    template:  'M3 3h18v4H3zM3 11h7v10H3zM14 11h7v10h-7z',
+    fileText:  'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h6',
+    lifeRing:  'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4.9 4.9l3.5 3.5M15.6 15.6l3.5 3.5M19.1 4.9l-3.5 3.5M8.4 15.6l-3.5 3.5',
+    cog:       'M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82h0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+    // Utility / state
+    lock:      'M5 11a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM8 9V7a4 4 0 1 1 8 0v2',
+    sparkle:   'M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M15 15l4 4M5 19l4-4M15 9l4-4',
+    arrowRight:'M5 12h14M13 5l7 7-7 7',
+    menu:      'M3 6h18M3 12h18M3 18h18',
+    user:      'M20 21a8 8 0 1 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10z',
+    logout:    'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
+    refresh:   'M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5',
+    plug:      'M9 2v6M15 2v6M5 8h14v4a7 7 0 0 1-14 0zM12 19v3',
+  };
+  function iconSvg(name) {
+    const d = ICON_PATHS[name] || ICON_PATHS.list;
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.8");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", d);
+    svg.appendChild(p);
+    return svg;
+  }
+  function icon(name, cls) {
+    const wrap = h("span", { class: cls || "dash-tab-ico" });
+    wrap.appendChild(iconSvg(name));
+    return wrap;
+  }
+
+  // Map every dashboard tab to an icon
+  const TAB_ICONS = {
+    "setup-hub":  "grid",
+    overview:     "activity",
+    welcome:      "hand",
+    autoRoles:    "shield",
+    roleMenus:    "masks",
+    polls:        "poll",
+    moderation:   "shield",
+    xp:           "trophy",
+    pets:         "flag",
+    tickets:      "ticket",
+    credits:      "coin",
+    payments:     "creditCard",
+    staffPay:     "wallet",
+    hype:         "flame",
+    giveaways:    "gift",
+    events:       "calendar",
+    branding:     "palette",
+    serverTemplates: "template",
+    logs:         "fileText",
+    premium:      "sparkle",
+    audit:        "fileText",
+    support:      "lifeRing",
+  };
+  function tabIcon(id) { return icon(TAB_ICONS[id] || "list"); }
+
+  /* ============================================================
      DOM helpers
      ============================================================ */
   function h(tag, attrs, ...children) {
@@ -212,16 +303,22 @@
 
   function renderLoggedOut() {
     clear(root);
-    root.append(
-      h("div", { class: "dash-card", style: { textAlign: "center", maxWidth: "560px", margin: "0 auto" } },
-        h("h2", { style: { margin: "0 0 8px", fontSize: "1.5rem" } }, "Customer Dashboard"),
-        h("p", { style: { color: "var(--text-muted)", margin: "0 0 22px" } },
-          "Log in with Discord to manage your bot's setup, branding, /pop, subscriptions, and every module."),
-        h("a", { class: "btn btn-lg", href: auth.loginUrl(), style: { background: "#5865f2", color: "#fff", boxShadow: "0 8px 24px rgba(88,101,242,0.45)" } }, "Continue with Discord"),
-        h("p", { style: { fontSize: "0.74rem", color: "var(--text-dim)", margin: "18px 0 0" } },
-          "We request only ", h("code", null, "identify"), " and ", h("code", null, "guilds"), " scopes.")
-      )
+    const card = h("div", { class: "dash-empty-card", style: { maxWidth: "560px", margin: "40px auto" } });
+    const ico = h("div", { class: "ico" });
+    ico.appendChild(iconSvg("user"));
+    card.append(
+      ico,
+      h("h4", null, "Sign in to your Quick's ARK Bot dashboard"),
+      h("p", null,
+        "Manage every module, branding, role menus, staff tiers, events and more — securely synced with your Discord server."),
+      h("a", { class: "btn btn-lg",
+        href: auth.loginUrl(),
+        style: { background: "#5865f2", color: "#fff", boxShadow: "0 8px 24px rgba(88,101,242,0.45)", fontWeight: 700 } },
+        "Continue with Discord"),
+      h("p", { style: { fontSize: "0.74rem", color: "var(--dash-muted-2)", margin: "16px 0 0" } },
+        "We request only ", h("code", null, "identify"), " and ", h("code", null, "guilds"), " scopes — no message read, no member list.")
     );
+    root.append(card);
   }
 
   function renderGuildPicker() {
@@ -237,14 +334,20 @@
       )
     );
     if (!state.guilds.length) {
-      root.append(
-        notice("warn", "No manageable servers",
-          "We didn't find any Discord servers where you have Manage Server / Administrator AND the bot is installed. Invite the bot to a server you own, then refresh."),
-        h("div", { class: "dash-actions", style: { marginTop: "16px" } },
-          btn("Invite Bot", { href: cfg.links?.inviteBot, external: true }),
+      const card = h("div", { class: "dash-empty-card", style: { maxWidth: "620px", margin: "20px auto" } });
+      const ico = h("div", { class: "ico" });
+      ico.appendChild(iconSvg("shield"));
+      card.append(
+        ico,
+        h("h4", null, "No manageable servers"),
+        h("p", null,
+          "We didn't find any Discord servers where you have Manage Server / Administrator and the bot is installed. Invite the bot to a server you own, then refresh."),
+        h("div", { class: "dash-actions", style: { justifyContent: "center" } },
+          btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
           btn("Refresh", { kind: "btn-ghost", onclick: () => boot(true) })
         )
       );
+      root.append(card);
       return;
     }
     root.append(
@@ -273,27 +376,49 @@
   }
 
   /* ============================================================
-     Per-guild dashboard
+     Per-guild dashboard — premium SaaS layout
      ============================================================ */
   async function renderGuildDashboard() {
     clear(root);
     const guild = state.guilds.find((g) => g.id === state.selectedGuildId);
+    const plan = guild?.plan || "free";
 
-    // Top bar
-    root.append(
-      h("div", { class: "dash-userbar" },
-        h("button", { type: "button", class: "btn btn-ghost", onclick: () => { state.selectedGuildId = null; render(); } }, "← Servers"),
-        guild ? guildIcon(guild) : userAvatar(state.user),
-        h("div", { class: "who" },
-          h("div", { class: "who-name" }, guild?.name || "Loading…"),
-          h("div", { class: "who-sub" }, state.user.globalName || state.user.username)
-        ),
-        guild?.plan === "lifetime" ? h("span", { class: "dash-tag lifetime", style: { fontSize: "0.74rem" } }, "Lifetime")
-          : (guild?.plan === "monthly" || guild?.plan === "premium") ? h("span", { class: "dash-tag premium", style: { fontSize: "0.74rem" } }, "Premium")
-          : h("span", { class: "dash-tag free", style: { fontSize: "0.74rem" } }, "Free"),
-        btn("Log out", { kind: "btn-ghost", onclick: handleLogout })
-      )
+    // Mobile drawer toggle bar — only visible <= 980px via CSS.
+    // Lets users open the sidebar on phones.
+    const mobileBar = h("div", { class: "dash-mobile-bar" },
+      h("button", { type: "button", class: "menu-btn", "aria-label": "Open menu",
+        onclick: () => {
+          const side = root.querySelector(".dash-sidebar");
+          if (side) {
+            side.classList.toggle("open");
+            document.body.classList.toggle("dash-drawer-open", side.classList.contains("open"));
+          }
+        },
+      }, iconSvg("menu")),
+      h("div", { class: "label" }, guild?.name || "Dashboard"),
+      planPill(plan)
     );
+    root.append(mobileBar);
+
+    // Top bar — clean status row
+    const topbar = h("div", { class: "dash-userbar" });
+    topbar.append(
+      h("button", { type: "button", class: "btn btn-ghost", "aria-label": "Back to server picker",
+        onclick: () => { state.selectedGuildId = null; render(); } }, "← Servers"),
+      guild ? guildIcon(guild) : userAvatar(state.user),
+      h("div", { class: "who" },
+        h("div", { class: "who-name" }, guild?.name || "Loading…"),
+        h("div", { class: "who-sub" },
+          (state.user.globalName || state.user.username),
+          guild?.id ? h("span", { style: { marginLeft: "8px", color: "var(--dash-muted-2)" } }, "· " + guild.id.slice(-6)) : null
+        )
+      ),
+      h("div", { id: "dash-save-status", class: "dash-save-status" }, "Saved ✓"),
+      h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Bot Online"),
+      planPill(plan),
+      btn("Log out", { kind: "btn-ghost", onclick: handleLogout })
+    );
+    root.append(topbar);
 
     // Load modules schema once
     if (!state.modules) {
@@ -306,38 +431,102 @@
     }
 
     const layout = h("div", { class: "dash-layout" });
-
-    // Sidebar — Setup Hub + Overview + each module + Audit
-    const sideTabs = [
-      { id: "setup-hub", label: "Setup Hub", group: "core" },
-      { id: "overview", label: "Overview", group: "core" },
-      ...state.modules.map((m) => ({ id: m.name, label: m.label, tier: m.tier, group: m.tier === "premium" ? "premium" : "free" })),
-      { id: "premium", label: "Premium", group: "core" },
-      { id: "audit", label: "Audit Log", group: "core" },
-      { id: "support", label: "Support", group: "core" },
-    ];
-    const side = h("div", { class: "dash-sidebar", role: "tablist" },
-      ...sideTabs.map((t) => h("button", {
-        type: "button",
-        class: `dash-tab ${t.id === state.activeTab ? "active" : ""}`,
-        role: "tab",
-        onclick: () => { state.activeTab = t.id; render(); },
-      },
-        h("span", { class: "badge-dot" }),
-        t.label,
-        t.tier === "premium" ? h("span", { class: "dash-tab-tier" }, "PRO") : null
-      ))
-    );
-    layout.append(side);
-
+    layout.append(renderSidebar(plan));
     const content = h("div", { class: "dash-content" });
     layout.append(content);
     root.append(layout);
     renderActiveTab(content);
   }
 
+  /** Premium plan pill — used in top bar + mobile bar */
+  function planPill(plan) {
+    if (plan === "lifetime") return h("span", { class: "dash-status-pill lifetime" }, h("span", { class: "pill-dot" }), "Lifetime");
+    if (plan === "premium" || plan === "monthly") return h("span", { class: "dash-status-pill premium" }, h("span", { class: "pill-dot" }), "Premium");
+    return h("span", { class: "dash-status-pill" }, "Free");
+  }
+
+  /** Grouped sidebar with icons, sections, premium-locked indicators. */
+  function renderSidebar(plan) {
+    const isPremium = plan === "premium" || plan === "monthly" || plan === "lifetime";
+    const side = h("div", { class: "dash-sidebar", role: "tablist", "aria-label": "Dashboard navigation" });
+
+    // Brand block
+    side.append(
+      h("div", { class: "dash-side-brand" },
+        h("div", { class: "dash-side-brand-mark" }, iconSvg("flag")),
+        h("div", { class: "dash-side-brand-text" },
+          h("div", { class: "dash-side-brand-name" }, "Quick's ARK Bot"),
+          h("div", { class: "dash-side-brand-sub" }, "Dashboard")
+        )
+      )
+    );
+
+    // Build groups dynamically from state.modules
+    const free = state.modules.filter((m) => m.tier !== "premium").map((m) => m.name);
+    const prem = state.modules.filter((m) => m.tier === "premium").map((m) => m.name);
+
+    const groups = [
+      { label: "Core",          items: ["setup-hub", "overview"] },
+      { label: "Free Tools",    items: free },
+      { label: "Premium Tools", items: prem },
+      { label: "System",        items: ["premium", "audit", "support"] },
+    ];
+
+    const labels = {
+      "setup-hub": "Setup Hub",
+      overview:    "Overview",
+      premium:     "Premium",
+      audit:       "Audit Log",
+      support:     "Support",
+    };
+
+    groups.forEach((g) => {
+      if (!g.items.length) return;
+      side.append(h("div", { class: "dash-side-section" }, g.label));
+      g.items.forEach((id) => {
+        const mod = state.modules.find((m) => m.name === id);
+        const label = labels[id] || (mod?.label || id);
+        const isPremTier = !!mod && mod.tier === "premium";
+        const locked = isPremTier && !isPremium;
+        const tab = h("button", {
+          type: "button",
+          class: `dash-tab ${id === state.activeTab ? "active" : ""} ${locked ? "locked" : ""}`,
+          role: "tab",
+          "aria-selected": id === state.activeTab ? "true" : "false",
+          onclick: () => {
+            state.activeTab = id;
+            // Close drawer on mobile after picking a tab
+            const sb = root.querySelector(".dash-sidebar");
+            if (sb && sb.classList.contains("open")) {
+              sb.classList.remove("open");
+              document.body.classList.remove("dash-drawer-open");
+            }
+            render();
+          },
+        });
+        tab.append(tabIcon(id), label);
+        if (isPremTier) tab.append(h("span", { class: "dash-tab-tier" }, "PRO"));
+        if (locked)     tab.append(h("span", { class: "dash-lock" }, iconSvg("lock")));
+        side.append(tab);
+      });
+    });
+
+    // Footer — quick support shortcut
+    side.append(
+      h("div", { class: "dash-side-foot" },
+        btn("Discord", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true }),
+        btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true })
+      )
+    );
+
+    return side;
+  }
+
   function renderActiveTab(content) {
-    content.append(h("div", { class: "dash-loading" }, h("div", { class: "dash-spinner" }), "Loading…"));
+    // Render a couple of shimmer skeleton cards instead of a tiny spinner —
+    // gives the dashboard a real "loading" feel during fetch.
+    clear(content);
+    content.append(renderGenericSkeleton());
     const tab = state.activeTab;
     if (tab === "setup-hub") return loadSetupHub(content);
     if (tab === "overview") return loadOverview(content);
@@ -345,6 +534,60 @@
     if (tab === "audit") return loadAudit(content);
     if (tab === "support") return renderSupportTab(content);
     return loadModule(content, tab);
+  }
+
+  /** Generic shimmer used while a module / tab is loading. */
+  function renderGenericSkeleton() {
+    return h("div", null,
+      h("div", { class: "skel-card" },
+        h("div", { class: "skel skel-line lg w-30" }),
+        h("div", { class: "skel skel-line w-70" })
+      ),
+      h("div", { class: "skel-card" },
+        h("div", { class: "skel skel-line lg w-50" }),
+        h("div", { class: "skel skel-line w-90" }),
+        h("div", { class: "skel skel-line w-70" }),
+        h("div", { class: "skel skel-line w-50" })
+      )
+    );
+  }
+
+  /** Standardized module-page hero. icon + title + tier + status badge. */
+  function renderModuleHero(mod, statusBadge) {
+    const ico = h("div", { class: "dash-module-hero-ico" });
+    ico.appendChild(iconSvg(TAB_ICONS[mod.name] || "list"));
+    return h("div", { class: "dash-module-hero" },
+      ico,
+      h("div", { class: "dash-module-hero-body" },
+        h("div", { class: "dash-module-hero-row" },
+          h("h2", { class: "dash-module-hero-title" }, mod.label),
+          mod.tier === "premium"
+            ? h("span", { class: "dash-status-pill premium" }, h("span", { class: "pill-dot" }), "Premium")
+            : h("span", { class: "dash-status-pill" }, "Free"),
+          statusBadge || null
+        ),
+        mod.description ? h("p", { class: "dash-module-hero-desc" }, mod.description) : null
+      )
+    );
+  }
+
+  /** Heuristic: do the saved values look "configured"? Used for the status pill. */
+  function detectModuleStatus(mod, values) {
+    if (!values || typeof values !== "object") return "missing";
+    const enabledField = (mod.fields || []).find((f) => f.key === "enabled");
+    if (enabledField) {
+      if (values.enabled === true) return "configured";
+      return "missing";
+    }
+    // Otherwise consider it configured if any non-default value is present
+    const hasValue = Object.values(values).some((v) =>
+      v !== "" && v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0) && v !== false
+    );
+    return hasValue ? "configured" : "missing";
+  }
+  function statusBadgeFor(status) {
+    if (status === "configured") return h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Configured");
+    return h("span", { class: "dash-status-pill warn" }, "Not set up");
   }
 
   /* ============================================================
@@ -459,6 +702,9 @@
      Tab: Overview
      ============================================================ */
   async function loadOverview(content) {
+    // Skeleton while we fetch
+    clear(content);
+    content.append(renderOverviewSkeleton());
     try {
       const o = await data.overview(state.selectedGuildId);
       clear(content);
@@ -466,51 +712,151 @@
       const planLabel = plan === "lifetime" ? "Lifetime" : (plan === "monthly" || plan === "premium") ? "Premium" : "Free";
       const expires = o.subscription?.expiresAt ? new Date(o.subscription.expiresAt) : null;
       const setup = o.setup || { percent: 0, completed: [], missing: [], total: 0 };
+      const completed = setup.completedCount ?? (setup.completed ? setup.completed.length : 0);
 
+      // Stat grid
+      content.append(
+        h("div", { class: "dash-stat-grid" },
+          renderStatCard({ label: "Plan", value: planLabel, sub: o.subscription?.status || "—", iconName: "sparkle" }),
+          renderStatCard({ label: "Setup", value: `${setup.percent}%`, sub: `${completed} of ${setup.total} modules`, iconName: "grid", barPct: setup.percent }),
+          renderStatCard({ label: "Bot", value: o.botInstalled ? "Installed" : "Not in server", sub: o.botInstalled ? "Online" : "Invite required", iconName: "plug" }),
+          renderStatCard({ label: "Expires", value: expires ? expires.toLocaleDateString() : "—", sub: expires ? "Auto-renew via /subscribe" : "—", iconName: "calendar" })
+        )
+      );
+
+      // Quick actions
       content.append(
         h("div", { class: "dash-card" },
-          h("h3", null, "Overview"),
-          h("dl", { class: "meta" },
-            h("dt", null, "Plan"), h("dd", null, planLabel),
-            h("dt", null, "Status"), h("dd", null, o.subscription?.status || "—"),
-            h("dt", null, "Expires"), h("dd", null, expires ? expires.toLocaleString() : "—"),
-            h("dt", null, "Bot installed"), h("dd", null, o.botInstalled ? "Yes" : "No"),
-            h("dt", null, "Setup completion"), h("dd", null, `${setup.percent}% · ${setup.completedCount || setup.completed.length} / ${setup.total} modules`)
-          ),
-          renderProgress(setup.percent)
-        ),
+          h("h3", null, "Quick actions"),
+          h("p", null, "Jump straight into the configuration you need most."),
+          h("div", { class: "dash-quick-actions" },
+            renderQuickAction("welcome",   "hand",     "Configure Welcome",  "Greet new members with a custom embed."),
+            renderQuickAction("roleMenus", "masks",    "Role Menus",         "Build dropdown / button role panels."),
+            renderQuickAction("tickets",   "ticket",   "Tickets",            "Forum-based support tickets."),
+            renderQuickAction("staffPay",  "wallet",   "Staff Pay",          "Per-role pay amounts + tiers."),
+            renderQuickAction("events",    "calendar", "Events",             "Dino / Number / Vault credit events."),
+            renderQuickAction("branding",  "palette",  "Branding",           "Customize the bot's embed look.")
+          )
+        )
+      );
+
+      // Setup status grid — same as before but with the new chips
+      content.append(
         h("div", { class: "dash-card" },
           h("h3", null, "Setup status"),
+          h("p", null, "Click a tile to jump into its configuration page."),
           h("div", { class: "dash-feat" },
             ...Object.entries(o.setup?.flags || {})
-              // /pop is configured in Discord only — don't surface it as a
-              // dashboard module the user can click into.
               .filter(([k]) => k !== "population")
               .map(([k, v]) =>
                 h("button", {
                   type: "button",
                   class: `dash-feat-card ${v ? "ok" : "missing"}`,
                   onclick: () => { state.activeTab = mapFlagToModule(k); render(); },
-                  style: { cursor: "pointer", textAlign: "left", border: "1px solid var(--border)" },
                 },
                   h("span", { class: "name" }, prettyName(k)),
                   h("span", { class: "state" }, v ? "Configured" : "Missing")
                 )
             )
           )
-        ),
-        h("div", { class: "dash-card" },
-          h("h3", null, "Quick actions"),
-          h("div", { class: "dash-actions" },
-            btn("Configure Welcome", { kind: "btn-primary", onclick: () => { state.activeTab = "welcome"; render(); } }),
-            btn("Configure Role Menus", { kind: "btn-ghost", onclick: () => { state.activeTab = "roleMenus"; render(); } }),
-            btn("Configure Tickets", { kind: "btn-ghost", onclick: () => { state.activeTab = "tickets"; render(); } }),
-            btn("Branding", { kind: "btn-ghost", onclick: () => { state.activeTab = "branding"; render(); } }),
-            btn("Open Support", { kind: "btn-outline", href: cfg.links?.supportDiscord, external: true })
-          )
         )
       );
+
+      // Recent audit (preview, last 6)
+      content.append(renderRecentAuditCard());
     } catch (e) { renderTabError(content, e); }
+  }
+
+  function renderStatCard({ label, value, sub, iconName, barPct }) {
+    const card = h("div", { class: "dash-stat" });
+    card.append(
+      h("div", { class: "dash-stat-l" }, label),
+      h("div", { class: "dash-stat-v" }, value),
+      h("div", { class: "dash-stat-sub" }, sub || ""),
+    );
+    if (iconName) {
+      const ic = h("span", { class: "dash-stat-ico" });
+      ic.appendChild(iconSvg(iconName));
+      card.appendChild(ic);
+    }
+    if (typeof barPct === "number") {
+      card.append(h("div", { class: "dash-stat-bar" }, h("i", { style: { width: `${Math.min(100, Math.max(0, barPct))}%` } })));
+    }
+    return card;
+  }
+
+  function renderQuickAction(tabId, iconName, name, desc) {
+    return h("button", {
+      type: "button",
+      class: "dash-quick-action",
+      onclick: () => { state.activeTab = tabId; render(); },
+    },
+      icon(iconName, "dash-quick-action-ico"),
+      h("div", { class: "dash-quick-action-body" },
+        h("div", { class: "dash-quick-action-name" }, name),
+        h("div", { class: "dash-quick-action-desc" }, desc)
+      ),
+      h("span", { style: { color: "var(--dash-muted-2)" } }, "→")
+    );
+  }
+
+  /** Inline recent-audit preview (last 6 entries). Loads async, hides on error. */
+  function renderRecentAuditCard() {
+    const card = h("div", { class: "dash-card" },
+      h("h3", null, "Recent activity"),
+      h("p", null, "Last few configuration changes from this dashboard."),
+      h("div", { id: "dash-recent-audit" }, h("div", { class: "skel skel-line lg w-90" }), h("div", { class: "skel skel-line w-70" }), h("div", { class: "skel skel-line w-50" }))
+    );
+    data.audit(state.selectedGuildId).then((a) => {
+      const host = card.querySelector("#dash-recent-audit");
+      if (!host) return;
+      clear(host);
+      const entries = (a.entries || []).slice(0, 6);
+      if (!entries.length) {
+        host.append(notice("info", "No recent activity", "Edits, panel posts, and config changes will appear here."));
+        return;
+      }
+      const list = h("div", { class: "dash-audit-list" });
+      entries.forEach((e) => {
+        list.append(
+          h("div", { class: "dash-audit-row" },
+            h("span", { class: "dash-audit-time" }, new Date(e.ts).toLocaleString()),
+            h("span", { class: `dash-audit-action ${e.ok ? "ok" : "fail"}` }, e.action),
+            h("span", { class: "dash-audit-target" }, e.target || "—")
+          )
+        );
+      });
+      host.appendChild(list);
+    }).catch(() => {
+      const host = card.querySelector("#dash-recent-audit");
+      if (host) host.replaceWith(h("div"));
+    });
+    return card;
+  }
+
+  /** Shimmer skeleton shown while the Overview fetch is in flight. */
+  function renderOverviewSkeleton() {
+    const wrap = h("div");
+    wrap.append(
+      h("div", { class: "skel-stat-grid" },
+        ...new Array(4).fill(0).map(() => h("div", { class: "skel-card" },
+          h("div", { class: "skel skel-line w-30" }),
+          h("div", { class: "skel skel-line lg w-50" }),
+          h("div", { class: "skel skel-line w-70" })
+        ))
+      ),
+      h("div", { class: "skel-card" },
+        h("div", { class: "skel skel-line lg w-30" }),
+        h("div", { class: "skel skel-line w-90" }),
+        h("div", { class: "skel skel-line w-70" })
+      ),
+      h("div", { class: "skel-card" },
+        h("div", { class: "skel skel-line lg w-30" }),
+        h("div", { class: "skel skel-line w-90" }),
+        h("div", { class: "skel skel-line w-90" })
+      )
+    );
+    return wrap;
   }
 
   function renderProgress(pct) {
@@ -595,10 +941,10 @@
   }
 
   function renderModuleForm(content, mod, values) {
-    const card = h("div", { class: "dash-card" },
-      h("h3", null, mod.label, mod.tier === "premium" ? h("span", { class: "dash-tag premium", style: { marginLeft: "10px", fontSize: "0.66rem" } }, "Premium") : null),
-      mod.description ? h("p", null, mod.description) : null
-    );
+    // Hero (icon + name + tier + status)
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, values))));
+
+    const card = h("div", { class: "dash-card" });
 
     // Quick Setup banner — shown only when backend reports it's available
     if (mod.quickSetupAvailable) {
@@ -613,7 +959,16 @@
 
     const saveBtn = h("button", { type: "submit", class: "btn btn-primary" }, "Save changes");
     const resetBtn = h("button", { type: "button", class: "btn btn-ghost", onclick: () => doResetModule(mod, content) }, "Reset to default");
-    form.appendChild(h("div", { class: "dash-actions" }, saveBtn, resetBtn));
+    // Sticky bottom action bar so Save is always reachable, even on long forms
+    form.appendChild(
+      h("div", { class: "dash-sticky-actions" },
+        saveBtn,
+        resetBtn,
+        h("div", { class: "filler" }),
+        h("span", { style: { fontSize: "0.78rem", color: "var(--dash-muted-2)" } },
+          mod.tier === "premium" ? "Premium" : "Free", " module")
+      )
+    );
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -990,6 +1345,12 @@
       saveBtn.disabled = false;
       toast("success", `${mod.label} saved`);
       statusBox.append(notice("success", "Saved", "Settings are live for this server."));
+      // Pulse the top-bar "Saved ✓" indicator
+      const stat = document.getElementById("dash-save-status");
+      if (stat) {
+        stat.classList.add("show");
+        setTimeout(() => stat.classList.remove("show"), 1800);
+      }
       // Re-render the form from the server's merged values so the user
       // visibly sees that the change persisted (and so multi-pickers /
       // checkboxes show the exact state the backend now has). Falls back
