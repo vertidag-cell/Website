@@ -269,6 +269,10 @@
     tierCreate: (gid, body)   => api(`/api/dashboard/guilds/${gid}/staff-tiers`, { method: "POST", body }),
     tierUpdate: (gid, id, body) => api(`/api/dashboard/guilds/${gid}/staff-tiers/${id}`, { method: "PATCH", body }),
     tierDelete: (gid, id)     => api(`/api/dashboard/guilds/${gid}/staff-tiers/${id}`, { method: "DELETE" }),
+    // PayPal config (write-only secrets, masked on read) — premium only
+    paypalGet:  (gid)         => api(`/api/dashboard/guilds/${gid}/payments/paypal`),
+    paypalSave: (gid, body)   => api(`/api/dashboard/guilds/${gid}/payments/paypal`, { method: "POST", body }),
+    paypalTest: (gid)         => api(`/api/dashboard/guilds/${gid}/payments/paypal/test`, { method: "POST" }),
   };
 
   /* ============================================================
@@ -922,6 +926,11 @@
       // + event payouts). Loads async; failure is silent + non-blocking.
       if (mod.name === "staffPay") {
         renderStaffTiersSection(content);
+      }
+      // Payments gets an extra PayPal API + Webhooks section below the
+      // standard form. Secrets are write-only — backend returns masks.
+      if (mod.name === "payments") {
+        renderPayPalConfigSection(content);
       }
     } catch (e) { renderTabError(content, e); }
   }
@@ -1983,6 +1992,243 @@
       document.body.appendChild(overlay);
       requestAnimationFrame(() => overlay.classList.add("show"));
     });
+  }
+
+  /* ============================================================
+     PayPal API + Webhooks — appears below the Payments form.
+     ============================================================
+     Secrets (client_id, client_secret, webhook_id) are write-only:
+     the backend never sends the actual values back, only:
+       { configured: true|false, source: 'guild'|'env'|'unset',
+         last4: '...' }
+     The UI shows the masked state, lets the user enter a NEW value
+     to overwrite, or click Clear to fall back to the env default.
+     Includes a Test Connection button that hits PayPal's OAuth
+     endpoint with the stored credentials.
+  */
+  async function renderPayPalConfigSection(content) {
+    const host = h("div", { class: "dash-paypal-host" });
+    content.append(host);
+    host.append(h("div", { class: "skel-card" },
+      h("div", { class: "skel skel-line lg w-30" }),
+      h("div", { class: "skel skel-line w-90" }),
+      h("div", { class: "skel skel-line w-70" })
+    ));
+    try {
+      const r = await data.paypalGet(state.selectedGuildId);
+      renderPayPalInto(host, r);
+    } catch (e) {
+      clear(host);
+      if (e.code === 403) return; // tierLocked already shown above
+      host.append(notice("warn", "Couldn't load PayPal config", e.message || "Backend error"));
+    }
+  }
+
+  function renderPayPalInto(host, cfg) {
+    clear(host);
+
+    // ── Header card with status pill + brief explanation ───────────
+    const statusPill = cfg.isConfigured
+      ? h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Configured")
+      : h("span", { class: "dash-status-pill warn" }, "Not set up");
+    const preferredLabel =
+      cfg.preferredMode === "orders"   ? "PayPal Orders API (auto-confirm)" :
+      cfg.preferredMode === "paypalme" ? "PayPal.me link (manual)" :
+      "Not configured";
+
+    host.append(
+      h("div", { class: "dash-card" },
+        h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" } },
+          h("div", null,
+            h("h3", { style: { margin: 0 } }, "PayPal API & Webhooks"),
+            h("p", { style: { margin: "4px 0 0", color: "var(--dash-muted)" } },
+              "Wire up your own PayPal app so /payment can issue checkouts and auto-confirm via webhooks. Currently active flow: ",
+              h("strong", null, preferredLabel), ".")
+          ),
+          statusPill
+        )
+      )
+    );
+
+    // ── Webhook URLs (read-only, copyable) ─────────────────────────
+    host.append(
+      h("div", { class: "dash-card" },
+        h("h3", null, "Webhook & return URLs"),
+        h("p", null, "Paste these into your PayPal Developer dashboard when creating the app."),
+        copyRow("Webhook URL", cfg.webhookUrl, "Add this as a Webhook in your PayPal app."),
+        copyRow("Return URL",  cfg.returnUrl,  "Used after successful payment."),
+        copyRow("Cancel URL",  cfg.cancelUrl,  "Used if the buyer cancels.")
+      )
+    );
+
+    // ── Credentials editor ─────────────────────────────────────────
+    const form = h("form", { class: "dash-form", onsubmit: (e) => { e.preventDefault(); doSavePayPal(host, form, saveBtn); } });
+
+    // Mode select
+    const modeSel = h("select", { id: "pp-mode" },
+      h("option", { value: "live",    selected: (cfg.mode === "live")    || null }, "Live"),
+      h("option", { value: "sandbox", selected: (cfg.mode === "sandbox") || null }, "Sandbox")
+    );
+    // Prefer select
+    const preferSel = h("select", { id: "pp-prefer" },
+      h("option", { value: "orders",   selected: (cfg.prefer === "orders")   || null }, "Orders API (auto-confirm)"),
+      h("option", { value: "paypalme", selected: (cfg.prefer === "paypalme") || null }, "PayPal.me link (manual)")
+    );
+
+    const brandIn   = h("input", { id: "pp-brand",  type: "text", value: cfg.brandName || "", placeholder: "Quick's ARK", maxlength: 128 });
+    const handleIn  = h("input", { id: "pp-handle", type: "text", value: cfg.paypalMeHandle || "", placeholder: "yourhandle", maxlength: 64 });
+
+    const cidIn     = h("input", { id: "pp-cid",  type: "password", autocomplete: "off", spellcheck: "false", placeholder: secretPlaceholder(cfg.clientId) });
+    const cidShow   = makeShowToggle(cidIn);
+    const csIn      = h("input", { id: "pp-cs",   type: "password", autocomplete: "off", spellcheck: "false", placeholder: secretPlaceholder(cfg.clientSecret) });
+    const csShow    = makeShowToggle(csIn);
+    const whIn      = h("input", { id: "pp-wh",   type: "text",     autocomplete: "off", spellcheck: "false", placeholder: secretPlaceholder(cfg.webhookId) });
+
+    form.append(
+      h("div", { class: "dash-form-row" },
+        h("div", { class: "dash-field" }, h("label", { for: "pp-mode" }, "Mode"), modeSel,
+          h("div", { class: "hint" }, "Use Sandbox while testing. Switch to Live once your PayPal app is approved.")),
+        h("div", { class: "dash-field" }, h("label", { for: "pp-prefer" }, "Preferred flow"), preferSel,
+          h("div", { class: "hint" }, "Orders API auto-confirms payments. PayPal.me requires staff to mark paid manually."))
+      ),
+      h("div", { class: "dash-form-row" },
+        h("div", { class: "dash-field" }, h("label", { for: "pp-brand" }, "Brand name (on checkout)"), brandIn),
+        h("div", { class: "dash-field" }, h("label", { for: "pp-handle" }, "PayPal.me handle"), handleIn,
+          h("div", { class: "hint" }, "Without the @. Used when Preferred flow is PayPal.me."))
+      ),
+      h("div", { class: "dash-field" },
+        h("label", { for: "pp-cid" }, "Client ID ", secretLabel(cfg.clientId)),
+        h("div", { class: "pp-secret-row" }, cidIn, cidShow),
+        h("div", { class: "hint" }, "From your PayPal app. Leave blank to keep current value. Type 'clear' and save to remove.")
+      ),
+      h("div", { class: "dash-field" },
+        h("label", { for: "pp-cs" }, "Client Secret ", secretLabel(cfg.clientSecret)),
+        h("div", { class: "pp-secret-row" }, csIn, csShow),
+        h("div", { class: "hint" }, "Never displayed back. Stored on the bot server only — never sent to your browser.")
+      ),
+      h("div", { class: "dash-field" },
+        h("label", { for: "pp-wh" }, "Webhook ID ", secretLabel(cfg.webhookId)),
+        whIn,
+        h("div", { class: "hint" }, "PayPal Developer → your app → Webhooks → the ID after you register the Webhook URL above.")
+      )
+    );
+
+    const saveBtn = h("button", { type: "submit", class: "btn btn-primary" }, "Save credentials");
+    const testBtn = h("button", { type: "button", class: "btn btn-ghost",
+      onclick: () => doTestPayPal(host, testBtn) }, "Test connection");
+    form.append(
+      h("div", { class: "dash-actions" },
+        saveBtn,
+        testBtn,
+        h("span", { style: { fontSize: "0.78rem", color: "var(--dash-muted-2)", marginLeft: "auto" } },
+          "Secrets are stored server-side only.")
+      )
+    );
+
+    host.append(
+      h("div", { class: "dash-card" },
+        h("h3", null, "Credentials"),
+        h("p", null,
+          "Get these from ",
+          h("a", { href: "https://developer.paypal.com/dashboard/applications/live", target: "_blank", rel: "noopener noreferrer", style: { color: "var(--dash-red-2)" } },
+            "developer.paypal.com → My Apps"),
+          ". Sandbox vs Live credentials are different — match the Mode you pick above."),
+        form
+      )
+    );
+
+    // Keep a handle so submit handler can reference saveBtn
+    form._ppSaveBtn = saveBtn;
+  }
+
+  function secretPlaceholder(rec) {
+    if (rec && rec.configured) return `••••••••${rec.last4 || ""} (${rec.source}) — type to replace`;
+    return "Not set";
+  }
+  function secretLabel(rec) {
+    if (rec && rec.configured) {
+      const src = rec.source === "env" ? "from environment" : "set for this server";
+      return h("span", { class: "pp-secret-tag" }, "●●●●●●●● " + (rec.last4 || ""), " · " + src);
+    }
+    return h("span", { class: "pp-secret-tag unset" }, "Not set");
+  }
+  function copyRow(label, value, hint) {
+    if (!value) return null;
+    const input = h("input", { type: "text", readonly: true, value, style: { fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: "0.82rem" } });
+    const btn = h("button", { type: "button", class: "btn btn-ghost", style: { whiteSpace: "nowrap" },
+      onclick: () => {
+        navigator.clipboard?.writeText(value).then(() => {
+          btn.textContent = "Copied ✓";
+          setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+        }).catch(() => toast("error", "Couldn't copy"));
+      }
+    }, "Copy");
+    return h("div", { class: "dash-field" },
+      h("label", null, label),
+      h("div", { class: "pp-copy-row" }, input, btn),
+      hint ? h("div", { class: "hint" }, hint) : null
+    );
+  }
+  function makeShowToggle(input) {
+    const btn = h("button", { type: "button", class: "btn btn-ghost pp-show-btn", "aria-label": "Show/hide",
+      onclick: () => {
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        btn.textContent = isHidden ? "Hide" : "Show";
+      }
+    }, "Show");
+    return btn;
+  }
+
+  async function doSavePayPal(host, form, saveBtn) {
+    const body = {
+      mode:           form.querySelector("#pp-mode").value,
+      prefer:         form.querySelector("#pp-prefer").value,
+      brandName:      form.querySelector("#pp-brand").value.trim(),
+      paypalMeHandle: form.querySelector("#pp-handle").value.trim(),
+    };
+    // Secret fields — only include in payload if user typed something.
+    // Empty input means "keep current". The literal word 'clear' (case-i)
+    // clears the value.
+    const cidV = form.querySelector("#pp-cid").value;
+    const csV  = form.querySelector("#pp-cs").value;
+    const whV  = form.querySelector("#pp-wh").value;
+    if (cidV.trim() !== "") body.clientId     = (/^clear$/i.test(cidV.trim()) ? "" : cidV.trim());
+    if (csV.trim()  !== "") body.clientSecret = (/^clear$/i.test(csV.trim())  ? "" : csV.trim());
+    if (whV.trim()  !== "") body.webhookId    = (/^clear$/i.test(whV.trim())  ? "" : whV.trim());
+
+    saveBtn.disabled = true;
+    const original = saveBtn.textContent;
+    saveBtn.textContent = "Saving…";
+    try {
+      const r = await data.paypalSave(state.selectedGuildId, body);
+      toast("success", "PayPal config saved");
+      // Pulse the top-bar Saved indicator
+      const stat = document.getElementById("dash-save-status");
+      if (stat) { stat.classList.add("show"); setTimeout(() => stat.classList.remove("show"), 1800); }
+      renderPayPalInto(host, r);
+    } catch (e) {
+      toast("error", e.message || "Save failed");
+      saveBtn.disabled = false;
+      saveBtn.textContent = original;
+    }
+  }
+
+  async function doTestPayPal(host, btn) {
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = "Testing…";
+    try {
+      const r = await data.paypalTest(state.selectedGuildId);
+      const msg = `PayPal OK (${r.mode}) · token valid ${Math.round((r.expiresIn || 0) / 60)} min`;
+      toast("success", msg, 5000);
+    } catch (e) {
+      const detail = e.data?.message || e.message || "Test failed";
+      toast("error", `PayPal: ${detail}`, 6500);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
   }
 
   /* ============================================================
