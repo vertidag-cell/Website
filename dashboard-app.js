@@ -949,6 +949,121 @@
     }
   }
 
+  /** Optional per-module accordion groups. When a module has an entry
+   *  here, its fields are split into collapsible <details> sections so
+   *  a long form (XP, Hype, Events, Tickets) becomes scannable. Any
+   *  field not listed in a group ends up in a trailing "Other" group.
+   *  Modules NOT in this map render as a single flat form (current
+   *  behaviour). */
+  const MODULE_GROUPS = {
+    welcome: [
+      { name: "Basic",          fields: ["enabled", "channelId"] },
+      { name: "Message",        fields: ["title", "message", "mentionUser"] },
+      { name: "Embed design",   fields: ["embedColor", "imageUrl"] },
+    ],
+    xp: [
+      { name: "Basic",                  fields: ["enabled"] },
+      { name: "XP rules",               fields: ["xpMin", "xpMax", "cooldownSec"] },
+      { name: "Filters",                fields: ["ignoredChannels", "ignoredRoles"] },
+      { name: "Level-up announcements", fields: ["levelUpAnnounce", "levelUpChannelId"] },
+      { name: "Weekly leaderboard",     fields: ["weeklyResetDay", "weeklyChannelId"] },
+      { name: "Rewards",                fields: ["rewardsMode", "rewardType", "reward1stCredits", "reward2ndCredits", "reward3rdCredits", "reward1stEggs", "reward2ndEggs", "reward3rdEggs"] },
+    ],
+    hype: [
+      { name: "Basic",              fields: ["enabled", "rewardChannelId"] },
+      { name: "Name / tag triggers",fields: ["tagKeywords", "creditAmount", "creditExpiryDays"] },
+      { name: "Reward role",        fields: ["rewardRoleId"] },
+      { name: "Other triggers",     fields: ["rewardInvites", "rewardBoosts", "preventDuplicates"] },
+    ],
+    events: [
+      { name: "Basic",        fields: ["enabled", "announceChannelId", "trackChannelId"] },
+      { name: "Permissions",  fields: ["pingRoleId", "allowedRoleIds"] },
+      { name: "Dino event",   fields: ["dinoBase", "dinoBump", "dinoPer"] },
+      { name: "Number guess", fields: ["numberBase", "numberBump", "numberPer"] },
+      { name: "Vault event",  fields: ["vaultBase", "vaultBump", "vaultPer"] },
+    ],
+    tickets: [
+      { name: "Basic",   fields: ["enabled", "panelChannelId", "ticketCategoryId"] },
+      { name: "Staff",   fields: ["staffRoleIds", "claimEnabled"] },
+      { name: "Logging", fields: ["logChannelId", "autoCloseHours"] },
+    ],
+    payments: [
+      { name: "Basic",        fields: ["enabled", "logChannelId"] },
+      { name: "Instructions", fields: ["instructions", "manualFallback"] },
+    ],
+    staffPay: [
+      { name: "Basic",   fields: ["enabled", "forumChannelId"] },
+      { name: "Payouts", fields: ["payoutRoleIds", "logChannelId"] },
+    ],
+    moderation: [
+      { name: "Basic",      fields: ["enabled", "modLogChannelId", "modRoleIds"] },
+      { name: "URL filter", fields: ["urlFilterEnabled", "whitelistDomains"] },
+      { name: "Auto-action",fields: ["maxWarnings"] },
+    ],
+    giveaways: [
+      { name: "Basic",   fields: ["enabled", "defaultChannelId"] },
+      { name: "Hosts",   fields: ["allowedRoleIds"] },
+      { name: "Logging", fields: ["logChannelId"] },
+    ],
+    autoRoles: [
+      { name: "Basic", fields: ["enabled", "roleIds", "ignoreBots"] },
+    ],
+    pets: [
+      { name: "Basic",    fields: ["enabled"] },
+      { name: "Channels", fields: ["showLeaderboard", "leaderboardChannelId", "displayChannelId"] },
+    ],
+    credits: [
+      { name: "Basic",  fields: ["enabled", "publicBalance"] },
+      { name: "Admin",  fields: ["adminRoleIds"] },
+      { name: "Expiry & logging", fields: ["defaultExpiryDays", "logChannelId"] },
+    ],
+  };
+
+  /** Modules with a live right-rail preview. */
+  const MODULES_WITH_PREVIEW = new Set(["welcome"]);
+
+  /** Render fields either as accordion sections (when groups exist for
+   *  this module) or as a flat list. Returns the wrapper element so
+   *  callers can append it into a form. */
+  function renderFieldsGrouped(mod, values) {
+    const wrap = h("div", { class: "dash-form-fields" });
+    const groups = MODULE_GROUPS[mod.name];
+    if (!groups || !groups.length) {
+      mod.fields.forEach((f) => wrap.appendChild(renderField(f, values[f.key])));
+      return wrap;
+    }
+    const usedKeys = new Set();
+    groups.forEach((g) => {
+      const fields = g.fields
+        .map((k) => mod.fields.find((f) => f.key === k))
+        .filter(Boolean);
+      if (!fields.length) return;
+      fields.forEach((f) => usedKeys.add(f.key));
+      wrap.appendChild(renderFormSection(g.name, fields, values, /* open */ groups.indexOf(g) === 0));
+    });
+    // Any leftover fields go into "Other"
+    const leftover = mod.fields.filter((f) => !usedKeys.has(f.key));
+    if (leftover.length) wrap.appendChild(renderFormSection("Other", leftover, values, false));
+    return wrap;
+  }
+
+  function renderFormSection(name, fields, values, openByDefault) {
+    const section = h("details", { class: "dash-form-section" });
+    if (openByDefault) section.setAttribute("open", "");
+    const summary = h("summary", null,
+      h("span", { class: "sec-name" }, name),
+      h("span", { class: "sec-count" }, String(fields.length)),
+    );
+    const chev = h("span", { class: "chev" });
+    chev.appendChild(iconSvg("arrowRight"));
+    summary.appendChild(chev);
+    section.appendChild(summary);
+    const body = h("div", { class: "sec-body" });
+    fields.forEach((f) => body.appendChild(renderField(f, values[f.key])));
+    section.appendChild(body);
+    return section;
+  }
+
   function renderModuleForm(content, mod, values) {
     // Hero (icon + name + tier + status)
     content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, values))));
@@ -964,7 +1079,9 @@
     const form = h("form", { class: "dash-form" });
     form.dataset.module = mod.name;
 
-    mod.fields.forEach((f) => form.appendChild(renderField(f, values[f.key])));
+    // Snapshot baseline so we can detect dirty state
+    form._baseline = JSON.stringify(values || {});
+    form.appendChild(renderFieldsGrouped(mod, values));
 
     const saveBtn = h("button", { type: "submit", class: "btn btn-primary" }, "Save changes");
     const resetBtn = h("button", { type: "button", class: "btn btn-ghost", onclick: () => doResetModule(mod, content) }, "Reset to default");
@@ -973,11 +1090,16 @@
       h("div", { class: "dash-sticky-actions" },
         saveBtn,
         resetBtn,
+        h("span", { class: "dash-unsaved" }, h("span", { class: "dot" }), "Unsaved changes"),
         h("div", { class: "filler" }),
         h("span", { style: { fontSize: "0.78rem", color: "var(--dash-muted-2)" } },
           mod.tier === "premium" ? "Premium" : "Free", " module")
       )
     );
+
+    // Track dirty state
+    form.addEventListener("input", () => updateDirty(form, mod), { capture: true });
+    form.addEventListener("change", () => updateDirty(form, mod), { capture: true });
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -985,7 +1107,99 @@
     });
 
     card.append(statusBox, form);
-    content.append(card);
+
+    // Two-column layout for modules with a meaningful preview
+    if (MODULES_WITH_PREVIEW.has(mod.name)) {
+      const grid = h("div", { class: "dash-mod-grid" });
+      grid.appendChild(card);
+      const aside = h("div", { class: "dash-mod-aside" }, renderModulePreviewPanel(mod, values, form));
+      grid.appendChild(aside);
+      content.append(grid);
+    } else {
+      content.append(card);
+    }
+  }
+
+  /** Build the right-rail preview + tips panel for a module. */
+  function renderModulePreviewPanel(mod, values, form) {
+    const panel = h("div");
+    if (mod.name === "welcome") {
+      const card = h("div", { class: "dash-preview-card" },
+        h("h4", null, "Live preview"),
+        h("div", { id: "dc-preview-welcome" })
+      );
+      panel.append(card);
+      // Build a refresh function the form input listener calls
+      const refresh = () => {
+        const host = panel.querySelector("#dc-preview-welcome");
+        if (!host) return;
+        clear(host);
+        const v = collectFormValues(form, mod);
+        host.appendChild(renderWelcomeEmbedPreview(v));
+      };
+      form._previewRefresh = refresh;
+      // First render
+      setTimeout(refresh, 0);
+
+      // Helpful tip card under the preview
+      panel.append(
+        h("div", { class: "dash-tip" },
+          (() => { const i = h("span", { class: "tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+          h("div", null,
+            h("strong", null, "Tips: "),
+            "Use ", h("code", null, "{user}"),
+            " to mention the new member and ", h("code", null, "{server}"),
+            " for the server name."
+          )
+        )
+      );
+    }
+    return panel;
+  }
+
+  /** Discord-style welcome embed preview, driven by the current form. */
+  function renderWelcomeEmbedPreview(v) {
+    const color = (v && v.embedColor && /^#[0-9a-f]{6}$/i.test(v.embedColor)) ? v.embedColor : "#dc2626";
+    const guildName = (state.guilds.find((g) => g.id === state.selectedGuildId)?.name) || "your server";
+    const username  = state.user?.username || "newmember";
+    const title = (v?.title && v.title.trim())
+      ? v.title.replace(/\{server\}/gi, guildName)
+      : `🦖  Welcome to ${guildName}!`;
+    const message = (v?.message && v.message.trim())
+      ? v.message
+          .replace(/\{user\}/gi, `@${username}`)
+          .replace(/\{server\}/gi, guildName)
+      : "Glad you're here! 🎉 Read the rules and say hi.";
+    const shell = h("div", { class: "dc-embed-shell", style: { ["--dc-color"]: color } },
+      h("div", { class: "dc-embed-bot" },
+        h("div", { class: "dc-embed-bot-avatar" }),
+        h("div", { class: "dc-embed-bot-name" }, "Quick's ARK Bot"),
+        h("span", { class: "dc-embed-bot-tag" }, "APP")
+      ),
+      v?.mentionUser !== false
+        ? h("div", { style: { color: "#fff", marginBottom: "6px", fontSize: "0.86rem" } }, `@${username}`)
+        : null,
+      h("div", { class: "dc-embed-title" }, title),
+      h("div", { class: "dc-embed-desc" }, message),
+      v?.imageUrl && /^https:\/\//i.test(v.imageUrl)
+        ? h("img", { class: "dc-embed-image", src: v.imageUrl, alt: "", onerror: function(){ this.style.display = "none"; } })
+        : null,
+      h("div", { class: "dc-embed-footer" }, `${guildName}`)
+    );
+    return shell;
+  }
+
+  /** Mark the form as dirty/clean by comparing live values to baseline. */
+  function updateDirty(form, mod) {
+    try {
+      const live = collectFormValues(form, mod);
+      const same = JSON.stringify(live) === form._baseline;
+      form.classList.toggle("dirty", !same);
+    } catch {}
+    // Also refresh the live preview if one is wired
+    if (form._previewRefresh) {
+      try { form._previewRefresh(); } catch {}
+    }
   }
 
   /* ============================================================

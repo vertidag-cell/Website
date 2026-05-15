@@ -7001,3 +7001,337 @@ section a.highlight-card {
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
+
+/* ================================================================
+   v30 — DENSITY + LAYOUT FIX
+   ================================================================
+   v28 introduced the premium look but pages felt oversized. v30
+   tightens spacing, regroups long forms into accordions, adds a
+   settings+preview two-column layout for modules that have a
+   meaningful Discord preview, and trims dead space everywhere.
+
+   No DOM-structure changes — purely CSS overrides + a couple of
+   new utility classes the JS now uses.
+*/
+:root {
+  --dash-page-padding:   28px;
+  --dash-card-padding:   18px;
+  --dash-grid-gap:       16px;
+  --dash-section-gap:    20px;
+  --dash-sidebar-width:  248px;
+  --dash-control-height: 40px;
+  --dash-radius:         14px;
+}
+@media (max-width: 768px) {
+  :root {
+    --dash-page-padding:   16px;
+    --dash-card-padding:   14px;
+    --dash-grid-gap:       12px;
+    --dash-section-gap:    16px;
+  }
+}
+
+/* Tighter shell */
+.dash-shell { padding: var(--dash-page-padding) 0 64px; }
+.dash-shell > .container { padding-left: var(--dash-page-padding); padding-right: var(--dash-page-padding); }
+@media (max-width: 720px) { .dash-shell { padding: var(--dash-page-padding) 0 48px; } }
+
+/* Tighter layout grid */
+.dash-layout {
+  grid-template-columns: var(--dash-sidebar-width) minmax(0, 1fr);
+  gap: 18px;
+}
+
+/* Tighter sidebar */
+.dash-sidebar { padding: 12px 10px 14px; }
+.dash-tab { padding: 7px 11px; font-size: 0.88rem; }
+.dash-tab .dash-tab-ico { width: 16px; height: 16px; }
+.dash-side-section { padding: 11px 12px 4px; font-size: 0.58rem; }
+.dash-side-brand { padding: 8px 10px 11px; }
+
+/* Tighter top bar */
+.dash-userbar { padding: 10px 14px; margin-bottom: 14px; gap: 10px; }
+.dash-userbar .gico, .dash-userbar .dash-avatar { width: 36px; height: 36px; border-radius: 10px; }
+.dash-userbar .who-name { font-size: 0.96rem; }
+.dash-userbar .who-sub  { font-size: 0.74rem; }
+
+/* Tighter cards across the board */
+.dash-card { padding: var(--dash-card-padding); border-radius: var(--dash-radius); }
+.dash-card + .dash-card { margin-top: 12px; }
+.dash-card h3 { font-size: 1rem; margin: 0 0 4px; }
+.dash-card > p { font-size: 0.86rem; margin: 0 0 10px; }
+
+/* Tighter module hero — no longer a big landing block */
+.dash-module-hero { padding: 16px 18px; margin-bottom: 12px; gap: 14px; }
+.dash-module-hero-ico { width: 44px; height: 44px; border-radius: 12px; }
+.dash-module-hero-ico svg { width: 22px; height: 22px; }
+.dash-module-hero-title { font-size: 1.18rem; }
+.dash-module-hero-desc { font-size: 0.86rem; margin: 4px 0 0; max-width: 560px; }
+
+/* Tighter stat grid + cards */
+.dash-stat-grid { gap: var(--dash-grid-gap); margin-bottom: 12px; }
+.dash-stat { padding: 13px 14px; border-radius: 12px; }
+.dash-stat-l { font-size: 0.62rem; }
+.dash-stat-v { font-size: 1.42rem; margin-top: 2px; }
+.dash-stat-sub { font-size: 0.74rem; }
+.dash-stat-ico { top: 12px; right: 12px; width: 18px; height: 18px; }
+.dash-stat-bar { margin-top: 8px; height: 5px; }
+
+/* Setup Hub: tighter cards, 3–4 cols on wide */
+.setup-hub-grid {
+  grid-template-columns: repeat(auto-fill, minmax(204px, 1fr));
+  gap: 10px; margin: 6px 0 12px;
+}
+.setup-hub-card { padding: 12px 14px; gap: 10px; border-radius: 12px; }
+.setup-hub-icon { width: 32px; height: 32px; font-size: 1rem; border-radius: 9px; }
+.setup-hub-name { font-size: 0.92rem; }
+.setup-hub-meta { gap: 4px; margin-top: 2px; }
+
+/* Tighter setup-hub stats row */
+.dash-hub-stats { gap: 8px; margin: 10px 0; }
+.hub-stat { padding: 10px; border-radius: 12px; }
+.hub-stat-num { font-size: 1.3rem; }
+.hub-stat-lbl { font-size: 0.64rem; }
+
+/* Tighter quick actions */
+.dash-quick-actions { gap: 8px; }
+.dash-quick-action { padding: 11px 13px; gap: 10px; border-radius: 12px; }
+.dash-quick-action-ico { width: 32px; height: 32px; border-radius: 9px; }
+.dash-quick-action-ico svg { width: 16px; height: 16px; }
+.dash-quick-action-name { font-size: 0.9rem; }
+.dash-quick-action-desc { font-size: 0.74rem; }
+
+/* Tighter forms */
+.dash-form { gap: 12px; }
+.dash-field > label { font-size: 0.7rem; }
+.dash-field input,
+.dash-field textarea,
+.dash-field select {
+  padding: 8px 11px;
+  font-size: 0.9rem;
+}
+.dash-field .hint { font-size: 0.74rem; }
+.dash-form-row { gap: 12px; }
+
+/* Tighter sticky action bar */
+.dash-sticky-actions { padding: 10px 14px; gap: 8px; margin-top: 12px; }
+.dash-sticky-actions .btn { min-height: 36px; padding: 7px 14px; font-size: 0.88rem; }
+
+/* ----- Form sections (accordion-style groupings) ----- */
+.dash-form-section {
+  border: 1px solid var(--dash-border);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.025);
+  overflow: hidden;
+  margin-bottom: 0;
+}
+.dash-form-section summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+  font-weight: 700;
+  font-size: 0.84rem;
+  letter-spacing: 0.02em;
+  color: var(--dash-text);
+  transition: background 0.15s var(--dash-ease);
+}
+.dash-form-section summary::-webkit-details-marker { display: none; }
+.dash-form-section summary:hover { background: rgba(255,255,255,0.04); }
+.dash-form-section summary .chev {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s var(--dash-ease);
+  color: var(--dash-muted-2);
+}
+.dash-form-section[open] summary .chev { transform: rotate(90deg); color: var(--dash-red-2); }
+.dash-form-section[open] summary { border-bottom: 1px solid var(--dash-border); }
+.dash-form-section .sec-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dash-form-section .sec-count {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--dash-muted-2);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--dash-border);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
+}
+.dash-form-section .sec-ico {
+  width: 16px; height: 16px;
+  color: var(--dash-red-2);
+  flex: 0 0 auto;
+}
+
+/* ----- Settings + Preview two-column wrapper ----- */
+.dash-mod-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  gap: 18px;
+  align-items: flex-start;
+}
+.dash-mod-grid > .dash-mod-aside {
+  position: sticky;
+  top: 12px;
+}
+@media (max-width: 1100px) {
+  .dash-mod-grid { grid-template-columns: 1fr; }
+  .dash-mod-grid > .dash-mod-aside { position: static; }
+}
+
+/* Right-rail preview card (used for Welcome, etc.) */
+.dash-preview-card {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01) 80%),
+    var(--dash-bg-card);
+  border: 1px solid var(--dash-border);
+  border-radius: 14px;
+  padding: 14px;
+}
+.dash-preview-card h4 {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dash-muted-2);
+}
+
+/* Discord-style embed preview (for Welcome / module previews) */
+.dc-embed-shell {
+  background: #2b2d31;
+  border-radius: 8px;
+  padding: 14px 14px 14px 16px;
+  position: relative;
+  margin-top: 6px;
+  font-size: 0.86rem;
+  color: #dbdee1;
+  line-height: 1.45;
+}
+.dc-embed-shell::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 4px;
+  border-radius: 8px 0 0 8px;
+  background: var(--dc-color, var(--dash-red));
+}
+.dc-embed-bot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dc-embed-bot-avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--dash-red), var(--dash-red-dark));
+  flex: 0 0 auto;
+}
+.dc-embed-bot-name {
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.84rem;
+}
+.dc-embed-bot-tag {
+  background: #5865f2;
+  color: #fff;
+  font-size: 0.6rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.dc-embed-title { font-weight: 700; color: #fff; font-size: 0.95rem; margin: 0 0 4px; }
+.dc-embed-desc  { font-size: 0.84rem; white-space: pre-wrap; }
+.dc-embed-image {
+  margin-top: 8px;
+  max-width: 100%;
+  border-radius: 4px;
+  display: block;
+}
+.dc-embed-footer {
+  margin-top: 8px;
+  font-size: 0.74rem;
+  color: #949ba4;
+}
+
+/* Tip card */
+.dash-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(239,35,60,0.06);
+  border: 1px solid rgba(239,35,60,0.20);
+  border-radius: 12px;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: var(--dash-muted);
+}
+.dash-tip .tip-ico {
+  width: 18px; height: 18px;
+  flex: 0 0 auto;
+  color: var(--dash-red-2);
+}
+.dash-tip strong { color: var(--dash-text); font-weight: 700; }
+
+/* Unsaved-changes indicator inside sticky bar */
+.dash-unsaved {
+  font-size: 0.78rem;
+  color: var(--dash-warning);
+  font-weight: 700;
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+.dash-form.dirty .dash-unsaved { display: inline-flex; }
+.dash-form.dirty .dash-sticky-actions {
+  border-color: rgba(245,158,11,0.32);
+  background:
+    linear-gradient(180deg, rgba(245,158,11,0.05), rgba(0,0,0,0.7)),
+    rgba(10,10,16,0.85);
+}
+.dash-unsaved .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--dash-warning);
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+/* Animation toggle for accordion content (without jank) */
+@keyframes accordion-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dash-form-section[open] .sec-body { animation: accordion-in 0.18s var(--dash-ease) both; }
+
+/* Trim recent activity rows */
+.dash-audit-list { display: flex; flex-direction: column; gap: 4px; }
+.dash-audit-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--dash-border);
+  border-radius: 9px;
+  font-size: 0.82rem;
+}
+.dash-audit-time   { color: var(--dash-muted-2); font-size: 0.74rem; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.dash-audit-action { color: var(--dash-text); font-weight: 600; }
+.dash-audit-action.fail { color: #fca5a5; }
+.dash-audit-target { color: var(--dash-muted-2); font-size: 0.78rem; text-align: right; font-family: ui-monospace, Menlo, Consolas, monospace; }
+@media (max-width: 600px) {
+  .dash-audit-row { grid-template-columns: 1fr; }
+  .dash-audit-target { text-align: left; }
+}
