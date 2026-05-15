@@ -173,6 +173,11 @@
     rmOptUpdate: (gid, id, oid, body) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}/options/${oid}`, { method: "PATCH", body }),
     rmOptDelete: (gid, id, oid) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}/options/${oid}`, { method: "DELETE" }),
     rmPost: (gid, id) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}/post`, { method: "POST" }),
+    // Staff Tiers (per-role pay amounts) — premium only
+    tierList:   (gid)         => api(`/api/dashboard/guilds/${gid}/staff-tiers`),
+    tierCreate: (gid, body)   => api(`/api/dashboard/guilds/${gid}/staff-tiers`, { method: "POST", body }),
+    tierUpdate: (gid, id, body) => api(`/api/dashboard/guilds/${gid}/staff-tiers/${id}`, { method: "PATCH", body }),
+    tierDelete: (gid, id)     => api(`/api/dashboard/guilds/${gid}/staff-tiers/${id}`, { method: "DELETE" }),
   };
 
   /* ============================================================
@@ -565,6 +570,13 @@
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
+
+      // Staff Pay gets an extra "Tiers" section below the standard form
+      // for per-role pay amounts (ticket basic/medium/advanced + auction %
+      // + event payouts). Loads async; failure is silent + non-blocking.
+      if (mod.name === "staffPay") {
+        renderStaffTiersSection(content);
+      }
     } catch (e) { renderTabError(content, e); }
   }
 
@@ -1582,8 +1594,11 @@
     }
   }
 
-  /** Generic form modal — confirms or cancels, returns Promise<boolean>. */
-  function modalForm(title, formNode) {
+  /** Generic form modal — confirms or cancels, returns Promise<boolean>.
+   *  opts: { okLabel?: string }
+   */
+  function modalForm(title, formNode, opts) {
+    opts = opts || {};
     return new Promise((resolve) => {
       const overlay = h("div", { class: "dash-modal-overlay" });
       const close = (ok) => {
@@ -1596,7 +1611,7 @@
         formNode,
         h("div", { class: "dash-modal-actions" },
           h("button", { type: "button", class: "btn btn-ghost", onclick: () => close(false) }, "Cancel"),
-          h("button", { type: "button", class: "btn btn-primary", onclick: () => close(true) }, "Create")
+          h("button", { type: "button", class: "btn btn-primary", onclick: () => close(true) }, opts.okLabel || "Create")
         )
       );
       overlay.append(modal);
@@ -1607,6 +1622,254 @@
       document.body.appendChild(overlay);
       requestAnimationFrame(() => overlay.classList.add("show"));
     });
+  }
+
+  /* ============================================================
+     Staff Tiers — per-role pay amount editor (Staff Pay module)
+     ============================================================
+     Lives beneath the standard Staff Pay form. Lists the tiers
+     this guild already has, lets you add new ones (pick a role +
+     amounts), edit existing ones inline, and delete them. The bot's
+     /log command resolves the highest-priority tier the user has and
+     uses its amounts for ticket / auction / event earnings.
+  */
+
+  const EVENT_TYPES_DEFAULT = ["Raid Base", "Vault Event", "Scav", "Other"];
+
+  // Helper: USD formatting for read-only displays
+  function fmtUSD(n) {
+    const num = Number(n);
+    if (!Number.isFinite(num)) return "$0.00";
+    return "$" + num.toFixed(2);
+  }
+
+  async function renderStaffTiersSection(content) {
+    // Placeholder so it appears immediately under the form
+    const host = h("div", { class: "dash-tiers-host" });
+    content.append(host);
+    try {
+      const r = await data.tierList(state.selectedGuildId);
+      renderTiersInto(host, r.tiers || [], r.defaults || {});
+    } catch (e) {
+      // 403 (no premium) was already handled by tierLocked path above; this
+      // is a defensive catch for unexpected errors. Hide silently.
+      if (e.code !== 403) {
+        host.append(notice("warn", "Couldn't load staff tiers", e.message || "Backend error"));
+      }
+    }
+  }
+
+  function renderTiersInto(host, tiers, defaults) {
+    clear(host);
+    const card = h("div", { class: "dash-card" },
+      h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" } },
+        h("div", null,
+          h("h3", { style: { margin: 0 } }, "Staff Tiers — pay per role"),
+          h("p", { style: { margin: "4px 0 0", color: "var(--text-muted)" } },
+            "Set per-role pay amounts for tickets, auctions, and events. The bot uses the highest-priority tier a staff member has.")
+        ),
+        h("button", { type: "button", class: "btn btn-primary", onclick: () => openCreateTierModal(host) }, "+ New Tier")
+      )
+    );
+    host.append(card);
+
+    if (!tiers.length) {
+      host.append(
+        h("div", { class: "dash-card", style: { textAlign: "center", padding: "32px 20px" } },
+          h("div", { style: { fontSize: "2rem", marginBottom: "8px" } }, "💷"),
+          h("h4", { style: { margin: "0 0 4px", fontSize: "1.02rem" } }, "No staff tiers yet"),
+          h("p", { style: { color: "var(--text-muted)", margin: "0 0 14px", maxWidth: "440px", marginLeft: "auto", marginRight: "auto" } },
+            "Without tiers the bot uses default amounts: $", defaults.ticket?.basic?.amount?.toFixed(2) || "0.20", " basic, $",
+            defaults.ticket?.medium?.amount?.toFixed(2) || "0.30", " medium, $",
+            defaults.ticket?.advanced?.amount?.toFixed(2) || "0.40", " advanced.")
+        )
+      );
+      return;
+    }
+
+    const list = h("div", { class: "dash-tiers-list" });
+    tiers.forEach((t) => list.appendChild(renderTierCard(t, host)));
+    host.append(list);
+  }
+
+  function renderTierCard(t, host) {
+    const role = (state.roles || []).find((r) => r.id === t.role_id);
+    const roleColor = role && role.color ? "#" + role.color.toString(16).padStart(6, "0") : "var(--red)";
+    return h("div", { class: "dash-tier-card" },
+      h("div", { class: "tier-head" },
+        h("span", { class: "tier-dot", style: { background: roleColor } }),
+        h("div", { class: "tier-head-info" },
+          h("div", { class: "tier-name" }, t.tier_name || "Tier"),
+          h("div", { class: "tier-role" }, role ? "@" + role.name : `(role missing: ${t.role_id})`, " · priority ", String(t.priority || 0))
+        ),
+        h("div", { class: "tier-head-actions" },
+          h("button", { type: "button", class: "btn btn-ghost", onclick: () => openEditTierModal(t, host) }, "Edit"),
+          h("button", { type: "button", class: "btn btn-ghost tier-del", title: "Delete tier", onclick: () => deleteTier(t, host) }, "×")
+        )
+      ),
+      h("div", { class: "tier-grid" },
+        renderTierStat("Ticket — basic",    fmtUSD(t.ticket_basic)),
+        renderTierStat("Ticket — medium",   fmtUSD(t.ticket_medium)),
+        renderTierStat("Ticket — advanced", fmtUSD(t.ticket_advanced)),
+        renderTierStat("Auction %",         (t.auction_percentage ?? 20) + "%"),
+      ),
+      Object.keys(t.event_payouts || {}).length
+        ? h("div", { class: "tier-events" },
+            h("div", { class: "tier-events-h" }, "Event payouts"),
+            h("div", { class: "tier-events-grid" },
+              ...Object.entries(t.event_payouts).map(([k, v]) =>
+                h("div", { class: "tier-event-chip" },
+                  h("span", { class: "tier-event-k" }, k),
+                  h("span", { class: "tier-event-v" }, fmtUSD(v))
+                )
+              )
+            )
+          )
+        : null,
+      h("div", { class: "tier-perms" },
+        t.can_payment          ? h("span", { class: "perm-chip ok" }, "Can /payment") : h("span", { class: "perm-chip off" }, "No /payment"),
+        t.can_log              ? h("span", { class: "perm-chip ok" }, "Can /log")     : h("span", { class: "perm-chip off" }, "No /log"),
+        t.can_approve_payout   ? h("span", { class: "perm-chip ok" }, "Approve payout") : null,
+        t.can_configure_tickets? h("span", { class: "perm-chip ok" }, "Configure tickets") : null,
+      )
+    );
+  }
+
+  function renderTierStat(label, value) {
+    return h("div", { class: "tier-stat" },
+      h("div", { class: "tier-stat-l" }, label),
+      h("div", { class: "tier-stat-v" }, value)
+    );
+  }
+
+  function openCreateTierModal(host) {
+    openTierModal({ host, mode: "create", tier: null });
+  }
+  function openEditTierModal(t, host) {
+    openTierModal({ host, mode: "edit", tier: t });
+  }
+
+  /** Tier editor modal — works for both create and edit. */
+  async function openTierModal({ host, mode, tier }) {
+    if (!state.roles) await loadDiscordLists();
+    const isEdit = mode === "edit";
+
+    const roleSel = renderSelect("tier-role", "role", [{ id: "", name: "— pick a role —" }, ...(state.roles || [])], tier?.role_id || "", (r) => r.id ? `@${r.name}` : r.name);
+    if (isEdit) roleSel.disabled = true; // role is the identity, don't let edit change it
+    const nameIn = h("input", { id: "tier-name", type: "text", value: tier?.tier_name || "", placeholder: "e.g. Admin, Mod, Trial Staff", maxlength: 64 });
+    const prioIn = h("input", { id: "tier-prio", type: "number", value: tier?.priority ?? 100, min: 0, max: 999 });
+
+    const basicIn    = h("input", { id: "tier-basic",    type: "number", step: "0.01", min: "0", value: tier?.ticket_basic    ?? 0.20 });
+    const mediumIn   = h("input", { id: "tier-medium",   type: "number", step: "0.01", min: "0", value: tier?.ticket_medium   ?? 0.30 });
+    const advancedIn = h("input", { id: "tier-advanced", type: "number", step: "0.01", min: "0", value: tier?.ticket_advanced ?? 0.40 });
+    const auctionIn  = h("input", { id: "tier-auction",  type: "number", step: "1",    min: "0", max: "100", value: tier?.auction_percentage ?? 20 });
+
+    // Event payouts: render an input per known event type, prefilled if tier
+    // already has an override for it.
+    const eventTypes = Array.from(new Set([
+      ...EVENT_TYPES_DEFAULT,
+      ...Object.keys(tier?.event_payouts || {}),
+    ]));
+    const eventInputs = {};
+    const eventFields = h("div", { class: "tier-events-edit" },
+      ...eventTypes.map((ev) => {
+        const v = tier?.event_payouts?.[ev];
+        const input = h("input", { type: "number", step: "0.01", min: "0", value: (v ?? "").toString(), placeholder: "0.00" });
+        eventInputs[ev] = input;
+        return h("label", { class: "dash-field tier-event-field" },
+          h("span", null, ev),
+          h("div", { class: "tier-event-input" }, h("span", null, "$"), input)
+        );
+      })
+    );
+
+    const canPayment   = h("input", { type: "checkbox", checked: tier?.can_payment ? true : null });
+    const canLog       = h("input", { type: "checkbox", checked: tier?.can_log !== false ? true : null });
+    const canApprove   = h("input", { type: "checkbox", checked: tier?.can_approve_payout ? true : null });
+    const canCfgTicket = h("input", { type: "checkbox", checked: tier?.can_configure_tickets ? true : null });
+
+    function permRow(label, cb) {
+      return h("label", { class: "tier-perm-row" }, cb, h("span", null, label));
+    }
+
+    const form = h("form", null,
+      h("div", { class: "dash-field" }, h("label", { for: "tier-role" }, "Role"), roleSel),
+      h("div", { class: "dash-form-row" },
+        h("div", { class: "dash-field" }, h("label", { for: "tier-name" }, "Tier name"), nameIn),
+        h("div", { class: "dash-field" }, h("label", { for: "tier-prio" }, "Priority (higher = wins)"), prioIn)
+      ),
+      h("h4", { style: { margin: "16px 0 6px", fontSize: "0.9rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" } }, "Ticket pay (USD per ticket)"),
+      h("div", { class: "dash-form-row" },
+        h("div", { class: "dash-field" }, h("label", { for: "tier-basic" }, "Basic"),    h("div", { class: "tier-event-input" }, h("span", null, "$"), basicIn)),
+        h("div", { class: "dash-field" }, h("label", { for: "tier-medium" }, "Medium"),  h("div", { class: "tier-event-input" }, h("span", null, "$"), mediumIn))
+      ),
+      h("div", { class: "dash-form-row" },
+        h("div", { class: "dash-field" }, h("label", { for: "tier-advanced" }, "Advanced"), h("div", { class: "tier-event-input" }, h("span", null, "$"), advancedIn)),
+        h("div", { class: "dash-field" }, h("label", { for: "tier-auction" }, "Auction %"), auctionIn)
+      ),
+      h("h4", { style: { margin: "16px 0 6px", fontSize: "0.9rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" } }, "Event payouts (USD, leave blank for default)"),
+      eventFields,
+      h("h4", { style: { margin: "16px 0 6px", fontSize: "0.9rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" } }, "Permissions"),
+      h("div", { class: "tier-perms-edit" },
+        permRow("Can use /payment",        canPayment),
+        permRow("Can use /log",            canLog),
+        permRow("Can approve payouts",     canApprove),
+        permRow("Can configure tickets",   canCfgTicket)
+      )
+    );
+
+    const ok = await modalForm(isEdit ? `Edit tier — ${tier.tier_name || "Tier"}` : "New staff tier", form, {
+      okLabel: isEdit ? "Save tier" : "Create tier",
+    });
+    if (!ok) return;
+
+    const body = {
+      role_id:    roleSel.value,
+      tier_name:  nameIn.value.trim() || "Staff",
+      priority:   parseInt(prioIn.value, 10) || 0,
+      ticket_basic:    Number(basicIn.value)    || 0,
+      ticket_medium:   Number(mediumIn.value)   || 0,
+      ticket_advanced: Number(advancedIn.value) || 0,
+      auction_percentage: Number(auctionIn.value) || 0,
+      event_payouts: Object.fromEntries(
+        Object.entries(eventInputs)
+          .map(([k, el]) => [k, el.value.trim() === "" ? null : Number(el.value)])
+          .filter(([, v]) => Number.isFinite(v) && v > 0)
+      ),
+      can_payment:          canPayment.checked,
+      can_log:              canLog.checked,
+      can_approve_payout:   canApprove.checked,
+      can_configure_tickets: canCfgTicket.checked,
+    };
+
+    if (!body.role_id) return toast("error", "Pick a role first");
+
+    try {
+      if (isEdit) {
+        await data.tierUpdate(state.selectedGuildId, tier.id, body);
+        toast("success", `Updated ${body.tier_name}`);
+      } else {
+        await data.tierCreate(state.selectedGuildId, body);
+        toast("success", `Created ${body.tier_name}`);
+      }
+      // Refresh the tiers section
+      const newR = await data.tierList(state.selectedGuildId);
+      renderTiersInto(host, newR.tiers || [], newR.defaults || {});
+    } catch (e) {
+      toast("error", e.message || (isEdit ? "Update failed" : "Create failed"));
+    }
+  }
+
+  async function deleteTier(t, host) {
+    if (!confirm(`Delete tier "${t.tier_name}"? Staff with this role will fall back to default amounts.`)) return;
+    try {
+      await data.tierDelete(state.selectedGuildId, t.id);
+      toast("success", "Tier deleted");
+      const newR = await data.tierList(state.selectedGuildId);
+      renderTiersInto(host, newR.tiers || [], newR.defaults || {});
+    } catch (e) {
+      toast("error", e.message);
+    }
   }
 
   /* ============================================================

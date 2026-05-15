@@ -87,7 +87,7 @@
         </nav>
         <div class="menu-cta-mobile">
           <a class="btn btn-primary" data-link="inviteBot" href="#">Invite Bot</a>
-          <a class="btn btn-ghost" data-link="subscribe" href="#">Subscribe</a>
+          <a class="btn btn-ghost" data-link="dashboardLogin" href="#">Dashboard</a>
           <a class="btn btn-outline" data-link="supportDiscord" href="#">Join Support Discord</a>
         </div>
         <div class="menu-foot">Quick's ARK Bot · Discord Automation</div>
