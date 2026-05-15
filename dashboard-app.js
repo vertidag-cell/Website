@@ -287,22 +287,27 @@
 
   function renderNoBackend() {
     clear(root);
-    root.append(
-      notice("warn", "Backend not configured",
-        "Set SITE_CONFIG.backendApiUrl in config.js to your bot's Square Cloud URL."),
-      h("div", { class: "dash-card", style: { marginTop: "16px" } },
-        h("h3", null, "Manage the bot in Discord"),
-        h("ul", { style: { color: "var(--text-muted)", paddingLeft: "20px" } },
-          h("li", null, h("code", null, "/setup"), " — Setup Hub"),
-          h("li", null, h("code", null, "/subscribe"), " — start Premium"),
-          h("li", null, h("code", null, "/pop"), " — cluster population")
-        ),
-        h("div", { class: "dash-actions", style: { marginTop: "16px" } },
-          btn("Invite Bot", { href: cfg.links?.inviteBot, external: true }),
-          btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
-        )
+    // Premium full-page state — not a tiny notice
+    const card = h("div", { class: "picker-empty large" });
+    const ico = h("div", { class: "picker-empty-ico" });
+    ico.appendChild(iconSvg("plug"));
+    card.append(
+      ico,
+      h("h3", null, "Dashboard backend not connected"),
+      h("p", null,
+        "The dashboard UI is ready, but the backend API URL isn't configured yet. For now, manage the bot inside Discord with ",
+        h("code", null, "/setup"), " and ", h("code", null, "/subscribe"),
+        ". Once the backend goes live this page becomes a full control panel."),
+      h("div", { class: "dash-actions", style: { justifyContent: "center" } },
+        btn("Invite Bot",   { kind: "btn-primary", href: cfg.links?.inviteBot,      external: true }),
+        btn("Join Support", { kind: "btn-ghost",   href: cfg.links?.supportDiscord, external: true }),
+        btn("View Pricing", { kind: "btn-outline", href: "pricing.html" })
       )
     );
+    root.append(card);
+    // Also show the marketing-style feature preview + setup guide so the
+    // page still feels useful while backend is offline.
+    root.append(renderPickerFeaturePreview(), renderPickerSetupGuide());
   }
 
   function renderLoggedOut() {
@@ -325,57 +330,328 @@
     root.append(card);
   }
 
+  // Server-picker local UI state (search query + filter pill)
+  const pickerState = { query: "", filter: "all" };
+
   function renderGuildPicker() {
     clear(root);
-    root.append(
-      h("div", { class: "dash-userbar" },
-        userAvatar(state.user),
-        h("div", { class: "who" },
-          h("div", { class: "who-name" }, state.user.globalName || state.user.username),
-          h("div", { class: "who-sub" }, `@${state.user.username}`)
-        ),
-        btn("Log out", { kind: "btn-ghost", onclick: handleLogout })
-      )
-    );
-    if (!state.guilds.length) {
-      const card = h("div", { class: "dash-empty-card", style: { maxWidth: "620px", margin: "20px auto" } });
-      const ico = h("div", { class: "ico" });
-      ico.appendChild(iconSvg("shield"));
-      card.append(
-        ico,
-        h("h4", null, "No manageable servers"),
+
+    const totalCount   = state.guilds.length;
+    const premiumCount = state.guilds.filter((g) => g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime").length;
+    const ownerCount   = state.guilds.filter((g) => g.owner).length;
+
+    // ── Welcome header ─────────────────────────────────────────────
+    root.append(renderPickerHeader(totalCount));
+
+    // No manageable servers — premium empty state inside the layout
+    if (!totalCount) {
+      const card = h("div", { class: "picker-empty" },
+        (() => { const i = h("div", { class: "picker-empty-ico" }); i.appendChild(iconSvg("shield")); return i; })(),
+        h("h3", null, "No manageable servers found"),
         h("p", null,
-          "We didn't find any Discord servers where you have Manage Server / Administrator and the bot is installed. Invite the bot to a server you own, then refresh."),
+          "You need to be a server owner, administrator, or have Manage Server permission AND have Quick's ARK Bot installed in that server."),
         h("div", { class: "dash-actions", style: { justifyContent: "center" } },
           btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
-          btn("Refresh", { kind: "btn-ghost", onclick: () => boot(true) })
+          btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true }),
+          btn("Refresh", { kind: "btn-outline", onclick: () => boot(true) })
         )
       );
       root.append(card);
+      // Still show getting-started + features below
+      root.append(renderPickerFeaturePreview(), renderPickerSetupGuide());
       return;
     }
-    root.append(
-      h("div", { class: "dash-card" },
-        h("h3", null, "Pick a server to manage"),
-        h("p", null, "Only servers where the bot is installed AND you have Manage Server or Administrator are shown.")
+
+    // ── Main 2-column layout ───────────────────────────────────────
+    const grid = h("div", { class: "picker-grid" });
+
+    // ─ Left: search/filter + server cards
+    const left = h("div", { class: "picker-main" });
+    left.append(renderPickerSearchBar());
+    const listHost = h("div", { class: "picker-servers" });
+    left.append(listHost);
+    rerenderServerList(listHost);
+
+    // ─ Right: account + quick actions + premium info
+    const aside = h("aside", { class: "picker-aside" },
+      renderPickerAccountCard(totalCount, premiumCount, ownerCount),
+      renderPickerQuickActions(),
+      renderPickerPremiumCard()
+    );
+
+    grid.append(left, aside);
+    root.append(grid);
+
+    // ── Below the fold: feature preview + setup guide ─────────────
+    root.append(renderPickerFeaturePreview(), renderPickerSetupGuide());
+  }
+
+  function renderPickerHeader(totalCount) {
+    const u = state.user || {};
+    const name = u.globalName || u.username || "there";
+    return h("div", { class: "picker-header" },
+      h("div", { class: "picker-header-row" },
+        userAvatar(u),
+        h("div", { class: "picker-header-who" },
+          h("h1", { class: "picker-header-title" }, `Welcome back, ${name}`),
+          h("p", { class: "picker-header-sub" },
+            "Select a Discord server to manage setup, branding, role menus, /pop, staff pay, and every Quick's ARK Bot feature.")
+        )
       ),
-      h("div", { class: "dash-guilds" }, ...state.guilds.map(renderGuildCard))
+      h("div", { class: "picker-header-badges" },
+        h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Logged in with Discord"),
+        h("span", { class: "dash-status-pill" }, `${totalCount} manageable server${totalCount === 1 ? "" : "s"}`),
+        h("span", { class: "dash-status-pill premium" }, h("span", { class: "pill-dot" }), "Quick's ARK Bot Dashboard")
+      ),
+      h("div", { class: "picker-header-actions" },
+        btn("Invite Bot",      { kind: "btn-primary", href: cfg.links?.inviteBot,      external: true }),
+        btn("Join Support",    { kind: "btn-ghost",   href: cfg.links?.supportDiscord, external: true }),
+        btn("View Pricing",    { kind: "btn-outline", href: "pricing.html" }),
+        btn("Log out",         { kind: "btn-ghost",   onclick: handleLogout })
+      )
     );
   }
 
+  function renderPickerSearchBar() {
+    const search = h("input", {
+      type: "search",
+      class: "picker-search",
+      placeholder: "Search your servers…",
+      value: pickerState.query,
+      autocomplete: "off",
+      spellcheck: "false",
+    });
+    search.addEventListener("input", () => {
+      pickerState.query = search.value;
+      rerenderServerList(root.querySelector(".picker-servers"));
+    });
+
+    const filters = [
+      { id: "all",      label: "All",       countFn: (gs) => gs.length },
+      { id: "premium",  label: "Premium",   countFn: (gs) => gs.filter((g) => g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime").length },
+      { id: "free",     label: "Free",      countFn: (gs) => gs.filter((g) => !["premium","monthly","lifetime"].includes(g.plan)).length },
+      { id: "owner",    label: "Owner",     countFn: (gs) => gs.filter((g) => g.owner).length },
+    ];
+    const pillRow = h("div", { class: "picker-filters" });
+    filters.forEach((f) => {
+      const count = f.countFn(state.guilds);
+      const pill = h("button", {
+        type: "button",
+        class: `picker-filter ${pickerState.filter === f.id ? "active" : ""}`,
+        onclick: () => {
+          pickerState.filter = f.id;
+          // Re-render filter row to reflect active state
+          const newBar = renderPickerSearchBar();
+          root.querySelector(".picker-searchbar").replaceWith(newBar);
+          rerenderServerList(root.querySelector(".picker-servers"));
+        },
+      },
+        f.label,
+        h("span", { class: "picker-filter-count" }, String(count))
+      );
+      pillRow.appendChild(pill);
+    });
+
+    const ico = h("span", { class: "picker-search-ico" });
+    ico.appendChild(iconSvg("activity"));
+    return h("div", { class: "picker-searchbar" },
+      h("div", { class: "picker-search-wrap" }, ico, search),
+      pillRow
+    );
+  }
+
+  function filterGuilds(guilds) {
+    const q = (pickerState.query || "").trim().toLowerCase();
+    const f = pickerState.filter;
+    return guilds.filter((g) => {
+      if (q && !(g.name || "").toLowerCase().includes(q)) return false;
+      if (f === "premium" && !(g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime")) return false;
+      if (f === "free"    &&  (g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime")) return false;
+      if (f === "owner"   && !g.owner) return false;
+      return true;
+    });
+  }
+
+  function rerenderServerList(host) {
+    if (!host) return;
+    clear(host);
+    const filtered = filterGuilds(state.guilds);
+    if (!filtered.length) {
+      host.append(
+        h("div", { class: "picker-empty-inline" },
+          (() => { const i = h("div", { class: "picker-empty-ico small" }); i.appendChild(iconSvg("activity")); return i; })(),
+          h("h4", null, "No matches"),
+          h("p", null,
+            pickerState.query
+              ? `No servers match "${pickerState.query}". Try a different search.`
+              : "No servers in this category.")
+        )
+      );
+      return;
+    }
+    filtered.forEach((g, i) => {
+      const card = renderGuildCard(g);
+      // Staggered fade-in for premium feel
+      card.style.animationDelay = (i * 0.05) + "s";
+      host.appendChild(card);
+    });
+  }
+
   function renderGuildCard(g) {
-    const tags = [];
-    if (g.plan === "lifetime") tags.push(h("span", { class: "dash-tag lifetime" }, "Lifetime"));
-    else if (g.plan === "monthly" || g.plan === "premium") tags.push(h("span", { class: "dash-tag premium" }, "Premium"));
-    else tags.push(h("span", { class: "dash-tag free" }, "Free"));
-    if (g.owner) tags.push(h("span", { class: "dash-tag" }, "Owner"));
-    return h("button", { class: "dash-guild", type: "button", onclick: () => selectGuild(g.id) },
-      guildIcon(g),
-      h("div", { class: "gmeta" },
-        h("div", { class: "gname" }, g.name),
-        h("div", { class: "gtags" }, ...tags)
+    const planLabel = g.plan === "lifetime" ? "Lifetime"
+                    : (g.plan === "premium" || g.plan === "monthly") ? "Premium"
+                    : "Free";
+    const planClass = g.plan === "lifetime" ? "lifetime"
+                    : (g.plan === "premium" || g.plan === "monthly") ? "premium"
+                    : "free";
+
+    const card = h("button", { class: "picker-server-card", type: "button",
+      onclick: () => selectGuild(g.id),
+      "aria-label": `Manage ${g.name}` });
+
+    card.append(
+      h("div", { class: "picker-server-top" },
+        guildIcon(g),
+        h("div", { class: "picker-server-info" },
+          h("div", { class: "picker-server-name" }, g.name),
+          h("div", { class: "picker-server-id" }, "ID · " + (g.id ? g.id.slice(-6) : "—"))
+        ),
+        h("span", { class: `dash-status-pill ${planClass}` },
+          g.plan === "lifetime" || g.plan === "premium" || g.plan === "monthly" ? h("span", { class: "pill-dot" }) : null,
+          planLabel)
       ),
-      h("span", { style: { color: "var(--text-dim)", fontSize: "1.1rem" } }, "→")
+      h("div", { class: "picker-server-badges" },
+        h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Bot Installed"),
+        g.owner ? h("span", { class: "dash-status-pill" }, "Owner")
+                : h("span", { class: "dash-status-pill" }, "Manage Server")
+      ),
+      h("div", { class: "picker-server-actions" },
+        h("span", { class: "picker-manage-btn" }, "Manage Server →")
+      )
+    );
+
+    return card;
+  }
+
+  // ── Aside cards ──────────────────────────────────────────────────
+  function renderPickerAccountCard(totalCount, premiumCount, ownerCount) {
+    return h("div", { class: "picker-aside-card" },
+      h("h4", null, "Account"),
+      h("div", { class: "picker-account-row" },
+        userAvatar(state.user),
+        h("div", null,
+          h("div", { class: "picker-account-name" }, state.user?.globalName || state.user?.username || "—"),
+          h("div", { class: "picker-account-sub" }, "@" + (state.user?.username || "—"))
+        )
+      ),
+      h("div", { class: "picker-mini-stats" },
+        renderMiniStat(String(totalCount),   "Servers"),
+        renderMiniStat(String(premiumCount), "Premium"),
+        renderMiniStat(String(ownerCount),   "Owner")
+      )
+    );
+  }
+  function renderMiniStat(value, label) {
+    return h("div", { class: "picker-mini-stat" },
+      h("div", { class: "picker-mini-stat-v" }, value),
+      h("div", { class: "picker-mini-stat-l" }, label)
+    );
+  }
+
+  function renderPickerQuickActions() {
+    return h("div", { class: "picker-aside-card" },
+      h("h4", null, "Quick Actions"),
+      h("div", { class: "picker-quick-list" },
+        renderQuickRow("plug",    "Invite Bot",     cfg.links?.inviteBot,      true),
+        renderQuickRow("lifeRing","Support Server", cfg.links?.supportDiscord, true),
+        renderQuickRow("calendar","View Pricing",   "pricing.html",            false),
+        renderQuickRow("fileText","Dashboard Help", "faq.html",                false)
+      )
+    );
+  }
+  function renderQuickRow(iconName, label, href, external) {
+    return h("a", {
+      class: "picker-quick-row",
+      href: href || "#",
+      target: external ? "_blank" : null,
+      rel:    external ? "noopener noreferrer" : null,
+    },
+      icon(iconName, "picker-quick-ico"),
+      h("span", { class: "picker-quick-label" }, label),
+      h("span", { class: "picker-quick-arrow" }, "→")
+    );
+  }
+
+  function renderPickerPremiumCard() {
+    return h("div", { class: "picker-aside-card picker-premium" },
+      h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" } },
+        icon("sparkle", "picker-quick-ico"),
+        h("h4", { style: { margin: 0, color: "var(--dash-red-2)" } }, "Activate Premium")
+      ),
+      h("p", { style: { fontSize: "0.84rem", color: "var(--dash-muted)", margin: "0 0 12px" } },
+        "Premium is activated inside Discord. Invite the bot, pick a server, then run ",
+        h("code", null, "/subscribe"), " — checkout opens automatically."),
+      h("div", { class: "dash-actions", style: { marginTop: 0 } },
+        btn("Invite Bot",   { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
+        btn("Pricing",      { kind: "btn-ghost",   href: "pricing.html" })
+      )
+    );
+  }
+
+  // ── Below-the-fold cards ────────────────────────────────────────
+  function renderPickerFeaturePreview() {
+    return h("div", { class: "picker-features-block" },
+      h("div", { class: "picker-section-head" },
+        h("h3", null, "What you can manage"),
+        h("p", null, "Quick's ARK Bot ships with a deep free toolkit and premium upgrades. Every module is also configurable inside Discord with /setup.")
+      ),
+      h("div", { class: "picker-features-grid" },
+        renderFeatureChip("hand",     "Welcome",          "free"),
+        renderFeatureChip("shield",   "Auto Roles",       "free"),
+        renderFeatureChip("masks",    "Role Menus",       "free"),
+        renderFeatureChip("activity", "/pop Population",  "free"),
+        renderFeatureChip("trophy",   "XP & Leaderboards","free"),
+        renderFeatureChip("flag",     "Pets",             "free"),
+        renderFeatureChip("creditCard","Payments",        "premium"),
+        renderFeatureChip("wallet",   "Staff Pay",        "premium"),
+        renderFeatureChip("flame",    "Hype",             "premium"),
+        renderFeatureChip("palette",  "Branding",         "premium"),
+        renderFeatureChip("ticket",   "Tickets",          "premium"),
+        renderFeatureChip("calendar", "Events",           "premium")
+      )
+    );
+  }
+  function renderFeatureChip(iconName, label, tier) {
+    return h("div", { class: `picker-feature-chip ${tier}` },
+      icon(iconName, "picker-feature-ico"),
+      h("div", { class: "picker-feature-body" },
+        h("div", { class: "picker-feature-label" }, label),
+        h("div", { class: "picker-feature-tier" }, tier === "premium" ? "Premium" : "Free")
+      )
+    );
+  }
+
+  function renderPickerSetupGuide() {
+    const steps = [
+      { n: "1", title: "Invite the bot",            sub: "Click Invite Bot and pick your server." },
+      { n: "2", title: "Open the dashboard",        sub: "Select that server from the list above." },
+      { n: "3", title: "Configure modules",         sub: "Welcome, Role Menus, Tickets, and more — point-and-click or use /setup." },
+      { n: "4", title: "Unlock premium (optional)", sub: "Run /subscribe inside Discord for staff pay, branding, hype, events." },
+    ];
+    return h("div", { class: "picker-guide" },
+      h("div", { class: "picker-section-head" },
+        h("h3", null, "Getting started"),
+        h("p", null, "Four short steps from zero to a configured server.")
+      ),
+      h("ol", { class: "picker-stepper" },
+        ...steps.map((s) => h("li", { class: "picker-step" },
+          h("div", { class: "picker-step-num" }, s.n),
+          h("div", null,
+            h("div", { class: "picker-step-title" }, s.title),
+            h("div", { class: "picker-step-sub" }, s.sub)
+          )
+        ))
+      )
     );
   }
 
@@ -2814,7 +3090,8 @@
      ============================================================ */
   async function boot() {
     clear(root);
-    root.append(h("div", { class: "dash-loading" }, h("div", { class: "dash-spinner" }), "Connecting…"));
+    // Premium skeleton while we fetch identity + guild list.
+    root.append(renderPickerBootSkeleton());
     if (!API_BASE) return renderNoBackend();
     try {
       const me = await data.me();
@@ -2826,10 +3103,70 @@
       console.error("[dashboard] boot failed:", e);
       if (e.code === 401) { state.user = null; return renderLoggedOut(); }
       if (e.code === "no_backend") return renderNoBackend();
-      if (e.code === "timeout") return renderTabError(root, e);
-      if (e.code === "network") return renderTabError(root, e);
-      renderTabError(root, e);
+      // Network/timeout/500 — show a friendly retry card, not raw error text.
+      return renderPickerBootError(e);
     }
+  }
+
+  /** Skeleton mirroring the picker layout so the loading state feels
+   *  intentional, not blank. */
+  function renderPickerBootSkeleton() {
+    const wrap = h("div");
+    wrap.append(
+      h("div", { class: "skel-card", style: { padding: "20px" } },
+        h("div", { class: "skel skel-line lg w-30" }),
+        h("div", { class: "skel skel-line w-70" }),
+        h("div", { class: "skel skel-line w-50" })
+      ),
+      h("div", { class: "picker-grid" },
+        h("div", { class: "picker-main" },
+          h("div", { class: "skel-card", style: { padding: "12px" } },
+            h("div", { class: "skel skel-line w-50" })
+          ),
+          h("div", { class: "picker-servers" },
+            ...new Array(4).fill(0).map(() => h("div", { class: "skel-card" },
+              h("div", { class: "skel skel-line lg w-50" }),
+              h("div", { class: "skel skel-line w-30" }),
+              h("div", { class: "skel skel-line w-70" })
+            ))
+          )
+        ),
+        h("div", { class: "picker-aside" },
+          h("div", { class: "skel-card" },
+            h("div", { class: "skel skel-line lg w-30" }),
+            h("div", { class: "skel skel-line w-70" })
+          ),
+          h("div", { class: "skel-card" },
+            h("div", { class: "skel skel-line lg w-30" }),
+            h("div", { class: "skel skel-line w-90" })
+          )
+        )
+      )
+    );
+    return wrap;
+  }
+
+  /** Premium boot-error state. Shown when /me or /guilds fails (network,
+   *  500, timeout). Always offers a clear Retry + Support. */
+  function renderPickerBootError(err) {
+    clear(root);
+    const card = h("div", { class: "picker-empty large" });
+    const ico = h("div", { class: "picker-empty-ico" });
+    ico.appendChild(iconSvg("refresh"));
+    const detail = err?.code === "timeout" ? "The backend didn't respond in 8 seconds."
+                  : err?.code === "network" ? "Couldn't reach the backend (CORS or network)."
+                  : (err?.message || "Unknown error");
+    card.append(
+      ico,
+      h("h3", null, "Couldn't load your servers"),
+      h("p", null, detail, " You can try again, or manage the bot inside Discord while we look into it."),
+      h("div", { class: "dash-actions", style: { justifyContent: "center" } },
+        btn("Retry",        { kind: "btn-primary", onclick: () => boot() }),
+        btn("Join Support", { kind: "btn-ghost",   href: cfg.links?.supportDiscord, external: true }),
+        btn("Invite Bot",   { kind: "btn-outline", href: cfg.links?.inviteBot,      external: true })
+      )
+    );
+    root.append(card);
   }
 
   function selectGuild(id) {
