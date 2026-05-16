@@ -135,6 +135,7 @@
   const TAB_ICONS = {
     "setup-hub":  "grid",
     overview:     "activity",
+    analytics:    "poll",
     welcome:      "hand",
     autoRoles:    "shield",
     roleMenus:    "masks",
@@ -749,7 +750,7 @@
     const prem = state.modules.filter((m) => m.tier === "premium").map((m) => m.name);
 
     const groups = [
-      { label: "Core",          items: ["setup-hub", "overview"] },
+      { label: "Core",          items: ["setup-hub", "overview", "analytics"] },
       { label: "Free Tools",    items: free },
       { label: "Premium Tools", items: prem },
       { label: "System",        items: ["premium", "audit", "support"] },
@@ -758,6 +759,7 @@
     const labels = {
       "setup-hub": "Setup Hub",
       overview:    "Overview",
+      analytics:   "Analytics",
       premium:     "Premium",
       audit:       "Audit Log",
       support:     "Support",
@@ -813,6 +815,7 @@
     const tab = state.activeTab;
     if (tab === "setup-hub") return loadSetupHub(content);
     if (tab === "overview") return loadOverview(content);
+    if (tab === "analytics") return loadAnalytics(content);
     if (tab === "premium") return renderPremium(content);
     if (tab === "audit") return loadAudit(content);
     if (tab === "support") return renderSupportTab(content);
@@ -1394,6 +1397,201 @@
       );
     });
     card.append(mini);
+    return card;
+  }
+
+  /* ============================================================
+     Tab: Analytics — full per-guild activity breakdown
+     ============================================================ */
+  // Range options for the Analytics page (persisted on state)
+  function analyticsDays() {
+    return state._analyticsDays || 7;
+  }
+  function seriesSum(s)  { return (s || []).reduce((t, p) => t + (p.value || 0), 0); }
+  function seriesAvg(s)  { return (s && s.length) ? seriesSum(s) / s.length : 0; }
+  function seriesPeak(s) {
+    let peak = { day: null, value: -1 };
+    (s || []).forEach((p) => { if ((p.value || 0) > peak.value) peak = { day: p.day, value: p.value || 0 }; });
+    return peak.value < 0 ? { day: null, value: 0 } : peak;
+  }
+  function fmtDay(dayStr) {
+    if (!dayStr) return "—";
+    return new Date(dayStr + "T00:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
+  async function loadAnalytics(content) {
+    clear(content);
+    content.append(renderGenericSkeleton());
+    const days = analyticsDays();
+    try {
+      const a = await data.analytics(state.selectedGuildId, days);
+      clear(content);
+
+      // ── Hero + range toggle ───────────────────────────────────────
+      const rangeBtns = h("div", { class: "analytics-range" });
+      [[7, "7 days"], [14, "14 days"], [30, "30 days"]].forEach(([d, label]) => {
+        rangeBtns.appendChild(h("button", {
+          type: "button",
+          class: "analytics-range-btn" + (d === days ? " active" : ""),
+          onclick: () => { state._analyticsDays = d; loadAnalytics(content); },
+        }, label));
+      });
+      content.append(
+        h("div", { class: "dash-module-hero" },
+          (() => { const i = h("div", { class: "dash-module-hero-ico" }); i.appendChild(iconSvg("poll")); return i; })(),
+          h("div", { class: "dash-module-hero-body" },
+            h("div", { class: "dash-module-hero-row" },
+              h("h2", { class: "dash-module-hero-title" }, "Analytics"),
+              h("span", { class: "dash-status-pill" }, `Last ${days} days`)
+            ),
+            h("p", { class: "dash-module-hero-desc" },
+              "Real activity recorded across your server. Everything updates automatically as the bot is used.")
+          ),
+          rangeBtns
+        )
+      );
+
+      const counters = ["messages", "commands", "voice_joins", "welcomes", "pop_uses"];
+      const anyData = counters.some((m) => ((a.cards && a.cards[m] && a.cards[m].total) || 0) > 0);
+
+      // ── Summary cards (every metric) ──────────────────────────────
+      const grid = h("div", { class: "dash-stat-grid" });
+      // Members card (gauge)
+      const memberGrowth = (a.memberSeries && a.memberSeries.length > 1)
+        ? (a.memberSeries[a.memberSeries.length - 1].value - a.memberSeries[0].value)
+        : null;
+      grid.appendChild(renderActivityCard({
+        label: "Members",
+        value: a.members != null ? fmtNum(a.members) : "—",
+        delta: memberGrowth,
+        deltaSuffix: ` in ${days}d`,
+        iconName: "user",
+        series: a.memberSeries,
+      }));
+      counters.forEach((m) => {
+        const c = (a.cards && a.cards[m]) || { total: 0, week: 0, prevWeek: 0 };
+        grid.appendChild(renderActivityCard({
+          label: METRIC_META[m].label,
+          value: fmtNum(c.total),
+          sub: "all-time total",
+          iconName: METRIC_META[m].iconName,
+          series: a.series && a.series[m],
+        }));
+      });
+      content.append(grid);
+
+      // ── Main interactive chart ────────────────────────────────────
+      content.append(renderAnalyticsBigChart(a, counters));
+
+      // ── Member growth chart ───────────────────────────────────────
+      if (a.memberSeries && a.memberSeries.some((p) => p.value > 0)) {
+        content.append(
+          h("div", { class: "dash-card" },
+            h("h3", null, "Member growth"),
+            h("p", null, `Server member count over the last ${days} days.`),
+            h("div", { class: "area-chart-wrap", html: areaChartSvg(a.memberSeries) })
+          )
+        );
+      }
+
+      // ── Per-metric breakdown ──────────────────────────────────────
+      const breakdown = h("div", { class: "dash-card" },
+        h("h3", null, "Metric breakdown"),
+        h("p", null, "Totals, averages, and peak days for every tracked metric.")
+      );
+      const bgrid = h("div", { class: "analytics-breakdown" });
+      counters.forEach((m) => {
+        const series = (a.series && a.series[m]) || [];
+        const c = (a.cards && a.cards[m]) || { total: 0, week: 0, prevWeek: 0 };
+        const peak = seriesPeak(series);
+        const delta = c.week - c.prevWeek;
+        const up = delta >= 0;
+        bgrid.appendChild(
+          h("div", { class: "analytics-bd-card" },
+            h("div", { class: "analytics-bd-head" },
+              icon(METRIC_META[m].iconName, "analytics-mini-ico"),
+              h("div", { class: "analytics-bd-name" }, METRIC_META[m].label)
+            ),
+            h("div", { class: "analytics-bd-rows" },
+              renderBdRow("All-time", fmtNum(c.total)),
+              renderBdRow("This week", fmtNum(c.week)),
+              renderBdRow("Week change", h("span", { class: "dash-stat-delta " + (up ? "up" : "down"), style: { fontSize: "0.78rem" } },
+                (up ? "▲ " : "▼ ") + fmtNum(Math.abs(delta)))),
+              renderBdRow("Daily average", fmtNum(Math.round(seriesAvg(series)))),
+              renderBdRow("Peak day", peak.value > 0 ? `${fmtNum(peak.value)} · ${fmtDay(peak.day)}` : "—")
+            )
+          )
+        );
+      });
+      breakdown.append(bgrid);
+      content.append(breakdown);
+
+      if (!anyData) {
+        // Friendly note pinned under the hero when nothing's recorded yet
+        content.querySelector(".dash-module-hero").after(
+          notice("info", "Analytics are still warming up",
+            "Tracking started when the bot was last updated. As your members chat, run commands and join voice, these charts fill in automatically.")
+        );
+      }
+    } catch (e) { renderTabError(content, e); }
+  }
+
+  function renderBdRow(label, value) {
+    return h("div", { class: "analytics-bd-row" },
+      h("span", { class: "analytics-bd-label" }, label),
+      h("span", { class: "analytics-bd-value" }, value)
+    );
+  }
+
+  /** Big metric-switchable chart card used on the Analytics page. */
+  function renderAnalyticsBigChart(a, metrics) {
+    let active = "messages";
+    const card = h("div", { class: "dash-card" });
+    const chartHost = h("div", { class: "analytics-chart-host" });
+    const summary = h("div", { class: "analytics-chart-summary" });
+
+    function draw() {
+      const series = (a.series && a.series[active]) || [];
+      clear(chartHost);
+      chartHost.appendChild(h("div", { class: "area-chart-wrap", html: areaChartSvg(series) }));
+      clear(summary);
+      const total = seriesSum(series);
+      const avg = Math.round(seriesAvg(series));
+      const peak = seriesPeak(series);
+      summary.append(
+        h("div", { class: "acs-item" }, h("strong", null, fmtNum(total)), h("span", null, "Total in range")),
+        h("div", { class: "acs-item" }, h("strong", null, fmtNum(avg)),   h("span", null, "Daily average")),
+        h("div", { class: "acs-item" }, h("strong", null, peak.value > 0 ? fmtNum(peak.value) : "—"), h("span", null, "Peak day"))
+      );
+    }
+
+    const pills = h("div", { class: "analytics-pills" });
+    metrics.forEach((m) => {
+      const pill = h("button", {
+        type: "button",
+        class: "analytics-pill" + (m === active ? " active" : ""),
+        onclick: () => {
+          active = m;
+          pills.querySelectorAll(".analytics-pill").forEach((p) => p.classList.remove("active"));
+          pill.classList.add("active");
+          draw();
+        },
+      }, METRIC_META[m].label);
+      pills.appendChild(pill);
+    });
+
+    card.append(
+      h("div", { class: "analytics-head" },
+        h("div", null,
+          h("h3", null, "Activity chart"),
+          h("p", null, "Switch metric to compare daily activity.")
+        ),
+        pills
+      ),
+      chartHost,
+      summary
+    );
+    draw();
     return card;
   }
 

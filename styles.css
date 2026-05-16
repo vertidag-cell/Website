@@ -8543,3 +8543,99 @@ footer .brand-mark  { width: 48px !important; height: 48px !important; }
   color: var(--dash-muted-2);
   margin-top: 1px;
 }
+
+/* ================================================================
+   v38 — Analytics page
+   ================================================================ */
+/* Range toggle in the hero */
+.analytics-range {
+  display: inline-flex;
+  gap: 3px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--dash-border);
+  border-radius: 999px;
+  padding: 3px;
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+.analytics-range-btn {
+  background: transparent;
+  border: none;
+  color: var(--dash-muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s var(--dash-ease), color 0.15s var(--dash-ease);
+}
+.analytics-range-btn:hover { color: var(--dash-text); }
+.analytics-range-btn.active {
+  background: linear-gradient(135deg, var(--dash-red), var(--dash-red-dark));
+  color: #fff;
+}
+
+/* Big chart summary strip under the chart */
+.analytics-chart-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.acs-item {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--dash-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: center;
+}
+.acs-item strong {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--dash-text);
+}
+.acs-item span {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dash-muted-2);
+}
+
+/* Per-metric breakdown grid */
+.analytics-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.analytics-bd-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--dash-border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.analytics-bd-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+.analytics-bd-name {
+  font-weight: 700;
+  font-size: 0.96rem;
+  color: var(--dash-text);
+}
+.analytics-bd-rows { display: flex; flex-direction: column; gap: 2px; }
+.analytics-bd-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--dash-border);
+  font-size: 0.84rem;
+}
+.analytics-bd-row:last-child { border-bottom: none; }
+.analytics-bd-label { color: var(--dash-muted-2); }
+.analytics-bd-value { color: var(--dash-text); font-weight: 700; }
