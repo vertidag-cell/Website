@@ -253,6 +253,7 @@
     resetModule: (gid, name) => api(`/api/dashboard/guilds/${gid}/modules/${name}/reset`, { method: "POST" }),
     quickSetup: (gid, name, body) => api(`/api/dashboard/guilds/${gid}/modules/${name}/quick-setup`, { method: "POST", body: body || {} }),
     audit: (gid) => api(`/api/dashboard/guilds/${gid}/audit-log`),
+    analytics: (gid, days) => api(`/api/dashboard/guilds/${gid}/analytics?days=${days || 7}`),
     channels: (gid) => api(`/api/dashboard/guilds/${gid}/discord/channels`),
     categories: (gid) => api(`/api/dashboard/guilds/${gid}/discord/categories`),
     roles: (gid) => api(`/api/dashboard/guilds/${gid}/discord/roles`),
@@ -1071,23 +1072,21 @@
     clear(content);
     content.append(renderOverviewSkeleton());
     try {
-      const o = await data.overview(state.selectedGuildId);
+      // Overview + analytics in parallel. Analytics is best-effort —
+      // if it fails the page still renders with the rest.
+      const [o, analytics] = await Promise.all([
+        data.overview(state.selectedGuildId),
+        data.analytics(state.selectedGuildId, 7).catch(() => null),
+      ]);
       clear(content);
-      const plan = o.plan || "free";
-      const planLabel = plan === "lifetime" ? "Lifetime" : (plan === "monthly" || plan === "premium") ? "Premium" : "Free";
-      const expires = o.subscription?.expiresAt ? new Date(o.subscription.expiresAt) : null;
       const setup = o.setup || { percent: 0, completed: [], missing: [], total: 0 };
-      const completed = setup.completedCount ?? (setup.completed ? setup.completed.length : 0);
 
-      // Stat grid
-      content.append(
-        h("div", { class: "dash-stat-grid" },
-          renderStatCard({ label: "Plan", value: planLabel, sub: o.subscription?.status || "—", iconName: "sparkle" }),
-          renderStatCard({ label: "Setup", value: `${setup.percent}%`, sub: `${completed} of ${setup.total} modules`, iconName: "grid", barPct: setup.percent }),
-          renderStatCard({ label: "Bot", value: o.botInstalled ? "Installed" : "Not in server", sub: o.botInstalled ? "Online" : "Invite required", iconName: "plug" }),
-          renderStatCard({ label: "Expires", value: expires ? expires.toLocaleDateString() : "—", sub: expires ? "Auto-renew via /subscribe" : "—", iconName: "calendar" })
-        )
-      );
+      // Activity stat grid — real numbers from the analytics endpoint.
+      // Each card: value, week-over-week delta, sparkline.
+      content.append(renderActivityStatGrid(o, analytics));
+
+      // Analytics chart card
+      if (analytics) content.append(renderAnalyticsCard(analytics));
 
       // Quick actions
       content.append(
@@ -1188,6 +1187,214 @@
       h("p", null, "Track configuration across every module. Click a row to jump straight to it."),
       h("div", { class: "setup-progress-grid" }, ringCol, checklist)
     );
+  }
+
+  /* ============================================================
+     Analytics rendering — real per-guild activity
+     ============================================================ */
+  const METRIC_META = {
+    messages:    { label: "Messages",    iconName: "list" },
+    commands:    { label: "Commands",    iconName: "grid" },
+    voice_joins: { label: "Voice Joins", iconName: "activity" },
+    welcomes:    { label: "Welcomes",    iconName: "hand" },
+    pop_uses:    { label: "/pop Uses",   iconName: "activity" },
+    members:     { label: "Members",     iconName: "user" },
+  };
+
+  function fmtNum(n) {
+    n = Number(n) || 0;
+    if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+    if (n >= 1000)    return (n / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+    return String(Math.round(n));
+  }
+
+  /** Round up to a clean axis maximum. */
+  function niceCeil(n) {
+    if (n <= 5) return 5;
+    const mag = Math.pow(10, Math.floor(Math.log10(n)));
+    const norm = n / mag;
+    const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+    return nice * mag;
+  }
+
+  /** Tiny inline sparkline SVG string from a [{day,value}] series. */
+  function sparklineSvg(series) {
+    const vals = (series || []).map((p) => p.value || 0);
+    if (vals.length < 2) return "";
+    const W = 120, H = 30;
+    const max = Math.max(...vals), min = Math.min(...vals);
+    const span = Math.max(1, max - min);
+    const n = vals.length;
+    const pts = vals.map((v, i) => [
+      (i / (n - 1)) * W,
+      H - 3 - ((v - min) / span) * (H - 6),
+    ]);
+    const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    const area = line + ` L${W} ${H} L0 ${H} Z`;
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="spark-svg">`
+      + `<path d="${area}" fill="rgba(239,35,60,0.16)"/>`
+      + `<path d="${line}" fill="none" stroke="var(--dash-red-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
+      + `</svg>`;
+  }
+
+  /** Full area chart SVG string from a [{day,value}] series. */
+  function areaChartSvg(series) {
+    const W = 760, H = 280;
+    const padL = 48, padR = 18, padT = 18, padB = 34;
+    const pw = W - padL - padR, ph = H - padT - padB;
+    const vals = (series || []).map((p) => p.value || 0);
+    const n = vals.length;
+    if (!n) return `<svg viewBox="0 0 ${W} ${H}"></svg>`;
+    const niceMax = niceCeil(Math.max(1, ...vals));
+    const X = (i) => padL + (n <= 1 ? pw / 2 : (i / (n - 1)) * pw);
+    const Y = (v) => padT + ph - (v / niceMax) * ph;
+    const pts = vals.map((v, i) => [X(i), Y(v)]);
+    const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    const baseY = padT + ph;
+    const area = line + ` L${X(n - 1).toFixed(1)} ${baseY} L${X(0).toFixed(1)} ${baseY} Z`;
+    let grid = "", ylab = "";
+    [0, niceMax / 2, niceMax].forEach((t) => {
+      const y = Y(t);
+      grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.06)"/>`;
+      ylab += `<text x="${padL - 8}" y="${(y + 3).toFixed(1)}" text-anchor="end" class="chart-axis">${fmtNum(t)}</text>`;
+    });
+    let xlab = "";
+    const step = Math.max(1, Math.ceil(n / 6));
+    series.forEach((p, i) => {
+      if (i % step !== 0 && i !== n - 1) return;
+      const d = new Date(p.day + "T00:00:00Z");
+      const lbl = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      xlab += `<text x="${X(i).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="chart-axis">${lbl}</text>`;
+    });
+    const dots = pts.map((p) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.4" class="chart-dot"/>`).join("");
+    return `<svg viewBox="0 0 ${W} ${H}" class="area-chart" preserveAspectRatio="xMidYMid meet">`
+      + `<defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">`
+      + `<stop offset="0%" stop-color="rgba(239,35,60,0.44)"/>`
+      + `<stop offset="100%" stop-color="rgba(239,35,60,0.02)"/>`
+      + `</linearGradient></defs>`
+      + grid
+      + `<path d="${area}" fill="url(#areaGrad)"/>`
+      + `<path d="${line}" fill="none" stroke="var(--dash-red)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`
+      + dots + ylab + xlab
+      + `</svg>`;
+  }
+
+  /** Activity stat grid — Members + Messages/Commands//pop this week. */
+  function renderActivityStatGrid(o, analytics) {
+    const grid = h("div", { class: "dash-stat-grid" });
+    const cards = (analytics && analytics.cards) || {};
+    const memberVal = (analytics && analytics.members != null)
+      ? analytics.members
+      : (o.guild && o.guild.memberCount != null ? o.guild.memberCount : null);
+
+    grid.append(renderActivityCard({
+      label: "Members",
+      value: memberVal != null ? fmtNum(memberVal) : "—",
+      iconName: "user",
+      sub: "in this server",
+      series: analytics && analytics.memberSeries,
+    }));
+
+    [["messages", "Messages"], ["commands", "Commands"], ["pop_uses", "/pop Uses"]].forEach(([m, label]) => {
+      const c = cards[m] || { total: 0, week: 0, prevWeek: 0 };
+      grid.append(renderActivityCard({
+        label,
+        value: fmtNum(c.week),
+        delta: c.week - c.prevWeek,
+        deltaSuffix: " this week",
+        iconName: METRIC_META[m].iconName,
+        series: analytics && analytics.series && analytics.series[m],
+      }));
+    });
+    return grid;
+  }
+
+  function renderActivityCard({ label, value, sub, delta, deltaSuffix, iconName, series }) {
+    const card = h("div", { class: "dash-stat activity-stat" });
+    const ic = h("span", { class: "dash-stat-ico" });
+    ic.appendChild(iconSvg(iconName));
+    card.append(
+      h("div", { class: "dash-stat-l" }, label),
+      ic,
+      h("div", { class: "dash-stat-v" }, value)
+    );
+    if (typeof delta === "number") {
+      const up = delta >= 0;
+      card.append(h("div", { class: "dash-stat-delta " + (up ? "up" : "down") },
+        (up ? "▲ " : "▼ ") + fmtNum(Math.abs(delta)) + (deltaSuffix || "")));
+    } else if (sub) {
+      card.append(h("div", { class: "dash-stat-sub" }, sub));
+    }
+    if (series && series.length > 1) {
+      card.append(h("div", { class: "spark-wrap", html: sparklineSvg(series) }));
+    }
+    return card;
+  }
+
+  /** Analytics card — metric-switchable area chart + mini-stat totals. */
+  function renderAnalyticsCard(analytics) {
+    const metrics = ["messages", "commands", "voice_joins", "welcomes"];
+    let activeMetric = "messages";
+    const hasData = metrics.some((m) => ((analytics.cards && analytics.cards[m] && analytics.cards[m].total) || 0) > 0);
+
+    const card = h("div", { class: "dash-card" });
+    const chartHost = h("div", { class: "analytics-chart-host" });
+
+    function drawChart() {
+      clear(chartHost);
+      const series = (analytics.series && analytics.series[activeMetric]) || [];
+      chartHost.appendChild(h("div", { class: "area-chart-wrap", html: areaChartSvg(series) }));
+    }
+
+    const pills = h("div", { class: "analytics-pills" });
+    metrics.forEach((m) => {
+      const pill = h("button", {
+        type: "button",
+        class: "analytics-pill" + (m === activeMetric ? " active" : ""),
+        onclick: () => {
+          activeMetric = m;
+          pills.querySelectorAll(".analytics-pill").forEach((p) => p.classList.remove("active"));
+          pill.classList.add("active");
+          drawChart();
+        },
+      }, METRIC_META[m].label);
+      pills.appendChild(pill);
+    });
+
+    card.append(
+      h("div", { class: "analytics-head" },
+        h("div", null,
+          h("h3", null, "Analytics Overview"),
+          h("p", null, `Real activity over the last ${analytics.days} days.`)
+        ),
+        pills
+      )
+    );
+
+    if (hasData) {
+      card.append(chartHost);
+      drawChart();
+    } else {
+      card.append(notice("info", "No activity recorded yet",
+        "Analytics populate as members chat, run commands, and join voice. Come back in a day or two — the chart fills itself."));
+    }
+
+    // Mini-stat totals row
+    const mini = h("div", { class: "analytics-mini" });
+    metrics.forEach((m) => {
+      const total = (analytics.cards && analytics.cards[m] && analytics.cards[m].total) || 0;
+      mini.appendChild(
+        h("div", { class: "analytics-mini-stat" },
+          icon(METRIC_META[m].iconName, "analytics-mini-ico"),
+          h("div", null,
+            h("div", { class: "analytics-mini-v" }, fmtNum(total)),
+            h("div", { class: "analytics-mini-l" }, METRIC_META[m].label)
+          )
+        )
+      );
+    });
+    card.append(mini);
+    return card;
   }
 
   function renderStatCard({ label, value, sub, iconName, barPct }) {
