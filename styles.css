@@ -466,14 +466,22 @@ section {
 }
 
 .feature-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: var(--red-tint);
-  color: var(--red-bright);
+  width: 64px;
+  height: 64px;
   display: grid;
   place-items: center;
   margin-bottom: 16px;
+}
+.feature-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 16px rgba(220, 38, 38, 0.4));
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+.feature-card:hover .feature-icon img {
+  transform: scale(1.07) translateY(-2px);
+  filter: drop-shadow(0 10px 24px rgba(220, 38, 38, 0.62));
 }
 
 .feature-card h3 {
@@ -1121,31 +1129,23 @@ footer {
   gap: 12px;
 }
 .brand-mark {
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
+  width: 40px;
+  height: 40px;
+  border-radius: 0;
   position: relative;
-  overflow: hidden;
-  background: linear-gradient(135deg, #ef4444 0%, var(--red) 45%, #7f1d1d 100%);
-  display: grid;
-  place-items: center;
-  box-shadow:
-    0 6px 22px var(--red-glow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  overflow: visible;
+  background: url("assets/logo.png") center / contain no-repeat;
+  box-shadow: none;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 4px 14px var(--red-glow));
+  transition: transform 0.25s ease, filter 0.25s ease;
 }
-.brand-mark::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.22), transparent 55%),
-    radial-gradient(circle at 80% 90%, rgba(0, 0, 0, 0.18), transparent 55%);
-  pointer-events: none;
+.brand:hover .brand-mark {
+  transform: scale(1.06);
+  filter: drop-shadow(0 6px 20px var(--red-glow));
 }
 .brand-mark svg {
-  position: relative;
-  z-index: 1;
+  display: none;
 }
 .brand-text {
   display: flex;
@@ -4392,20 +4392,26 @@ body::after {
 }
 .highlight-card.premium:hover { box-shadow: 0 18px 50px rgba(220, 38, 38, 0.14); }
 .highlight-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 76px;
+  height: 76px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
 }
-.highlight-card.free .highlight-icon {
-  background: rgba(34, 197, 94, 0.14);
-  color: var(--success);
+.highlight-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.25s ease, filter 0.25s ease;
 }
-.highlight-card.premium .highlight-icon {
-  background: rgba(220, 38, 38, 0.18);
-  color: var(--red-bright);
+.highlight-card.free .highlight-icon img {
+  filter: drop-shadow(0 6px 18px rgba(34, 197, 94, 0.4));
+}
+.highlight-card.premium .highlight-icon img {
+  filter: drop-shadow(0 6px 18px rgba(220, 38, 38, 0.5));
+}
+.highlight-card:hover .highlight-icon img {
+  transform: scale(1.07);
 }
 .highlight-tier {
   font-size: 0.7rem;
