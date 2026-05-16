@@ -82,4 +82,15 @@ for (const f of STATIC) {
   }
 }
 
+// --- Static asset directories (images, fonts, etc.) — copied verbatim ---
+const STATIC_DIRS = ["assets"];
+for (const d of STATIC_DIRS) {
+  try {
+    await fs.cp(d, path.join(DIST, d), { recursive: true });
+    console.log(`[build] copy dir ${d}/`);
+  } catch {
+    /* dir may not exist; skip silently */
+  }
+}
+
 console.log(`✓ Built ${htmlFiles.length + jsFiles.length + cssFiles.length} files to ./${DIST}`);

@@ -7802,3 +7802,100 @@ section a.highlight-card {
   .dash-audit-row { grid-template-columns: 1fr; }
   .dash-audit-target { text-align: left; }
 }
+
+/* ================================================================
+   v33 — Brand graphics integration
+   ================================================================
+   Real logo emblem + showcase renders. The .brand-mark override
+   swaps the CSS gradient block for the actual circular logo on
+   every page (navbar + footer + dashboard sidebar) in one place.
+*/
+.brand-mark {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  background-image: url("assets/logo.png") !important;
+  background-size: contain !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+.brand-mark::before { display: none !important; }
+.brand-mark svg { display: none !important; }
+
+/* Dashboard sidebar brand mark — also use the logo */
+.dash-side-brand-mark {
+  background: transparent !important;
+  box-shadow: none !important;
+  background-image: url("assets/logo.png") !important;
+  background-size: contain !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+.dash-side-brand-mark svg { display: none !important; }
+
+/* ---- Hero showcase image (homepage) ---- */
+.hero-shot {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(239,35,60,0.10),
+    0 0 90px rgba(239,35,60,0.18);
+  background: #0a0a0f;
+  animation: hero-shot-in 0.9s cubic-bezier(0.22,0.7,0.25,1) both;
+}
+@keyframes hero-shot-in {
+  from { opacity: 0; transform: translateY(22px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.hero-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.hero-shot::after {
+  /* soft red glow sweep along the top edge */
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(239,35,60,0.8), transparent);
+}
+.hero-shot-glow {
+  position: absolute;
+  inset: -40px;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgba(239,35,60,0.28), transparent 75%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+/* ---- Generic product showcase block (pages) ---- */
+.showcase {
+  position: relative;
+  margin: 8px auto 0;
+  max-width: 1040px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow:
+    0 24px 64px rgba(0,0,0,0.5),
+    0 0 70px rgba(239,35,60,0.14);
+}
+.showcase img { display: block; width: 100%; height: auto; }
+.showcase::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(239,35,60,0.7), transparent);
+}
+.showcase-caption {
+  text-align: center;
+  color: var(--text-dim, #71717a);
+  font-size: 0.82rem;
+  margin-top: 12px;
+}

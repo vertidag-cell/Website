@@ -12,6 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -72,62 +73,13 @@
           </div>
         </div>
 
-        <!-- Cinematic hero stage (Discord-style command center) -->
+        <!-- Hero showcase render -->
         <div class="hero-stage-wrap">
-          <div class="hero-stage" aria-hidden="true">
-            <div class="stage-titlebar">
-              <div class="stage-dots"><span></span><span></span><span></span></div>
-              <div class="stage-channel"><span class="channel-hash">#</span>&nbsp;server-status</div>
-              <div style="width:36px"></div>
-            </div>
-
-            <div class="stage-bot">
-              <div class="bot-avatar">Q</div>
-              <div>
-                <div class="bot-name">Quick's ARK Bot</div>
-                <div class="bot-online">Online</div>
-              </div>
-            </div>
-
-            <div class="stage-cmdbox">
-              <span class="slash">/</span><span class="typed" data-typer="setup" data-typer-delay="1.7" data-typer-speed="55"></span><span class="caret"></span>
-            </div>
-
-            <div class="stage-embed">
-              <div class="stage-embed-title">Setup Hub <span class="live">14 Modules</span></div>
-              <div class="stage-embed-desc">Configure every module from one place. No commands required.</div>
-              <div class="setup-grid">
-                <button class="setup-btn free" type="button" tabindex="-1" disabled>Welcome</button>
-                <button class="setup-btn free" type="button" tabindex="-1" disabled>Auto Roles</button>
-                <button class="setup-btn free" type="button" tabindex="-1" disabled>Role Menus</button>
-                <button class="setup-btn free" type="button" tabindex="-1" disabled>Cluster &middot; /pop</button>
-                <button class="setup-btn free" type="button" tabindex="-1" disabled>Pets</button>
-                <button class="setup-btn premium" type="button" tabindex="-1" disabled>Payments</button>
-                <button class="setup-btn premium" type="button" tabindex="-1" disabled>Staff Pay</button>
-                <button class="setup-btn premium" type="button" tabindex="-1" disabled>Hype Rewards</button>
-                <button class="setup-btn premium" type="button" tabindex="-1" disabled>Tickets</button>
-                <button class="setup-btn premium" type="button" tabindex="-1" disabled>Branding</button>
-              </div>
-              <div class="stage-mini-status">
-                <span class="status-dot"></span>
-                <span>Live cluster: <strong><span class="count-up" data-count="184" data-count-delay="3.8">0</span> / 620</strong> &middot; Peak today <strong><span class="count-up" data-count="231" data-count-delay="4.0">0</span></strong></span>
-                <svg class="mini-sparkline" viewBox="0 0 80 18" preserveAspectRatio="none" aria-hidden="true">
-                  <path d="M0,13 L8,11 L16,8 L24,10 L32,6 L40,9 L48,4 L56,7 L64,5 L72,8 L80,3"/>
-                </svg>
-              </div>
-              <div class="stage-embed-footer-row">
-                <span>Quick's ARK Bot &middot; 14+ modules</span>
-                <strong>0 commands needed</strong>
-              </div>
-            </div>
+          <div class="hero-shot">
+            <span class="hero-shot-glow" aria-hidden="true"></span>
+            <img src="assets/hero.jpg" width="1600" height="900"
+                 alt="Quick's ARK Bot command center — dashboard, modules, and live cluster stats" />
           </div>
-
-          <!-- Floating feature cards drift in at Stage 6 -->
-          <!-- Balanced Free + Premium float cards -->
-          <div class="float-card float-1 green" aria-hidden="true"><span class="float-dot"></span> Welcome · Auto Roles</div>
-          <div class="float-card float-2" aria-hidden="true"><span class="float-dot"></span> PayPal · Staff Pay</div>
-          <div class="float-card float-3 green" aria-hidden="true"><span class="float-dot"></span> /pop · Charts</div>
-          <div class="float-card float-4" aria-hidden="true"><span class="float-dot"></span> Premium Branding</div>
         </div>
       </div>
     </section>
@@ -176,6 +128,24 @@
         </div>
         <div style="text-align:center;margin-top:32px">
           <a class="btn btn-ghost" href="pricing.html">Compare Plans →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dashboard showcase -->
+    <section class="short">
+      <div class="container">
+        <div class="section-head" data-animate>
+          <span class="eyebrow">Web Dashboard</span>
+          <h2>A Real Control Panel for Your Server</h2>
+          <p>Log in with Discord and manage every module, branding, role menus, and payments from a premium web dashboard — no commands required.</p>
+        </div>
+        <div class="showcase" data-animate>
+          <img src="assets/dashboard-preview.jpg" width="1600" height="900" loading="lazy"
+               alt="Quick's ARK Bot web dashboard — analytics, setup progress, and quick actions" />
+        </div>
+        <div style="text-align:center;margin-top:20px">
+          <a class="btn btn-primary" data-link="dashboardLogin" href="#">Open the Dashboard →</a>
         </div>
       </div>
     </section>
