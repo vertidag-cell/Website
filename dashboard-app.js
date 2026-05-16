@@ -1427,7 +1427,7 @@
       const a = await data.analytics(state.selectedGuildId, days);
       clear(content);
 
-      // ── Hero + range toggle ───────────────────────────────────────
+      // ── Hero + range toggle + export ──────────────────────────────
       const rangeBtns = h("div", { class: "analytics-range" });
       [[7, "7 days"], [14, "14 days"], [30, "30 days"]].forEach(([d, label]) => {
         rangeBtns.appendChild(h("button", {
@@ -1436,6 +1436,11 @@
           onclick: () => { state._analyticsDays = d; loadAnalytics(content); },
         }, label));
       });
+      const exportBtn = h("button", {
+        type: "button",
+        class: "btn btn-ghost analytics-export-btn",
+        onclick: () => exportAnalyticsCsv(a),
+      }, "↓ Export CSV");
       content.append(
         h("div", { class: "dash-module-hero" },
           (() => { const i = h("div", { class: "dash-module-hero-ico" }); i.appendChild(iconSvg("poll")); return i; })(),
@@ -1447,7 +1452,7 @@
             h("p", { class: "dash-module-hero-desc" },
               "Real activity recorded across your server. Everything updates automatically as the bot is used.")
           ),
-          rangeBtns
+          h("div", { class: "analytics-hero-actions" }, rangeBtns, exportBtn)
         )
       );
 
@@ -1478,6 +1483,15 @@
           series: a.series && a.series[m],
         }));
       });
+      // Donations card — real money from completed payments
+      const don = a.donations || { total: 0, count: 0, currency: "USD", series: [] };
+      grid.appendChild(renderActivityCard({
+        label: "Donations",
+        value: fmtMoney(don.total, don.currency),
+        sub: `${don.count} payment${don.count === 1 ? "" : "s"}`,
+        iconName: "coin",
+        series: don.series,
+      }));
       content.append(grid);
 
       // ── Main interactive chart ────────────────────────────────────
@@ -1493,6 +1507,15 @@
           )
         );
       }
+
+      // ── Donations / revenue ───────────────────────────────────────
+      content.append(renderDonationsCard(a.donations, days));
+
+      // ── Busiest hours heatmap ─────────────────────────────────────
+      content.append(renderHeatmapCard(a.heatmap));
+
+      // ── Top channels ──────────────────────────────────────────────
+      content.append(renderTopChannelsCard(a.topChannels));
 
       // ── Per-metric breakdown ──────────────────────────────────────
       const breakdown = h("div", { class: "dash-card" },
@@ -1534,6 +1557,179 @@
         );
       }
     } catch (e) { renderTabError(content, e); }
+  }
+
+  /** Currency formatter with a safe fallback for odd codes. */
+  function fmtMoney(amount, currency) {
+    const n = Number(amount) || 0;
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency", currency: currency || "USD", maximumFractionDigits: 2,
+      }).format(n);
+    } catch {
+      return (currency || "USD") + " " + n.toFixed(2);
+    }
+  }
+
+  /** Donations / revenue card — total, count, and a per-day chart. */
+  function renderDonationsCard(donations, days) {
+    const d = donations || { total: 0, count: 0, currency: "USD", week: 0, prevWeek: 0, series: [] };
+    const hasData = (d.count || 0) > 0;
+    const delta = (d.week || 0) - (d.prevWeek || 0);
+    const up = delta >= 0;
+    const card = h("div", { class: "dash-card" },
+      h("div", { class: "analytics-head" },
+        h("div", null,
+          h("h3", null, "Donations & revenue"),
+          h("p", null, "Completed payments processed through the bot.")
+        ),
+        h("div", { class: "donations-summary" },
+          h("div", { class: "don-sum-item" },
+            h("strong", null, fmtMoney(d.total, d.currency)),
+            h("span", null, "All-time")
+          ),
+          h("div", { class: "don-sum-item" },
+            h("strong", null, fmtMoney(d.week, d.currency)),
+            h("span", null, "This week")
+          ),
+          h("div", { class: "don-sum-item" },
+            h("strong", { class: up ? "pos" : "neg" }, (up ? "▲ " : "▼ ") + fmtMoney(Math.abs(delta), d.currency)),
+            h("span", null, "vs last week")
+          )
+        )
+      )
+    );
+    if (hasData) {
+      card.append(h("div", { class: "area-chart-wrap", html: areaChartSvg(d.series || []) }));
+    } else {
+      card.append(notice("info", "No payments recorded yet",
+        "Once a payment is completed through /payment, donation totals and revenue trends show up here."));
+    }
+    return card;
+  }
+
+  /** Busiest-hours heatmap — 7×24 grid of message activity (UTC). */
+  function renderHeatmapCard(heatmap) {
+    const grid = heatmap || Array.from({ length: 7 }, () => new Array(24).fill(0));
+    let max = 1;
+    grid.forEach((row) => row.forEach((v) => { if (v > max) max = v; }));
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const anyData = grid.some((row) => row.some((v) => v > 0));
+
+    const card = h("div", { class: "dash-card" },
+      h("h3", null, "Busiest hours"),
+      h("p", null, "When your server is most active — message volume by weekday and hour (UTC).")
+    );
+    if (!anyData) {
+      card.append(notice("info", "No message activity yet",
+        "This heatmap fills in as members chat. Give it a day or two."));
+      return card;
+    }
+
+    const wrap = h("div", { class: "heatmap-wrap" });
+    // Hour ruler
+    const ruler = h("div", { class: "heatmap-ruler" }, h("span", { class: "heatmap-day-spacer" }));
+    for (let hr = 0; hr < 24; hr++) {
+      ruler.appendChild(h("span", { class: "heatmap-hr" }, hr % 6 === 0 ? String(hr) : ""));
+    }
+    wrap.appendChild(ruler);
+    // Rows
+    for (let dow = 0; dow < 7; dow++) {
+      const row = h("div", { class: "heatmap-row" }, h("span", { class: "heatmap-day" }, dayNames[dow]));
+      for (let hr = 0; hr < 24; hr++) {
+        const v = grid[dow][hr] || 0;
+        const intensity = v / max; // 0..1
+        const cell = h("span", {
+          class: "heatmap-cell",
+          title: `${dayNames[dow]} ${String(hr).padStart(2, "0")}:00 UTC — ${v} message${v === 1 ? "" : "s"}`,
+          style: {
+            background: v === 0
+              ? "rgba(255,255,255,0.03)"
+              : `rgba(239,35,60,${(0.16 + intensity * 0.72).toFixed(3)})`,
+          },
+        });
+        row.appendChild(cell);
+      }
+      wrap.appendChild(row);
+    }
+    card.append(wrap,
+      h("div", { class: "heatmap-legend" },
+        h("span", null, "Less"),
+        h("span", { class: "heatmap-legend-grad" }),
+        h("span", null, "More")
+      )
+    );
+    return card;
+  }
+
+  /** Top channels by message volume. */
+  function renderTopChannelsCard(channels) {
+    const list = (channels || []).filter((c) => c && c.name);
+    const card = h("div", { class: "dash-card" },
+      h("h3", null, "Top channels"),
+      h("p", null, "Most active channels by all-time message count.")
+    );
+    if (!list.length) {
+      card.append(notice("info", "No channel data yet",
+        "As members chat, the busiest channels rank here."));
+      return card;
+    }
+    const max = Math.max(1, ...list.map((c) => c.value || 0));
+    const rows = h("div", { class: "topchan-list" });
+    list.forEach((c, i) => {
+      const pct = Math.round(((c.value || 0) / max) * 100);
+      rows.appendChild(
+        h("div", { class: "topchan-row" },
+          h("span", { class: "topchan-rank" }, String(i + 1)),
+          h("div", { class: "topchan-body" },
+            h("div", { class: "topchan-name" },
+              h("span", { class: "topchan-hash" }, c.type === 15 ? "📋" : "#"),
+              c.name
+            ),
+            h("div", { class: "topchan-bar" }, h("i", { style: { width: pct + "%" } }))
+          ),
+          h("span", { class: "topchan-count" }, fmtNum(c.value || 0))
+        )
+      );
+    });
+    card.append(rows);
+    return card;
+  }
+
+  /** Build a CSV of the daily series + donations and trigger a download. */
+  function exportAnalyticsCsv(a) {
+    try {
+      const counters = ["messages", "commands", "voice_joins", "welcomes", "pop_uses"];
+      const days = (a.series && a.series.messages) ? a.series.messages.map((p) => p.day) : [];
+      const memberByDay = {};
+      (a.memberSeries || []).forEach((p) => { memberByDay[p.day] = p.value; });
+      const donByDay = {};
+      ((a.donations && a.donations.series) || []).forEach((p) => { donByDay[p.day] = p.value; });
+      const header = ["date", ...counters, "members", "donations"];
+      const lines = [header.join(",")];
+      days.forEach((day, idx) => {
+        const row = [day];
+        counters.forEach((m) => {
+          const s = (a.series && a.series[m]) || [];
+          row.push(s[idx] ? s[idx].value : 0);
+        });
+        row.push(memberByDay[day] != null ? memberByDay[day] : "");
+        row.push(donByDay[day] != null ? donByDay[day] : 0);
+        lines.push(row.join(","));
+      });
+      const guild = state.guilds.find((g) => g.id === state.selectedGuildId);
+      const safeName = ((guild && guild.name) || "server").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = h("a", { href: url, download: `analytics-${safeName}-${a.days}d.csv` });
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast("success", "Analytics CSV exported");
+    } catch (e) {
+      toast("error", "Couldn't export CSV");
+    }
   }
 
   function renderBdRow(label, value) {
