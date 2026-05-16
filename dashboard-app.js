@@ -1022,31 +1022,89 @@
         )
       );
 
-      // Setup status grid — same as before but with the new chips
-      content.append(
-        h("div", { class: "dash-card" },
-          h("h3", null, "Setup status"),
-          h("p", null, "Click a tile to jump into its configuration page."),
-          h("div", { class: "dash-feat" },
-            ...Object.entries(o.setup?.flags || {})
-              .filter(([k]) => k !== "population")
-              .map(([k, v]) =>
-                h("button", {
-                  type: "button",
-                  class: `dash-feat-card ${v ? "ok" : "missing"}`,
-                  onclick: () => { state.activeTab = mapFlagToModule(k); render(); },
-                },
-                  h("span", { class: "name" }, prettyName(k)),
-                  h("span", { class: "state" }, v ? "Configured" : "Missing")
-                )
-            )
-          )
-        )
-      );
+      // Setup progress (ring + checklist) — mirrors the mockup's
+      // "Bot Setup Progress" panel.
+      content.append(renderSetupProgressCard(o));
 
       // Recent audit (preview, last 6)
       content.append(renderRecentAuditCard());
     } catch (e) { renderTabError(content, e); }
+  }
+
+  /** Animated circular progress ring (SVG). Returns a wrapper div. */
+  function renderProgressRing(pct, opts) {
+    opts = opts || {};
+    const size = opts.size || 140;
+    const stroke = opts.stroke || 12;
+    const r = (size - stroke) / 2;
+    const circ = 2 * Math.PI * r;
+    const clamped = Math.max(0, Math.min(100, Math.round(pct || 0)));
+    const offset = circ * (1 - clamped / 100);
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("width", size);
+    svg.setAttribute("height", size);
+    svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+    svg.setAttribute("class", "ring-svg");
+    const mk = (cls) => {
+      const c = document.createElementNS(ns, "circle");
+      c.setAttribute("cx", size / 2);
+      c.setAttribute("cy", size / 2);
+      c.setAttribute("r", r);
+      c.setAttribute("fill", "none");
+      c.setAttribute("stroke-width", stroke);
+      c.setAttribute("class", cls);
+      return c;
+    };
+    const track = mk("ring-track");
+    const fill = mk("ring-fill");
+    fill.setAttribute("stroke-linecap", "round");
+    fill.setAttribute("stroke-dasharray", circ);
+    fill.setAttribute("stroke-dashoffset", circ); // start empty
+    svg.append(track, fill);
+    const wrap = h("div", { class: "ring-wrap", style: { width: size + "px", height: size + "px" } },
+      svg,
+      h("div", { class: "ring-label" },
+        h("div", { class: "ring-pct" }, clamped + "%"),
+        h("div", { class: "ring-sub" }, opts.label || "Complete")
+      )
+    );
+    // Animate to target once mounted
+    requestAnimationFrame(() => setTimeout(() => { fill.setAttribute("stroke-dashoffset", offset); }, 60));
+    return wrap;
+  }
+
+  /** "Bot Setup Progress" card — ring on the left, clickable checklist
+   *  of every module flag on the right. Real data from /overview. */
+  function renderSetupProgressCard(o) {
+    const setup = o.setup || { percent: 0, total: 0 };
+    const flags = setup.flags || {};
+    const entries = Object.entries(flags).filter(([k]) => k !== "population");
+    const completed = entries.filter(([, v]) => v).length;
+
+    const ringCol = h("div", { class: "setup-ring-col" },
+      renderProgressRing(setup.percent || 0, { label: "Configured" }),
+      h("div", { class: "setup-ring-meta" }, `${completed} of ${entries.length} modules`),
+      btn("Continue setup", { kind: "btn-primary", onclick: () => { state.activeTab = "setup-hub"; render(); } })
+    );
+
+    const checklist = h("div", { class: "setup-checklist" },
+      ...entries.map(([k, v]) => h("button", {
+        type: "button",
+        class: "setup-check-row " + (v ? "done" : "todo"),
+        onclick: () => { state.activeTab = mapFlagToModule(k); render(); },
+      },
+        h("span", { class: "setup-check-box" }, v ? "✓" : ""),
+        h("span", { class: "setup-check-name" }, prettyName(k)),
+        h("span", { class: "setup-check-state" }, v ? "Configured" : "Set up →")
+      ))
+    );
+
+    return h("div", { class: "dash-card" },
+      h("h3", null, "Bot Setup Progress"),
+      h("p", null, "Track configuration across every module. Click a row to jump straight to it."),
+      h("div", { class: "setup-progress-grid" }, ringCol, checklist)
+    );
   }
 
   function renderStatCard({ label, value, sub, iconName, barPct }) {
