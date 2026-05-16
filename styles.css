@@ -7899,3 +7899,125 @@ section a.highlight-card {
   font-size: 0.82rem;
   margin-top: 12px;
 }
+
+/* ================================================================
+   v34 — Brand graphics: punchier images, restored motion, bigger logo
+   ================================================================ */
+
+/* ---- Bigger logo everywhere ---- */
+.brand-mark {
+  width: 46px !important;
+  height: 46px !important;
+}
+.navbar .brand-mark { width: 44px !important; height: 44px !important; }
+footer .brand-mark  { width: 48px !important; height: 48px !important; }
+.dash-side-brand-mark {
+  width: 44px !important;
+  height: 44px !important;
+}
+/* Logo gets a subtle red halo so it reads as a real emblem, not flat */
+.brand-mark,
+.dash-side-brand-mark {
+  filter: drop-shadow(0 3px 10px rgba(239,35,60,0.35));
+}
+
+/* ---- Hero render: louder, with continuous motion ---- */
+.hero-shot {
+  border: 1px solid rgba(239,35,60,0.28) !important;
+  box-shadow:
+    0 36px 90px rgba(0,0,0,0.62),
+    0 0 0 1px rgba(239,35,60,0.18),
+    0 0 120px rgba(239,35,60,0.30) !important;
+  animation:
+    hero-shot-in 0.9s cubic-bezier(0.22,0.7,0.25,1) both,
+    hero-shot-float 7s ease-in-out 0.9s infinite !important;
+}
+@keyframes hero-shot-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+.hero-shot:hover {
+  box-shadow:
+    0 44px 110px rgba(0,0,0,0.66),
+    0 0 0 1px rgba(239,35,60,0.34),
+    0 0 150px rgba(239,35,60,0.42) !important;
+}
+/* Brighter, breathing glow behind the render */
+.hero-shot-glow {
+  inset: -60px !important;
+  background: radial-gradient(closest-side, rgba(239,35,60,0.46), transparent 76%) !important;
+  filter: blur(26px) !important;
+  animation: hero-glow-pulse 5.5s ease-in-out infinite;
+}
+@keyframes hero-glow-pulse {
+  0%, 100% { opacity: 0.7;  transform: scale(0.96); }
+  50%      { opacity: 1;    transform: scale(1.04); }
+}
+/* Diagonal sheen sweep across the render */
+.hero-shot-shine {
+  position: absolute;
+  top: 0; left: -40%;
+  width: 40%; height: 100%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,0.16), transparent);
+  transform: skewX(-18deg);
+  pointer-events: none;
+  z-index: 3;
+  animation: hero-shine 6.5s ease-in-out 1.6s infinite;
+}
+@keyframes hero-shine {
+  0%, 70%, 100% { left: -40%; }
+  85%           { left: 120%; }
+}
+
+/* Float cards around the hero render — restore drift-in motion with
+   concrete delays (the old --stage6 sequencing var no longer exists). */
+.float-card {
+  animation:
+    floatIn 0.7s cubic-bezier(0.22,0.61,0.36,1) forwards,
+    floatDrift 7.5s ease-in-out infinite !important;
+  box-shadow: 0 16px 34px rgba(0,0,0,0.5), 0 0 0 1px rgba(239,35,60,0.12) !important;
+  background: rgba(16,16,22,0.92) !important;
+}
+.float-1 { animation-delay: 0.5s, 1.6s !important; }
+.float-2 { animation-delay: 0.7s, 1.9s !important; }
+.float-3 { animation-delay: 0.9s, 2.2s !important; }
+.float-4 { animation-delay: 1.1s, 2.5s !important; }
+
+/* ---- Showcase images: punchier framing + scroll reveal ---- */
+.showcase {
+  border: 1px solid rgba(239,35,60,0.26) !important;
+  box-shadow:
+    0 28px 72px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(239,35,60,0.14),
+    0 0 100px rgba(239,35,60,0.22) !important;
+  transition: transform 0.5s cubic-bezier(0.22,0.7,0.25,1),
+              box-shadow 0.4s ease, opacity 0.6s ease;
+}
+.showcase:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 40px 96px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(239,35,60,0.32),
+    0 0 140px rgba(239,35,60,0.34) !important;
+}
+/* Scroll-reveal: showcases tagged data-animate start hidden, the
+   existing IntersectionObserver in script.js adds .in-view. */
+.showcase[data-animate] {
+  opacity: 0;
+  transform: translateY(28px) scale(0.97);
+}
+.showcase[data-animate].in-view {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.showcase img { transition: transform 6s ease-in-out; }
+.showcase:hover img { transform: scale(1.03); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-shot,
+  .hero-shot-glow,
+  .hero-shot-shine,
+  .float-card { animation: none !important; }
+  .hero-shot-shine { display: none; }
+  .showcase[data-animate] { opacity: 1; transform: none; }
+}
