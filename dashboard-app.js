@@ -898,86 +898,169 @@
     { id: "sticky",      label: "Sticky",      emoji: "📌", module: null,            flag: null,         comingSoon: true },
   ];
 
+  // One-line descriptions for the Setup Hub cards (mockup style).
+  const SETUP_HUB_DESC = {
+    levels:      "Reward activity with XP and levels.",
+    welcome:     "Greet new members with style.",
+    roleMenus:   "Create reaction role menus.",
+    polls:       "Run quick role-gated polls.",
+    moderation:  "Ban, kick, timeout, URL filter.",
+    tickets:     "Manage support tickets easily.",
+    credits:     "In-server credits with expiry.",
+    payments:    "Accept PayPal payments securely.",
+    staffPay:    "Pay your staff automatically.",
+    hype:        "Build hype and engage your community.",
+    giveaways:   "Run community giveaways.",
+    events:      "Dino, Number & Vault credit events.",
+    branding:    "Customize bot text, colors and more.",
+    suggestions: "Collect member suggestions.",
+    sticky:      "Keep a message pinned to the bottom.",
+  };
+
   async function loadSetupHub(content) {
     try {
       const o = await data.overview(state.selectedGuildId);
       const flags = o.setup?.flags || {};
       const isPremium = !!o.premiumActive;
+      const setup = o.setup || { percent: 0, total: 0, completedCount: 0 };
       clear(content);
 
-      content.append(
-        h("div", { class: "dash-card" },
-          h("h3", null, "Setup Hub"),
-          h("p", null,
-            "Same categories as ", h("code", null, "/setup"), " in Discord. Each card jumps to its configuration tab — or click ",
-            h("code", null, "/setup"), " inside Discord to use the original guided flow."),
-          h("div", { class: "dash-hub-stats" },
-            h("div", { class: "hub-stat" },
-              h("div", { class: "hub-stat-num" }, o.setup?.completedCount ?? "—"),
-              h("div", { class: "hub-stat-lbl" }, "Configured")
-            ),
-            h("div", { class: "hub-stat" },
-              h("div", { class: "hub-stat-num" }, o.setup?.total ?? "—"),
-              h("div", { class: "hub-stat-lbl" }, "Total")
-            ),
-            h("div", { class: "hub-stat" },
-              h("div", { class: "hub-stat-num" }, `${o.setup?.percent ?? 0}%`),
-              h("div", { class: "hub-stat-lbl" }, "Complete")
-            )
+      // ── Two-column shell: main (hero + grid) + right rail ──────────
+      const shell = h("div", { class: "hub-shell" });
+      const main = h("div", { class: "hub-main" });
+      const rail = h("aside", { class: "hub-rail" });
+      shell.append(main, rail);
+      content.append(shell);
+
+      // Hero band
+      main.append(
+        h("div", { class: "hub-hero" },
+          h("div", { class: "hub-hero-body" },
+            h("div", { class: "hub-hero-eyebrow" }, "/ SETUP"),
+            h("h1", { class: "hub-hero-title" }, "Setup Hub"),
+            h("div", { class: "hub-hero-rule" }),
+            h("p", { class: "hub-hero-desc" },
+              "Configure and customize your server with Quick's ARK Bot's powerful modules. Every card writes to the same database as ",
+              h("code", null, "/setup"), " in Discord.")
           ),
-          renderProgress(o.setup?.percent ?? 0)
+          h("div", { class: "hub-hero-glow", "aria-hidden": "true" })
         )
       );
 
-      const grid = h("div", { class: "setup-hub-grid" });
+      // Module card grid
+      const grid = h("div", { class: "hub-grid" });
       SETUP_HUB.forEach((cat) => {
         const isConfigured = cat.flag ? !!flags[cat.flag] : null;
         const isLocked = cat.tier === "premium" && !isPremium;
-        const card = h("button", {
-          type: "button",
-          class: `setup-hub-card ${isConfigured ? "configured" : ""} ${isLocked ? "locked" : ""} ${cat.comingSoon ? "soon" : ""}`,
-          onclick: () => {
-            if (cat.comingSoon) {
-              toast("warn", `${cat.label} is configured in Discord via /setup for now.`, 4500);
-              return;
-            }
-            if (cat.module) {
-              state.activeTab = cat.module;
-              render();
-            }
-          },
-        },
-          h("div", { class: "setup-hub-icon" }, cat.emoji),
-          h("div", { class: "setup-hub-body" },
-            h("div", { class: "setup-hub-name" }, cat.label),
-            h("div", { class: "setup-hub-meta" },
-              cat.tier === "premium" ? h("span", { class: "setup-hub-tag premium" }, "Premium") : null,
-              cat.comingSoon
-                ? h("span", { class: "setup-hub-tag soon" }, "Discord only")
-                : isConfigured === true
-                  ? h("span", { class: "setup-hub-tag ok" }, "Configured")
-                  : isConfigured === false
-                    ? h("span", { class: "setup-hub-tag missing" }, "Not set up")
-                    : h("span", { class: "setup-hub-tag" }, "Ready")
-            )
-          ),
-          h("div", { class: "setup-hub-arrow" }, "→")
+        const card = h("div", {
+          class: `hub-card ${isConfigured ? "configured" : ""} ${isLocked ? "locked" : ""}`,
+        });
+        const iconWrap = h("div", { class: "hub-card-icon" });
+        iconWrap.appendChild(iconSvg(TAB_ICONS[cat.module] || "grid"));
+        const go = () => {
+          if (cat.comingSoon) {
+            toast("warn", `${cat.label} is configured in Discord via /setup for now.`, 4500);
+            return;
+          }
+          if (cat.module) { state.activeTab = cat.module; render(); }
+        };
+        card.append(
+          cat.tier === "premium" ? h("span", { class: "hub-card-tier" }, "PRO") : null,
+          isConfigured === true ? h("span", { class: "hub-card-check" }, "✓") : null,
+          iconWrap,
+          h("div", { class: "hub-card-name" }, cat.label),
+          h("div", { class: "hub-card-desc" }, SETUP_HUB_DESC[cat.id] || "Configure this module."),
+          h("button", { type: "button", class: "hub-card-btn", onclick: go },
+            cat.comingSoon ? "Discord only" : "Configure",
+            h("span", { class: "hub-card-btn-arrow" }, "›"))
         );
+        // Whole card is clickable too
+        card.addEventListener("click", (e) => { if (!e.target.closest(".hub-card-btn")) go(); });
         grid.appendChild(card);
       });
-      content.append(grid);
+      main.append(grid);
 
-      content.append(
-        h("div", { class: "dash-card" },
-          h("h3", null, "Prefer Discord?"),
-          h("p", null, "Every category here is also configurable inside Discord with ", h("code", null, "/setup"), ". The dashboard and ", h("code", null, "/setup"), " write to the same database — use whichever you prefer."),
-          h("div", { class: "dash-actions" },
-            btn("Open Discord", { kind: "btn-ghost", href: cfg.links?.inviteBot, external: true }),
-            btn("Support", { kind: "btn-outline", href: cfg.links?.supportDiscord, external: true })
+      // ── Right rail ────────────────────────────────────────────────
+      // Bot status
+      rail.append(
+        h("div", { class: "hub-rail-card" },
+          h("div", { class: "hub-rail-label" }, "Bot Status"),
+          h("div", { class: "hub-status-row" },
+            h("div", { class: "hub-status-badge" }, "✓"),
+            h("div", null,
+              h("div", { class: "hub-status-main" }, o.botInstalled ? "Online" : "Not installed"),
+              h("div", { class: "hub-status-sub" }, o.botInstalled ? "All systems operational" : "Invite the bot to this server")
+            )
           )
         )
       );
+
+      // Server info — real data only
+      const g = o.guild || {};
+      const created = g.createdAt ? new Date(g.createdAt) : null;
+      const planLabel = o.plan === "lifetime" ? "Lifetime"
+                      : (o.plan === "premium" || o.plan === "monthly") ? "Premium" : "Free";
+      rail.append(
+        h("div", { class: "hub-rail-card" },
+          h("div", { class: "hub-rail-label" }, "Server Info"),
+          h("div", { class: "hub-info-row" }, h("span", null, "Server"),  h("strong", null, g.name || "—")),
+          g.memberCount != null
+            ? h("div", { class: "hub-info-row" }, h("span", null, "Members"), h("strong", null, g.memberCount.toLocaleString()))
+            : null,
+          created
+            ? h("div", { class: "hub-info-row" }, h("span", null, "Created"), h("strong", null, created.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })))
+            : null,
+          h("div", { class: "hub-info-row" }, h("span", null, "Plan"), h("strong", null, planLabel)),
+          h("div", { class: "hub-info-row" }, h("span", null, "Setup"), h("strong", null, `${setup.percent || 0}% · ${setup.completedCount || 0}/${setup.total || 0}`))
+        )
+      );
+
+      // Quick actions (real)
+      rail.append(
+        h("div", { class: "hub-rail-card" },
+          h("div", { class: "hub-rail-label" }, "Quick Actions"),
+          h("div", { class: "hub-rail-actions" },
+            renderHubAction("activity", "Overview",     () => { state.activeTab = "overview"; render(); }),
+            renderHubAction("fileText", "Audit Log",    () => { state.activeTab = "audit"; render(); }),
+            renderHubAction("plug",     "Invite Bot",   cfg.links?.inviteBot),
+            renderHubAction("lifeRing", "Join Support", cfg.links?.supportDiscord)
+          )
+        )
+      );
+
+      // Go Premium (only when not premium)
+      if (!isPremium) {
+        rail.append(
+          h("div", { class: "hub-rail-card hub-premium" },
+            h("div", { class: "hub-premium-head" },
+              h("span", { class: "hub-premium-crown" }, "♛"),
+              h("span", null, "Go Premium")
+            ),
+            h("p", null, "Unlock Payments, Staff Pay, Hype, Branding, Tickets, Events and more."),
+            btn("Upgrade Now", { kind: "btn-primary", onclick: () => { state.activeTab = "premium"; render(); } })
+          )
+        );
+      }
     } catch (e) { renderTabError(content, e); }
+  }
+
+  /** Right-rail quick-action row for the Setup Hub. `target` is either a
+   *  URL string (external link) or a function (in-app navigation). */
+  function renderHubAction(iconName, label, target) {
+    const isFn = typeof target === "function";
+    const el = h(isFn ? "button" : "a", {
+      class: "hub-rail-action",
+      type: isFn ? "button" : null,
+      href: isFn ? null : (target || "#"),
+      target: isFn ? null : "_blank",
+      rel: isFn ? null : "noopener noreferrer",
+      onclick: isFn ? target : null,
+    },
+      icon(iconName, "hub-rail-action-ico"),
+      h("span", { class: "hub-rail-action-label" }, label),
+      h("span", { class: "hub-rail-action-arrow" }, "›")
+    );
+    return el;
   }
 
   /* ============================================================
