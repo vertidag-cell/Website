@@ -9686,3 +9686,106 @@ footer {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---- 12. Live Cluster Population panel (dashboard Overview) --- */
+.livepop-card { display: flex; flex-direction: column; gap: 12px; }
+.livepop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.livepop-head .hub-rail-label { margin-bottom: 0; }
+.livepop-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--red-bright);
+}
+.livepop-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--red-bright);
+  box-shadow: 0 0 10px var(--red-glow);
+  animation: livepop-pulse 1.8s ease-in-out infinite;
+}
+@keyframes livepop-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.65); }
+}
+.livepop-segs { display: flex; gap: 6px; flex-wrap: wrap; }
+.livepop-seg {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: 9px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.livepop-seg:hover { color: var(--text); border-color: var(--border-strong); }
+.livepop-seg.active {
+  color: #fff;
+  background: linear-gradient(180deg, var(--red-bright), var(--red));
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 6px 18px -8px var(--red-glow);
+}
+.livepop-note { font-size: 0.74rem; color: var(--text-dim); padding: 4px 2px; }
+.livepop-list { display: flex; flex-direction: column; gap: 9px; }
+.livepop-msg {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  padding: 12px 2px;
+  text-align: center;
+}
+.livepop-row { display: flex; align-items: center; gap: 10px; }
+.livepop-rank {
+  flex: 0 0 22px;
+  width: 22px; height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--red-bright);
+  background: var(--red-tint);
+  border: 1px solid rgba(239, 35, 60, 0.22);
+}
+.livepop-body { flex: 1 1 auto; min-width: 0; }
+.livepop-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.livepop-bar {
+  margin-top: 4px;
+  height: 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.livepop-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--red-dark), var(--red-bright));
+  box-shadow: 0 0 8px var(--red-glow);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.livepop-count {
+  flex: 0 0 auto;
+  text-align: right;
+  font-size: 0.74rem;
+  color: var(--text-dim);
+}
+.livepop-count strong { color: var(--text); font-size: 0.84rem; }

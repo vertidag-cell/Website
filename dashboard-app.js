@@ -1087,17 +1087,21 @@
         data.analytics(state.selectedGuildId, 7).catch(() => null),
       ]);
       clear(content);
-      const setup = o.setup || { percent: 0, completed: [], missing: [], total: 0 };
+
+      // Two-column shell: overview content on the left, a live cluster-
+      // population rail on the right (reuses the hub-shell/hub-rail layout).
+      const main = h("div", { class: "hub-main" });
+      const rail = h("aside", { class: "hub-rail" });
 
       // Activity stat grid — real numbers from the analytics endpoint.
       // Each card: value, week-over-week delta, sparkline.
-      content.append(renderActivityStatGrid(o, analytics));
+      main.append(renderActivityStatGrid(o, analytics));
 
       // Analytics chart card
-      if (analytics) content.append(renderAnalyticsCard(analytics));
+      if (analytics) main.append(renderAnalyticsCard(analytics));
 
       // Quick actions
-      content.append(
+      main.append(
         h("div", { class: "dash-card" },
           h("h3", null, "Quick actions"),
           h("p", null, "Jump straight into the configuration you need most."),
@@ -1114,11 +1118,108 @@
 
       // Setup progress (ring + checklist) — mirrors the mockup's
       // "Bot Setup Progress" panel.
-      content.append(renderSetupProgressCard(o));
+      main.append(renderSetupProgressCard(o));
 
       // Recent audit (preview, last 6)
-      content.append(renderRecentAuditCard());
+      main.append(renderRecentAuditCard());
+
+      // Right rail — live cluster population (top 5 by game / platform).
+      rail.append(renderLivePopPanel());
+
+      content.append(h("div", { class: "hub-shell" }, main, rail));
     } catch (e) { renderTabError(content, e); }
+  }
+
+  /** Live cluster-population panel for the Overview right rail. Pulls the
+   *  global /pop leaderboard (Wildcard snapshot poller) by game + platform.
+   *  ASA is crossplay so it has no platform choice; ASE defaults to Xbox. */
+  function renderLivePopPanel() {
+    const st = { game: "ase", platform: "xbox" };
+    const card = h("div", { class: "hub-rail-card livepop-card" });
+
+    const gameRow = h("div", { class: "livepop-segs" });
+    const platRow = h("div", { class: "livepop-segs" });
+    const list = h("div", { class: "livepop-list" });
+
+    const seg = (label, active, onclick) =>
+      h("button", { type: "button", class: "livepop-seg" + (active ? " active" : ""), onclick }, label);
+
+    function paintGameRow() {
+      clear(gameRow);
+      [["ase", "ASE"], ["asa", "ASA"]].forEach(([v, lbl]) =>
+        gameRow.append(seg(lbl, st.game === v, () => {
+          if (st.game === v) return;
+          st.game = v;
+          refresh();
+        })));
+    }
+
+    function paintPlatRow() {
+      clear(platRow);
+      if (st.game === "asa") {
+        platRow.append(h("div", { class: "livepop-note" },
+          "ASA is crossplay — all platforms combined."));
+        return;
+      }
+      [["steam", "Steam"], ["xbox", "Xbox"], ["ps", "PlayStation"]].forEach(([v, lbl]) =>
+        platRow.append(seg(lbl, st.platform === v, () => {
+          if (st.platform === v) return;
+          st.platform = v;
+          refresh();
+        })));
+    }
+
+    async function refresh() {
+      paintGameRow();
+      paintPlatRow();
+      clear(list);
+      list.append(h("div", { class: "livepop-msg" }, "Loading live population…"));
+      try {
+        const qp = st.game === "asa"
+          ? "game=asa"
+          : `game=ase&platform=${st.platform}`;
+        const r = await api(`/api/dashboard/pop/leaderboard?${qp}&limit=5`);
+        clear(list);
+        const clusters = r.clusters || [];
+        if (!clusters.length) {
+          list.append(h("div", { class: "livepop-msg" },
+            "No live data for this selection yet."));
+          return;
+        }
+        clusters.forEach((c, i) => {
+          const cap = c.maxPlayers || 0;
+          const pct = cap ? Math.min(100, Math.round((c.players / cap) * 100)) : 0;
+          list.append(
+            h("div", { class: "livepop-row" },
+              h("span", { class: "livepop-rank" }, String(i + 1)),
+              h("div", { class: "livepop-body" },
+                h("div", { class: "livepop-name", title: c.name || "" }, c.name || "Unknown"),
+                h("div", { class: "livepop-bar" },
+                  h("span", { style: { width: pct + "%" } }))
+              ),
+              h("div", { class: "livepop-count" },
+                h("strong", null, (c.players || 0).toLocaleString()),
+                cap ? h("span", null, " / " + cap.toLocaleString()) : null)
+            )
+          );
+        });
+      } catch (e) {
+        clear(list);
+        list.append(h("div", { class: "livepop-msg" }, "Live population unavailable."));
+      }
+    }
+
+    card.append(
+      h("div", { class: "livepop-head" },
+        h("div", { class: "hub-rail-label" }, "Live Cluster Population"),
+        h("span", { class: "livepop-live" }, h("span", { class: "livepop-dot" }), "LIVE")
+      ),
+      gameRow,
+      platRow,
+      list
+    );
+    refresh();
+    return card;
   }
 
   /** Animated circular progress ring (SVG). Returns a wrapper div. */
