@@ -249,6 +249,8 @@
     guilds: () => api("/api/dashboard/guilds"),
     modules: () => api("/api/dashboard/modules"),
     overview: (gid) => api(`/api/dashboard/guilds/${gid}/overview`),
+    setupOverride: (gid, module, done) =>
+      api(`/api/dashboard/guilds/${gid}/setup/override`, { method: "POST", body: { module, done } }),
     module: (gid, name) => api(`/api/dashboard/guilds/${gid}/modules/${name}`),
     saveModule: (gid, name, body) => api(`/api/dashboard/guilds/${gid}/modules/${name}`, { method: "POST", body }),
     resetModule: (gid, name) => api(`/api/dashboard/guilds/${gid}/modules/${name}/reset`, { method: "POST" }),
@@ -1270,6 +1272,7 @@
   function renderSetupProgressCard(o) {
     const setup = o.setup || { percent: 0, total: 0 };
     const flags = setup.flags || {};
+    const overrides = setup.overrides || {};
     const entries = Object.entries(flags).filter(([k]) => k !== "population");
     const completed = entries.filter(([, v]) => v).length;
 
@@ -1279,21 +1282,49 @@
       btn("Continue setup", { kind: "btn-primary", onclick: () => { state.activeTab = "setup-hub"; render(); } })
     );
 
+    // Manually mark a module done (or undo it) when auto-detection misses it.
+    async function toggleOverride(k, done) {
+      try {
+        await data.setupOverride(state.selectedGuildId, k, done);
+        toast("success", done
+          ? `Marked ${prettyName(k)} as done.`
+          : `${prettyName(k)} back to auto-detect.`);
+        render();
+      } catch (e) {
+        toast("error", "Couldn't update — try again.");
+      }
+    }
+
     const checklist = h("div", { class: "setup-checklist" },
-      ...entries.map(([k, v]) => h("button", {
-        type: "button",
-        class: "setup-check-row " + (v ? "done" : "todo"),
-        onclick: () => { state.activeTab = mapFlagToModule(k); render(); },
-      },
-        h("span", { class: "setup-check-box" }, v ? "✓" : ""),
-        h("span", { class: "setup-check-name" }, prettyName(k)),
-        h("span", { class: "setup-check-state" }, v ? "Configured" : "Set up →")
-      ))
+      ...entries.map(([k, v]) => {
+        const ov = !!overrides[k];
+        return h("div", { class: "setup-check-row " + (v ? "done" : "todo") },
+          h("button", {
+            type: "button",
+            class: "setup-check-nav",
+            onclick: () => { state.activeTab = mapFlagToModule(k); render(); },
+          },
+            h("span", { class: "setup-check-box" }, v ? "✓" : ""),
+            h("span", { class: "setup-check-name" }, prettyName(k)),
+            h("span", { class: "setup-check-state" },
+              v ? (ov ? "Marked done" : "Configured") : "Set up →")
+          ),
+          // Mark-done / undo — hidden on purely auto-detected rows.
+          (!v || ov)
+            ? h("button", {
+                type: "button",
+                class: "setup-check-mark" + (ov ? " active" : ""),
+                title: ov ? "Marked done manually — click to undo" : "Mark this module as done",
+                onclick: () => toggleOverride(k, !ov),
+              }, ov ? "Undo" : "Mark done")
+            : null
+        );
+      })
     );
 
     return h("div", { class: "dash-card" },
       h("h3", null, "Bot Setup Progress"),
-      h("p", null, "Track configuration across every module. Click a row to jump straight to it."),
+      h("p", null, "Track configuration across every module. Click a row to jump to it — or mark one done if detection misses it."),
       h("div", { class: "setup-progress-grid" }, ringCol, checklist)
     );
   }
