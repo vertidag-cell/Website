@@ -9863,3 +9863,60 @@ footer {
 .chart-tip.show { opacity: 1; }
 .chart-tip-v { font-size: 0.84rem; font-weight: 700; color: var(--text); }
 .chart-tip-d { font-size: 0.7rem; color: var(--text-dim); margin-top: 1px; }
+
+/* ════════════════════════════════════════════════════════════
+   DASHBOARD POLISH PASS — consistency, depth, mobile safety
+   ────────────────────────────────────────────────────────────
+   CSS-only, append-only. Uses the dashboard's own --dash-*
+   tokens (shadows / radii / easing) that several components
+   were not using — so cards look consistent and intentional.
+   ════════════════════════════════════════════════════════════ */
+
+/* ---- Unified card family — consistent radius + real depth ---- */
+.dash-card {
+  border-radius: var(--dash-r-lg);
+  box-shadow: var(--dash-shadow-card);
+}
+.dash-feat-card,
+.dash-stat {
+  border-radius: var(--dash-r-md);
+  transition: transform 0.16s var(--dash-ease),
+    border-color 0.16s var(--dash-ease), background 0.16s var(--dash-ease);
+}
+.dash-feat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--dash-border-strong);
+  background: var(--dash-card-hov);
+}
+
+/* ---- Form controls — consistent radius + clear red focus ring -- */
+.dash-field input,
+.dash-field textarea,
+.dash-field select {
+  border-radius: var(--dash-r-sm);
+  transition: border-color 0.15s var(--dash-ease), box-shadow 0.15s var(--dash-ease);
+}
+.dash-field input:focus,
+.dash-field textarea:focus,
+.dash-field select:focus {
+  outline: none;
+  border-color: rgba(239, 35, 60, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(239, 35, 60, 0.14) !important;
+}
+
+/* ---- Sticky save bar sits cleanly above content -------------- */
+.dash-actions { gap: 10px; }
+
+/* ---- Mobile safety — no horizontal scroll, sane stacking ----- */
+@media (max-width: 860px) {
+  .picker-grid { grid-template-columns: 1fr; }
+  .picker-aside { order: -1; } /* account/quick-actions above the list on mobile */
+}
+@media (max-width: 720px) {
+  .dash-card { padding: 16px; }
+  .dash-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-feat { grid-template-columns: 1fr; }
+}
+@media (max-width: 440px) {
+  .dash-stat-grid { grid-template-columns: 1fr; }
+}
