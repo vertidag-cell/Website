@@ -968,15 +968,20 @@
           }
           if (cat.module) { state.activeTab = cat.module; render(); }
         };
+        // Native .append() (unlike h()) does not skip null children — it
+        // coerces them to the literal text "null". Filter first so free /
+        // unconfigured cards don't render a stray "null null".
         card.append(
-          cat.tier === "premium" ? h("span", { class: "hub-card-tier" }, "PRO") : null,
-          isConfigured === true ? h("span", { class: "hub-card-check" }, "✓") : null,
-          iconWrap,
-          h("div", { class: "hub-card-name" }, cat.label),
-          h("div", { class: "hub-card-desc" }, SETUP_HUB_DESC[cat.id] || "Configure this module."),
-          h("button", { type: "button", class: "hub-card-btn", onclick: go },
-            cat.comingSoon ? "Discord only" : "Configure",
-            h("span", { class: "hub-card-btn-arrow" }, "›"))
+          ...[
+            cat.tier === "premium" ? h("span", { class: "hub-card-tier" }, "PRO") : null,
+            isConfigured === true ? h("span", { class: "hub-card-check" }, "✓") : null,
+            iconWrap,
+            h("div", { class: "hub-card-name" }, cat.label),
+            h("div", { class: "hub-card-desc" }, SETUP_HUB_DESC[cat.id] || "Configure this module."),
+            h("button", { type: "button", class: "hub-card-btn", onclick: go },
+              cat.comingSoon ? "Discord only" : "Configure",
+              h("span", { class: "hub-card-btn-arrow" }, "›")),
+          ].filter(Boolean)
         );
         // Whole card is clickable too
         card.addEventListener("click", (e) => { if (!e.target.closest(".hub-card-btn")) go(); });
