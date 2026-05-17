@@ -1346,14 +1346,15 @@
       + `</svg>`;
   }
 
-  /** Full area chart SVG string from a [{day,value}] series. */
+  /** Area chart from a [{day,value}] series. Returns { svg, geo } so the
+   *  caller can wire hover tooltips (geo carries the point coordinates). */
   function areaChartSvg(series) {
     const W = 760, H = 280;
     const padL = 48, padR = 18, padT = 18, padB = 34;
     const pw = W - padL - padR, ph = H - padT - padB;
     const vals = (series || []).map((p) => p.value || 0);
     const n = vals.length;
-    if (!n) return `<svg viewBox="0 0 ${W} ${H}"></svg>`;
+    if (!n) return { svg: `<svg viewBox="0 0 ${W} ${H}"></svg>`, geo: { pts: [], series: [] } };
     const niceMax = niceCeil(Math.max(1, ...vals));
     const X = (i) => padL + (n <= 1 ? pw / 2 : (i / (n - 1)) * pw);
     const Y = (v) => padT + ph - (v / niceMax) * ph;
@@ -1376,7 +1377,11 @@
       xlab += `<text x="${X(i).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="chart-axis">${lbl}</text>`;
     });
     const dots = pts.map((p) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.4" class="chart-dot"/>`).join("");
-    return `<svg viewBox="0 0 ${W} ${H}" class="area-chart" preserveAspectRatio="xMidYMid meet">`
+    // Hover layer — a vertical guide line + emphasised dot, hidden until the
+    // hover handler (wireChartHover) moves them to the nearest data point.
+    const hover = `<line class="chart-guide" x1="0" y1="${padT}" x2="0" y2="${baseY.toFixed(1)}" style="opacity:0"/>`
+      + `<circle class="chart-hover-dot" cx="0" cy="0" r="5" style="opacity:0"/>`;
+    const svg = `<svg viewBox="0 0 ${W} ${H}" class="area-chart" preserveAspectRatio="xMidYMid meet">`
       + `<defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">`
       + `<stop offset="0%" stop-color="rgba(239,35,60,0.44)"/>`
       + `<stop offset="100%" stop-color="rgba(239,35,60,0.02)"/>`
@@ -1384,8 +1389,67 @@
       + grid
       + `<path d="${area}" fill="url(#areaGrad)"/>`
       + `<path d="${line}" fill="none" stroke="var(--dash-red)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`
-      + dots + ylab + xlab
+      + dots + ylab + xlab + hover
       + `</svg>`;
+    return { svg, geo: { pts, series } };
+  }
+
+  /** Wire a hover tooltip + guide line onto an .area-chart-wrap. Maps the
+   *  cursor to the nearest data point and shows its date + value. Uses the
+   *  SVG screen-CTM so it stays correct at any responsive scale. */
+  function wireChartHover(wrap, geo, metricLabel) {
+    const svg = wrap.querySelector("svg");
+    const tip = wrap.querySelector(".chart-tip");
+    const guide = wrap.querySelector(".chart-guide");
+    const dot = wrap.querySelector(".chart-hover-dot");
+    if (!svg || !tip || !geo.pts.length) return;
+
+    function hide() {
+      tip.classList.remove("show");
+      if (guide) guide.style.opacity = "0";
+      if (dot) dot.style.opacity = "0";
+    }
+
+    function move(src) {
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return;
+      const sp = svg.createSVGPoint();
+      sp.x = src.clientX; sp.y = src.clientY;
+      const loc = sp.matrixTransform(ctm.inverse()); // → viewBox coords
+      let best = 0, bestD = Infinity;
+      geo.pts.forEach((p, i) => {
+        const d = Math.abs(p[0] - loc.x);
+        if (d < bestD) { bestD = d; best = i; }
+      });
+      const [px, py] = geo.pts[best];
+      const datum = geo.series[best] || {};
+      if (guide) { guide.setAttribute("x1", px); guide.setAttribute("x2", px); guide.style.opacity = "1"; }
+      if (dot) { dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.style.opacity = "1"; }
+
+      const dayLbl = datum.day
+        ? new Date(datum.day + "T00:00:00Z").toLocaleDateString(undefined,
+            { weekday: "short", month: "short", day: "numeric" })
+        : "";
+      clear(tip);
+      tip.append(
+        h("div", { class: "chart-tip-v" }, fmtNum(datum.value || 0) + " " + String(metricLabel).toLowerCase()),
+        h("div", { class: "chart-tip-d" }, dayLbl)
+      );
+      // Place the tooltip in pixel space, above the point, clamped to the box.
+      const scr = svg.createSVGPoint();
+      scr.x = px; scr.y = py;
+      const screenPt = scr.matrixTransform(ctm);
+      const wr = wrap.getBoundingClientRect();
+      const x = Math.max(58, Math.min(wr.width - 58, screenPt.x - wr.left));
+      tip.style.left = x + "px";
+      tip.style.top = (screenPt.y - wr.top) + "px";
+      tip.classList.add("show");
+    }
+
+    svg.addEventListener("mousemove", move);
+    svg.addEventListener("mouseleave", hide);
+    svg.addEventListener("touchstart", (e) => { if (e.touches[0]) move(e.touches[0]); }, { passive: true });
+    svg.addEventListener("touchmove", (e) => { if (e.touches[0]) move(e.touches[0]); }, { passive: true });
   }
 
   /** Activity stat grid — Members + Messages/Commands//pop this week. */
@@ -1452,7 +1516,12 @@
     function drawChart() {
       clear(chartHost);
       const series = (analytics.series && analytics.series[activeMetric]) || [];
-      chartHost.appendChild(h("div", { class: "area-chart-wrap", html: areaChartSvg(series) }));
+      const built = areaChartSvg(series);
+      const wrap = h("div", { class: "area-chart-wrap" });
+      wrap.innerHTML = built.svg;
+      wrap.appendChild(h("div", { class: "chart-tip" }));
+      wireChartHover(wrap, built.geo, METRIC_META[activeMetric].label);
+      chartHost.appendChild(wrap);
     }
 
     const pills = h("div", { class: "analytics-pills" });
