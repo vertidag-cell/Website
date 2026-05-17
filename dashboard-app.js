@@ -2720,18 +2720,46 @@
   /* ============================================================
      Tab: /pop Population (read-only with link to Discord)
      ============================================================ */
+  /** Right-rail "Top 5 Clusters" panel — ranks configured clusters by their
+   *  cached live population so the /pop tab's empty right side shows useful
+   *  at-a-glance data. */
+  function renderTopClustersPanel(clusters) {
+    const ranked = (clusters || [])
+      .map((c) => ({ name: c.name || "Unnamed cluster", total: Number(c.cachedTotal) || 0 }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+    const withData = ranked.filter((r) => r.total > 0);
+    const grandTotal = withData.reduce((s, r) => s + r.total, 0);
+    return h("div", { class: "hub-rail-card" },
+      h("div", { class: "hub-rail-label" }, "Top 5 Clusters"),
+      withData.length
+        ? withData.map((r, i) =>
+            h("div", { class: "hub-info-row" },
+              h("span", null, `${i + 1}. ${r.name}`),
+              h("strong", null, `${r.total.toLocaleString()} online`)))
+        : h("div", { class: "hub-info-row" },
+            h("span", null, "No live population data yet")),
+      withData.length
+        ? h("div", { class: "hub-info-row" },
+            h("span", null, "Total online"),
+            h("strong", null, grandTotal.toLocaleString()))
+        : null
+    );
+  }
+
   async function renderPopulationView(content) {
     try {
       const p = await api(`/api/dashboard/guilds/${state.selectedGuildId}/population`);
       clear(content);
-      content.append(
-        h("div", { class: "dash-card" },
-          h("h3", null, "/pop Cluster Population"),
-          h("p", null, "Free for every server. Cluster CRUD currently lives in Discord — run ", h("code", null, "/setup › Cluster Population"), ". The dashboard previews configured clusters.")
-        )
+
+      const intro = h("div", { class: "dash-card" },
+        h("h3", null, "/pop Cluster Population"),
+        h("p", null, "Free for every server. Cluster CRUD currently lives in Discord — run ", h("code", null, "/setup › Cluster Population"), ". The dashboard previews configured clusters.")
       );
+
       if (p.notice === "population_config_not_wired" || !p.clusters?.length) {
         content.append(
+          intro,
           notice("info", "No clusters configured", "Run /setup in Discord to add your first cluster. The dashboard will list them here."),
           h("div", { class: "dash-actions", style: { marginTop: "12px" } },
             btn("Open in Discord", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true })
@@ -2739,8 +2767,14 @@
         );
         return;
       }
+
+      // Two-column shell: cluster cards on the left, live Top-5 rail on the
+      // right (reuses the Setup Hub's hub-shell/hub-rail layout + styling).
+      const main = h("div", { class: "hub-main" });
+      const rail = h("aside", { class: "hub-rail" });
+      main.append(intro);
       (p.clusters || []).forEach((c) => {
-        content.append(
+        main.append(
           h("div", { class: "dash-card" },
             h("h3", null, c.name || "Unnamed cluster"),
             h("dl", { class: "meta" },
@@ -2753,6 +2787,9 @@
           )
         );
       });
+      rail.append(renderTopClustersPanel(p.clusters));
+
+      content.append(h("div", { class: "hub-shell" }, main, rail));
     } catch (e) { renderTabError(content, e); }
   }
 
