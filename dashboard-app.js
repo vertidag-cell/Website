@@ -2190,8 +2190,7 @@
       { name: "Instructions", fields: ["instructions", "manualFallback"] },
     ],
     staffPay: [
-      { name: "Basic",   fields: ["enabled", "forumChannelId"] },
-      { name: "Payouts", fields: ["payoutRoleIds", "logChannelId"] },
+      { name: "Basic", fields: ["enabled", "forumChannelId"] },
     ],
     moderation: [
       { name: "Basic",      fields: ["enabled", "modLogChannelId", "modRoleIds"] },
