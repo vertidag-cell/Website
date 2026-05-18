@@ -32,7 +32,9 @@
 
   async function api(path, opts) {
     opts = opts || {};
-    if (!API_BASE) throw Object.assign(new Error("backend not configured"), { code: "no_backend" });
+    // API_BASE is empty in production — requests go to this origin's
+    // /api/* and /auth/* paths, which Cloudflare Pages Functions proxy
+    // to the backend. An absolute API_BASE is only used for local dev.
     const url = API_BASE + path;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
@@ -285,7 +287,6 @@
      Top-level renderers
      ============================================================ */
   function render() {
-    if (!API_BASE) return renderNoBackend();
     if (!state.user) return renderLoggedOut();
     if (!state.selectedGuildId) return renderGuildPicker();
     return renderGuildDashboard();
@@ -4104,7 +4105,6 @@
     clear(root);
     // Premium skeleton while we fetch identity + guild list.
     root.append(renderPickerBootSkeleton());
-    if (!API_BASE) return renderNoBackend();
     try {
       const me = await data.me();
       state.user = me.user;

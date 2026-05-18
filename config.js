@@ -26,14 +26,15 @@ window.SITE_CONFIG = {
 
   /*
    * Backend API base URL for the customer dashboard.
-   * Points at the bot's Square Cloud HTTPS endpoint.
    *
-   * Note: until the backend/ scaffold is mounted on the Square Cloud
-   * Express app, all /api/dashboard/* routes return 404 and the
-   * dashboard will show "Dashboard API not found" — that's the
-   * expected state until backend deployment completes.
+   * Left EMPTY on purpose: the dashboard now talks to its own origin
+   * (relative /api/* and /auth/* URLs). Cloudflare Pages Functions in
+   * /functions reverse-proxy those paths to the bot's Square Cloud
+   * backend, so the session cookie stays first-party — which is what
+   * makes login work on mobile (Safari/Chrome block third-party
+   * cookies). Do NOT point this back at the squareweb.app URL.
    */
-  backendApiUrl: "https://quicksark.squareweb.app",
+  backendApiUrl: "",
 
   links: {
     // External — opens in new tab
