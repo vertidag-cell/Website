@@ -317,6 +317,16 @@
     root.append(renderPickerFeaturePreview(), renderPickerSetupGuide());
   }
 
+  // Discord's in-app browser breaks OAuth: the login cookie set at the start
+  // of the flow lands in a different browser session than the callback, so
+  // login never sticks — the user gets dumped back at this screen.
+  function isInAppBrowser() {
+    return /Discord|FBAN|FBAV|Instagram|\bLine\b|GSA|\bTwitter\b/i.test(navigator.userAgent || "");
+  }
+  function isMobile() {
+    return /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent || "");
+  }
+
   function renderLoggedOut() {
     clear(root);
     const card = h("div", { class: "dash-empty-card", style: { maxWidth: "560px", margin: "40px auto" } });
@@ -326,7 +336,35 @@
       ico,
       h("h4", null, "Sign in to your Quick's ARK Bot dashboard"),
       h("p", null,
-        "Manage every module, branding, role menus, staff tiers, events and more — securely synced with your Discord server."),
+        "Manage every module, branding, role menus, staff tiers, events and more — securely synced with your Discord server.")
+    );
+
+    // Warn mobile users about Discord's in-app browser — the #1 cause of
+    // "I sign in and it sends me right back to the login screen".
+    if (isInAppBrowser() || isMobile()) {
+      card.append(h("div", {
+        style: {
+          background: "rgba(241,196,15,0.10)",
+          border: "1px solid rgba(241,196,15,0.38)",
+          borderRadius: "12px",
+          padding: "12px 14px",
+          margin: "6px 0 10px",
+          fontSize: "0.79rem",
+          lineHeight: "1.55",
+          textAlign: "left",
+          color: "#f4d58d",
+        },
+      },
+        h("strong", null, "⚠️  Opened this from Discord?"),
+        h("br"),
+        "Discord's built-in browser blocks login from completing — you'll get sent back to this screen. ",
+        "Tap the ", h("strong", null, "•••"), " menu in the corner and choose ",
+        h("strong", null, "“Open in Safari”"), " / ", h("strong", null, "“Open in Chrome”"),
+        ", then sign in from there."
+      ));
+    }
+
+    card.append(
       h("a", { class: "btn btn-lg",
         href: auth.loginUrl(),
         style: { background: "#5865f2", color: "#fff", boxShadow: "0 8px 24px rgba(88,101,242,0.45)", fontWeight: 700 } },
