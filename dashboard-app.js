@@ -4139,10 +4139,31 @@
   /* ============================================================
      Boot
      ============================================================ */
+  // OAuth handoff — after Discord login the callback sends us back with a
+  // one-time id in the URL fragment. Trade it for a real session (same-origin
+  // via the Pages proxy, so the cookie is first-party). Runs before boot().
+  async function consumeAuthHandoff() {
+    const m = (location.hash || "").match(/[#&]auth=([^&]+)/);
+    if (!m) return;
+    // Strip the id from the URL immediately so it can't be re-used or shared.
+    history.replaceState(null, "", location.pathname + location.search);
+    try {
+      await fetch(API_BASE + "/auth/session", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auth: decodeURIComponent(m[1]) }),
+      });
+    } catch (e) {
+      console.error("[dashboard] auth handoff failed:", e);
+    }
+  }
+
   async function boot() {
     clear(root);
     // Premium skeleton while we fetch identity + guild list.
     root.append(renderPickerBootSkeleton());
+    await consumeAuthHandoff();
     try {
       const me = await data.me();
       state.user = me.user;
