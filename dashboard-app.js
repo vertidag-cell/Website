@@ -1464,6 +1464,19 @@
     return { svg, geo: { pts, series } };
   }
 
+  /** Build a ready-to-insert area-chart element from a series. Wraps the SVG,
+   *  adds the hover tooltip layer, and wires hover. Always use THIS — never
+   *  pass areaChartSvg() (which returns { svg, geo }) to an `html` prop, or it
+   *  stringifies the object to the literal "[object Object]". */
+  function areaChartWrap(series, label) {
+    const built = areaChartSvg(series);
+    const wrap = h("div", { class: "area-chart-wrap" });
+    wrap.innerHTML = built.svg;
+    wrap.appendChild(h("div", { class: "chart-tip" }));
+    if (label != null) { try { wireChartHover(wrap, built.geo, label); } catch {} }
+    return wrap;
+  }
+
   /** Wire a hover tooltip + guide line onto an .area-chart-wrap. Maps the
    *  cursor to the nearest data point and shows its date + value. Uses the
    *  SVG screen-CTM so it stays correct at any responsive scale. */
@@ -1748,7 +1761,7 @@
           h("div", { class: "dash-card" },
             h("h3", null, "Member growth"),
             h("p", null, `Server member count over the last ${days} days.`),
-            h("div", { class: "area-chart-wrap", html: areaChartSvg(a.memberSeries) })
+            areaChartWrap(a.memberSeries, "Members")
           )
         );
       }
@@ -1845,7 +1858,7 @@
       )
     );
     if (hasData) {
-      card.append(h("div", { class: "area-chart-wrap", html: areaChartSvg(d.series || []) }));
+      card.append(areaChartWrap(d.series || [], "Donations"));
     } else {
       card.append(notice("info", "No payments recorded yet",
         "Once a payment is completed through /payment, donation totals and revenue trends show up here."));
@@ -1994,7 +2007,7 @@
     function draw() {
       const series = (a.series && a.series[active]) || [];
       clear(chartHost);
-      chartHost.appendChild(h("div", { class: "area-chart-wrap", html: areaChartSvg(series) }));
+      chartHost.appendChild(areaChartWrap(series, METRIC_META[active] && METRIC_META[active].label));
       clear(summary);
       const total = seriesSum(series);
       const avg = Math.round(seriesAvg(series));
