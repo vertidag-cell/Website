@@ -944,7 +944,7 @@
           btn("⤒ Export", { kind: "btn-ghost", onclick: ebExport }),
           btn("⧉ Copy JSON", { kind: "btn-ghost", onclick: ebCopyJson }),
           btn("💾 Save template", { kind: "btn-secondary", onclick: ebSaveTemplate }),
-          btn("🚀 Send", { kind: "btn-primary", onclick: ebOpenSend })
+          btn("📨 Post embed", { kind: "btn-primary eb-post-btn", onclick: ebOpenPost })
         )
       )
     );
@@ -996,17 +996,13 @@
 
     // ===== Section: Message & Channel =====
     function sectionMessage() {
-      return section("message", "1 · Message & Channel", () => {
-        const chSel = h("select", { class: "eb-select", onchange: (e) => { eb.channelId = e.target.value; syncPreview(); } },
-          h("option", { value: "" }, channels.length ? "Select a channel…" : "No sendable channels found"),
-          ...channels.map((c) => h("option", { value: c.id, selected: c.id === eb.channelId ? true : null }, `#${c.name}${c.parentName ? "  ·  " + c.parentName : ""}`))
-        );
+      return section("message", "1 · Message", () => {
         const ta = h("textarea", { class: "eb-textarea", rows: 3, placeholder: "Optional text shown above the embed…", maxlength: EB_LIMITS.content, oninput: (e) => { eb.content = e.target.value; syncPreview(); } }, eb.content || "");
         const menSel = h("select", { class: "eb-select", onchange: (e) => { eb.allowedMentions = e.target.value; } },
           ...[["default", "Default (respect roles/users)"], ["none", "Suppress all mentions"], ["roles", "Allow role mentions"], ["users", "Allow user mentions"], ["all", "Allow @everyone / @here"]].map(([v, l]) => h("option", { value: v, selected: v === eb.allowedMentions ? true : null }, l))
         );
         return [
-          field("Channel", chSel, channels.length ? "Only channels the bot can post in are listed." : null),
+          h("p", { class: "eb-microcopy" }, "Build your message + embed, then hit “Post embed” to choose a channel and publish."),
           field("Message content", ta),
           field("Mentions", menSel),
         ];
@@ -1298,23 +1294,31 @@
     }
 
     // ---- send flow ----
-    function ebOpenSend() {
+    function ebOpenPost() {
       const errs = ebValidate(eb);
-      if (errs.length) { toast("error", "Fix validation issues first"); eb.open.add("message"); renderEditor(); return; }
-      if (!eb.channelId) { toast("error", "Pick a channel first"); eb.open.add("message"); renderEditor(); return; }
-      const ch = channels.find((c) => c.id === eb.channelId);
+      if (errs.length) { toast("error", "Fix the validation issues first"); renderValidation(); return; }
       const guild = state.guilds.find((g) => g.id === gid);
-      ebModal("Confirm send", h("div", null,
-        h("p", { class: "eb-modal-text" }, "This will post the message to your server immediately."),
+      const chSel = h("select", { class: "eb-select eb-post-channel" },
+        h("option", { value: "" }, channels.length ? "Choose a channel…" : "No sendable channels found"),
+        ...channels.map((c) => h("option", { value: c.id, selected: c.id === eb.channelId ? true : null }, `#${c.name}${c.parentName ? "  ·  " + c.parentName : ""}`))
+      );
+      const errLine = h("div", { class: "eb-post-err" });
+      ebModal("Post embed", h("div", null,
+        h("p", { class: "eb-modal-text" }, "Pick where to publish this message. It posts immediately."),
+        h("label", { class: "eb-field" }, h("span", { class: "eb-label" }, "Channel"), chSel),
+        errLine,
         h("div", { class: "eb-confirm-grid" },
           h("div", null, h("span", { class: "eb-confirm-k" }, "Server"), h("span", { class: "eb-confirm-v" }, (guild && guild.name) || gid)),
-          h("div", null, h("span", { class: "eb-confirm-k" }, "Channel"), h("span", { class: "eb-confirm-v" }, ch ? "#" + ch.name : eb.channelId)),
           h("div", null, h("span", { class: "eb-confirm-k" }, "Embeds"), h("span", { class: "eb-confirm-v" }, String(eb.embeds.filter((e) => !ebEmbedEmpty(e)).length))),
-          h("div", null, h("span", { class: "eb-confirm-k" }, "Components"), h("span", { class: "eb-confirm-v" }, String(eb.components.length) + " row(s)"))
+          h("div", null, h("span", { class: "eb-confirm-k" }, "Buttons/menus"), h("span", { class: "eb-confirm-v" }, String(eb.components.length) + " row(s)")),
+          h("div", null, h("span", { class: "eb-confirm-k" }, "Content"), h("span", { class: "eb-confirm-v" }, s2(eb.content) ? "Yes" : "—"))
         )
       ), [
         { label: "Cancel", kind: "btn-ghost" },
-        { label: "🚀 Confirm send", kind: "btn-primary", onConfirm: ebDoSend },
+        { label: "📨 Post now", kind: "btn-primary", onConfirm: (close) => {
+            if (!chSel.value) { errLine.textContent = "Pick a channel to post to."; errLine.classList.add("show"); chSel.classList.add("eb-shake"); setTimeout(() => chSel.classList.remove("eb-shake"), 500); return; }
+            eb.channelId = chSel.value; ebDoSend(close);
+          } },
       ]);
     }
     async function ebDoSend(close) {
@@ -1343,7 +1347,7 @@
     const keyHandler = (ev) => {
       if (state.activeTab !== "embed-builder") { document.removeEventListener("keydown", keyHandler); return; }
       if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") { ev.preventDefault(); ebSaveTemplate(); }
-      if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") { ev.preventDefault(); ebOpenSend(); }
+      if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") { ev.preventDefault(); ebOpenPost(); }
     };
     document.addEventListener("keydown", keyHandler);
   }
