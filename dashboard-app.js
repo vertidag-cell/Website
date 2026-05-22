@@ -154,6 +154,7 @@
     events:       "calendar",
     branding:     "palette",
     serverTemplates: "template",
+    "embed-builder": "sparkle",
     logs:         "fileText",
     premium:      "sparkle",
     audit:        "fileText",
@@ -281,6 +282,17 @@
     paypalGet:  (gid)         => api(`/api/dashboard/guilds/${gid}/payments/paypal`),
     paypalSave: (gid, body)   => api(`/api/dashboard/guilds/${gid}/payments/paypal`, { method: "POST", body }),
     paypalTest: (gid)         => api(`/api/dashboard/guilds/${gid}/payments/paypal/test`, { method: "POST" }),
+    // Embed Builder
+    embTplList:   (gid)         => api(`/api/dashboard/guilds/${gid}/embeds/templates`),
+    embTplCreate: (gid, body)   => api(`/api/dashboard/guilds/${gid}/embeds/templates`, { method: "POST", body }),
+    embTplUpdate: (gid, id, body) => api(`/api/dashboard/guilds/${gid}/embeds/templates/${id}`, { method: "PATCH", body }),
+    embTplDelete: (gid, id)     => api(`/api/dashboard/guilds/${gid}/embeds/templates/${id}`, { method: "DELETE" }),
+    embDraftGet:  (gid)         => api(`/api/dashboard/guilds/${gid}/embeds/draft`),
+    embDraftSave: (gid, draft)  => api(`/api/dashboard/guilds/${gid}/embeds/draft`, { method: "PUT", body: { draft } }),
+    embValidate:  (gid, payload) => api(`/api/dashboard/guilds/${gid}/embeds/validate`, { method: "POST", body: { payload } }),
+    embSend:      (gid, body)   => api(`/api/dashboard/guilds/${gid}/embeds/send`, { method: "POST", body }),
+    embSentList:  (gid)         => api(`/api/dashboard/guilds/${gid}/embeds/sent`),
+    embSentDelete: (gid, id)    => api(`/api/dashboard/guilds/${gid}/embeds/sent/${id}`, { method: "DELETE" }),
   };
 
   /* ============================================================
@@ -791,7 +803,7 @@
     const prem = state.modules.filter((m) => m.tier === "premium").map((m) => m.name);
 
     const groups = [
-      { label: "Core",          items: ["setup-hub", "overview", "analytics"] },
+      { label: "Core",          items: ["setup-hub", "overview", "analytics", "embed-builder"] },
       { label: "Free Tools",    items: free },
       { label: "Premium Tools", items: prem },
       { label: "System",        items: ["premium", "audit", "support"] },
@@ -801,6 +813,7 @@
       "setup-hub": "Setup Hub",
       overview:    "Overview",
       analytics:   "Analytics",
+      "embed-builder": "Embed Builder",
       premium:     "Premium",
       audit:       "Audit Log",
       support:     "Support",
@@ -857,11 +870,550 @@
     if (tab === "setup-hub") return loadSetupHub(content);
     if (tab === "overview") return loadOverview(content);
     if (tab === "analytics") return loadAnalytics(content);
+    if (tab === "embed-builder") return loadEmbedBuilder(content);
     if (tab === "premium") return renderPremium(content);
     if (tab === "audit") return loadAudit(content);
     if (tab === "support") return renderSupportTab(content);
     return loadModule(content, tab);
   }
+
+  /* ============================================================
+     EMBED BUILDER — premium embed editor + live Discord preview
+     ============================================================ */
+  const EB_LIMITS = { content: 2000, title: 256, description: 4096, footer: 2048, authorName: 256, fieldName: 256, fieldValue: 1024, fields: 25, total: 6000, embeds: 10, rows: 5, buttonsPerRow: 5, options: 25, placeholder: 150, optLabel: 100, optValue: 100, optDesc: 100, label: 80 };
+  const EB_PRESET_COLORS = ["#e23b2e", "#f5851f", "#ffcc4d", "#2ecc71", "#3498db", "#9b59b6", "#e91e63", "#1abc9c", "#34495e", "#95a5a6", "#000000", "#ffffff"];
+  const EB_BTN_STYLES = [["primary", "Primary"], ["secondary", "Secondary"], ["success", "Success"], ["danger", "Danger"], ["link", "Link"]];
+
+  function ebBlankEmbed() { return { title: "", url: "", description: "", color: "#e23b2e", timestamp: null, author: { name: "", url: "", icon_url: "" }, thumbnail: { url: "" }, image: { url: "" }, footer: { text: "", icon_url: "" }, fields: [] }; }
+  function ebEmbedEmpty(e) { return !s2(e.title) && !s2(e.description) && !(e.fields || []).length && !s2(e.image && e.image.url) && !s2(e.thumbnail && e.thumbnail.url) && !s2(e.author && e.author.name) && !s2(e.footer && e.footer.text); }
+  function s2(v) { return (v == null ? "" : String(v)).trim(); }
+  function ebCharCount(e) { let n = (e.title || "").length + (e.description || "").length + ((e.footer && e.footer.text) || "").length + ((e.author && e.author.name) || "").length; for (const f of (e.fields || [])) n += (f.name || "").length + (f.value || "").length; return n; }
+
+  async function loadEmbedBuilder(content) {
+    const gid = state.selectedGuildId;
+    clear(content);
+    content.append(renderGenericSkeleton());
+
+    // Builder model + supporting data
+    const eb = {
+      channelId: "", content: "", allowedMentions: "default",
+      embeds: [ebBlankEmbed()], activeEmbed: 0, components: [], templateId: null,
+      open: new Set(["message", "embed"]),
+    };
+    let channels = [], templates = [];
+    try {
+      const [chRes, tplRes, draftRes] = await Promise.all([
+        data.channels(gid).catch(() => ({ channels: [] })),
+        data.embTplList(gid).catch(() => ({ templates: [] })),
+        data.embDraftGet(gid).catch(() => ({ draft: null })),
+      ]);
+      channels = chRes.channels || [];
+      templates = tplRes.templates || [];
+      if (draftRes && draftRes.draft && draftRes.draft.draft) {
+        try { applyModel(eb, draftRes.draft.draft); toast("info", "Restored your unsaved draft"); } catch {}
+      }
+    } catch (e) { return renderTabError(content, e); }
+
+    clear(content);
+    const page = h("div", { class: "eb-page" });
+    content.append(page);
+
+    // ---- elements we re-render into ----
+    let editorEl, previewEl, validEl;
+    let saveTimer = null;
+    function scheduleAutosave() {
+      const status = document.getElementById("dash-save-status");
+      if (status) { status.textContent = "Saving…"; status.classList.add("saving"); }
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        try { await data.embDraftSave(gid, serializeModel(eb)); if (status) { status.textContent = "Draft saved ✓"; status.classList.remove("saving"); } }
+        catch { if (status) status.textContent = "Save failed"; }
+      }, 1100);
+    }
+
+    // ---- header + action bar ----
+    page.append(
+      h("div", { class: "eb-header" },
+        h("div", null,
+          h("h1", { class: "eb-title" }, "Embed Builder"),
+          h("p", { class: "eb-sub" }, "Design, preview and publish rich Discord messages to your server.")
+        ),
+        h("div", { class: "eb-actionbar" },
+          btn("↺ Reset", { kind: "btn-ghost", onclick: ebReset }),
+          btn("⤓ Import", { kind: "btn-ghost", onclick: ebImport }),
+          btn("⤒ Export", { kind: "btn-ghost", onclick: ebExport }),
+          btn("⧉ Copy JSON", { kind: "btn-ghost", onclick: ebCopyJson }),
+          btn("💾 Save template", { kind: "btn-secondary", onclick: ebSaveTemplate }),
+          btn("🚀 Send", { kind: "btn-primary", onclick: ebOpenSend })
+        )
+      )
+    );
+
+    const split = h("div", { class: "eb-split" });
+    editorEl = h("div", { class: "eb-editor" });
+    const previewCol = h("div", { class: "eb-preview-col" });
+    previewEl = h("div", { class: "eb-preview" });
+    previewCol.append(
+      h("div", { class: "eb-preview-head" },
+        h("span", { class: "eb-preview-label" }, "Live preview"),
+        h("span", { class: "eb-preview-hint" }, "Updates as you type")
+      ),
+      previewEl
+    );
+    validEl = h("div", { class: "eb-valid" });
+    previewCol.append(validEl);
+    split.append(editorEl, previewCol);
+    page.append(split);
+
+    // ---- render fns ----
+    function curEmbed() { return eb.embeds[eb.activeEmbed] || eb.embeds[0]; }
+    function syncPreview() { renderPreview(); renderValidation(); scheduleAutosave(); }
+    function renderAll() { renderEditor(); renderPreview(); renderValidation(); }
+
+    function section(id, title, bodyFn) {
+      const isOpen = eb.open.has(id);
+      const head = h("button", { type: "button", class: `eb-sec-head ${isOpen ? "open" : ""}`, onclick: () => { isOpen ? eb.open.delete(id) : eb.open.add(id); renderEditor(); } },
+        h("span", { class: "eb-sec-title" }, title),
+        h("span", { class: "eb-sec-chev" }, isOpen ? "▾" : "▸"));
+      const sec = h("div", { class: `eb-sec ${isOpen ? "open" : ""}` }, head);
+      if (isOpen) sec.append(h("div", { class: "eb-sec-body" }, bodyFn()));
+      return sec;
+    }
+    function field(labelText, child, hint) {
+      return h("label", { class: "eb-field" }, h("span", { class: "eb-label" }, labelText), child, hint ? h("span", { class: "eb-hint" }, hint) : null);
+    }
+    function counter(node, val, max) { const c = h("span", { class: `eb-count ${val > max ? "over" : ""}` }, `${val}/${max}`); return c; }
+    function textInput(val, oninput, ph) { return h("input", { class: "eb-input", type: "text", value: val || "", placeholder: ph || "", oninput: (e) => oninput(e.target.value) }); }
+    function urlInput(val, oninput, ph) { const i = textInput(val, oninput, ph || "https://…"); i.type = "url"; return i; }
+
+    function renderEditor() {
+      clear(editorEl);
+      editorEl.append(
+        sectionMessage(), sectionEmbed(), sectionAuthor(), sectionMedia(),
+        sectionFields(), sectionFooter(), sectionComponents(), sectionTemplates()
+      );
+    }
+
+    // ===== Section: Message & Channel =====
+    function sectionMessage() {
+      return section("message", "1 · Message & Channel", () => {
+        const chSel = h("select", { class: "eb-select", onchange: (e) => { eb.channelId = e.target.value; syncPreview(); } },
+          h("option", { value: "" }, channels.length ? "Select a channel…" : "No sendable channels found"),
+          ...channels.map((c) => h("option", { value: c.id, selected: c.id === eb.channelId ? true : null }, `#${c.name}${c.parentName ? "  ·  " + c.parentName : ""}`))
+        );
+        const ta = h("textarea", { class: "eb-textarea", rows: 3, placeholder: "Optional text shown above the embed…", maxlength: EB_LIMITS.content, oninput: (e) => { eb.content = e.target.value; syncPreview(); } }, eb.content || "");
+        const menSel = h("select", { class: "eb-select", onchange: (e) => { eb.allowedMentions = e.target.value; } },
+          ...[["default", "Default (respect roles/users)"], ["none", "Suppress all mentions"], ["roles", "Allow role mentions"], ["users", "Allow user mentions"], ["all", "Allow @everyone / @here"]].map(([v, l]) => h("option", { value: v, selected: v === eb.allowedMentions ? true : null }, l))
+        );
+        return [
+          field("Channel", chSel, channels.length ? "Only channels the bot can post in are listed." : null),
+          field("Message content", ta),
+          field("Mentions", menSel),
+        ];
+      });
+    }
+
+    // ===== Section: Embed main =====
+    function sectionEmbed() {
+      return section("embed", "2 · Embed", () => {
+        const e = curEmbed();
+        // embed switcher
+        const tabs = h("div", { class: "eb-embed-tabs" },
+          ...eb.embeds.map((_, i) => h("button", { type: "button", class: `eb-chip ${i === eb.activeEmbed ? "active" : ""}`, onclick: () => { eb.activeEmbed = i; renderEditor(); } }, `Embed ${i + 1}`)),
+          eb.embeds.length < EB_LIMITS.embeds ? h("button", { type: "button", class: "eb-chip add", onclick: () => { eb.embeds.push(ebBlankEmbed()); eb.activeEmbed = eb.embeds.length - 1; renderAll(); } }, "+ Add") : null,
+          eb.embeds.length > 1 ? h("button", { type: "button", class: "eb-chip del", onclick: () => { eb.embeds.splice(eb.activeEmbed, 1); eb.activeEmbed = 0; renderAll(); } }, "✕ Remove") : null
+        );
+        const titleI = textInput(e.title, (v) => { e.title = v; titleCount.replaceWith(titleCount = counter(null, v.length, EB_LIMITS.title)); syncPreview(); });
+        let titleCount = counter(null, (e.title || "").length, EB_LIMITS.title);
+        const descTa = h("textarea", { class: "eb-textarea", rows: 5, placeholder: "Supports Discord markdown…", maxlength: EB_LIMITS.description, oninput: (e2) => { e.description = e2.target.value; descCount.replaceWith(descCount = counter(null, e2.target.value.length, EB_LIMITS.description)); syncPreview(); } }, e.description || "");
+        let descCount = counter(null, (e.description || "").length, EB_LIMITS.description);
+        // markdown toolbar
+        const mdBar = h("div", { class: "eb-mdbar" }, ...[["B", "**", "**"], ["i", "*", "*"], ["U", "__", "__"], ["S", "~~", "~~"], ["</>", "`", "`"], ["▤", "```\n", "\n```"], ["❝", "> ", ""], ["•", "- ", ""]].map(([lbl, pre, post]) =>
+          h("button", { type: "button", class: "eb-md", title: lbl, onclick: () => wrapSel(descTa, pre, post, (v) => { e.description = v; syncPreview(); }) }, lbl)));
+        const colorRow = h("div", { class: "eb-color-row" },
+          h("input", { class: "eb-color", type: "color", value: /^#[0-9a-f]{6}$/i.test(e.color || "") ? e.color : "#e23b2e", oninput: (ev) => { e.color = ev.target.value; hexI.value = ev.target.value; syncPreview(); } }),
+          (function () { const hexI = textInput(e.color, (v) => { e.color = v; syncPreview(); }, "#RRGGBB"); hexI.classList.add("eb-hex"); sectionEmbed._hex = hexI; return hexI; })(),
+          h("button", { type: "button", class: "eb-md", title: "Random", onclick: () => { const c = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0"); e.color = c; renderEditor(); syncPreview(); } }, "🎲")
+        );
+        const hexI = sectionEmbed._hex; void hexI;
+        const presets = h("div", { class: "eb-presets" }, ...EB_PRESET_COLORS.map((c) => h("button", { type: "button", class: "eb-swatch", style: { background: c }, title: c, onclick: () => { e.color = c; renderEditor(); syncPreview(); } })));
+        const tsSel = h("select", { class: "eb-select", onchange: (ev) => { eb_setTimestamp(e, ev.target.value); syncPreview(); } },
+          ...[["none", "No timestamp"], ["now", "Current time (on send)"], ["custom", "Custom date/time"]].map(([v, l]) => h("option", { value: v, selected: (eb_tsMode(e) === v) ? true : null }, l)));
+        const tsRow = h("div", { class: "eb-ts-row" }, tsSel,
+          eb_tsMode(e) === "custom" ? h("input", { class: "eb-input", type: "datetime-local", value: eb_tsLocal(e), oninput: (ev) => { e.timestamp = ev.target.value ? new Date(ev.target.value).toISOString() : null; syncPreview(); } }) : null);
+        return [
+          tabs,
+          field("Title", h("div", { class: "eb-with-count" }, titleI, titleCount)),
+          field("Title URL", urlInput(e.url, (v) => { e.url = v; syncPreview(); })),
+          field("Description", h("div", null, mdBar, h("div", { class: "eb-with-count" }, descTa, descCount))),
+          field("Colour", h("div", null, colorRow, presets)),
+          field("Timestamp", tsRow),
+        ];
+      });
+    }
+
+    // ===== Section: Author =====
+    function sectionAuthor() {
+      return section("author", "3 · Author", () => {
+        const e = curEmbed();
+        return [
+          field("Author name", textInput(e.author.name, (v) => { e.author.name = v; syncPreview(); })),
+          field("Author URL", urlInput(e.author.url, (v) => { e.author.url = v; syncPreview(); })),
+          field("Author icon URL", urlInput(e.author.icon_url, (v) => { e.author.icon_url = v; syncPreview(); })),
+          btn("Clear author", { kind: "btn-ghost", onclick: () => { e.author = { name: "", url: "", icon_url: "" }; renderEditor(); syncPreview(); } }),
+        ];
+      });
+    }
+
+    // ===== Section: Media =====
+    function sectionMedia() {
+      return section("media", "4 · Media", () => {
+        const e = curEmbed();
+        return [
+          field("Thumbnail URL", urlInput(e.thumbnail.url, (v) => { e.thumbnail.url = v; syncPreview(); }), "Small image, top-right of the embed."),
+          field("Large image URL", urlInput(e.image.url, (v) => { e.image.url = v; syncPreview(); }), "Full-width image below the content."),
+          h("div", { class: "eb-row-btns" },
+            btn("Clear thumbnail", { kind: "btn-ghost", onclick: () => { e.thumbnail.url = ""; renderEditor(); syncPreview(); } }),
+            btn("Clear image", { kind: "btn-ghost", onclick: () => { e.image.url = ""; renderEditor(); syncPreview(); } })
+          ),
+        ];
+      });
+    }
+
+    // ===== Section: Fields =====
+    function sectionFields() {
+      return section("fields", `5 · Fields (${curEmbed().fields.length}/${EB_LIMITS.fields})`, () => {
+        const e = curEmbed();
+        const list = h("div", { class: "eb-fields" });
+        e.fields.forEach((f, i) => {
+          list.append(h("div", { class: "eb-field-card" },
+            h("div", { class: "eb-field-card-head" },
+              h("span", { class: "eb-field-num" }, `#${i + 1}`),
+              h("div", { class: "eb-field-actions" },
+                h("button", { type: "button", class: "eb-icon-btn", title: "Move up", disabled: i === 0 ? true : null, onclick: () => { [e.fields[i - 1], e.fields[i]] = [e.fields[i], e.fields[i - 1]]; renderAll(); } }, "↑"),
+                h("button", { type: "button", class: "eb-icon-btn", title: "Move down", disabled: i === e.fields.length - 1 ? true : null, onclick: () => { [e.fields[i + 1], e.fields[i]] = [e.fields[i], e.fields[i + 1]]; renderAll(); } }, "↓"),
+                h("button", { type: "button", class: "eb-icon-btn", title: "Duplicate", onclick: () => { e.fields.splice(i + 1, 0, JSON.parse(JSON.stringify(f))); renderAll(); } }, "⧉"),
+                h("button", { type: "button", class: "eb-icon-btn danger", title: "Remove", onclick: () => { e.fields.splice(i, 1); renderAll(); } }, "✕")
+              )
+            ),
+            field(`Name`, textInput(f.name, (v) => { f.name = v; syncPreview(); })),
+            field(`Value`, h("textarea", { class: "eb-textarea", rows: 2, maxlength: EB_LIMITS.fieldValue, oninput: (ev) => { f.value = ev.target.value; syncPreview(); } }, f.value || "")),
+            h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: f.inline ? true : null, onchange: (ev) => { f.inline = ev.target.checked; syncPreview(); } }), h("span", null, "Inline"))
+          ));
+        });
+        return [
+          list,
+          e.fields.length < EB_LIMITS.fields ? btn("+ Add field", { kind: "btn-secondary", onclick: () => { e.fields.push({ name: "", value: "", inline: false }); renderAll(); } }) : notice("warn", "Max 25 fields reached"),
+        ];
+      });
+    }
+
+    // ===== Section: Footer =====
+    function sectionFooter() {
+      return section("footer", "6 · Footer", () => {
+        const e = curEmbed();
+        let fc = counter(null, (e.footer.text || "").length, EB_LIMITS.footer);
+        return [
+          field("Footer text", h("div", { class: "eb-with-count" }, h("input", { class: "eb-input", type: "text", value: e.footer.text || "", oninput: (ev) => { e.footer.text = ev.target.value; fc.replaceWith(fc = counter(null, ev.target.value.length, EB_LIMITS.footer)); syncPreview(); } }), fc)),
+          field("Footer icon URL", urlInput(e.footer.icon_url, (v) => { e.footer.icon_url = v; syncPreview(); })),
+          btn("Clear footer", { kind: "btn-ghost", onclick: () => { e.footer = { text: "", icon_url: "" }; renderEditor(); syncPreview(); } }),
+        ];
+      });
+    }
+
+    // ===== Section: Components (buttons + selects) =====
+    function sectionComponents() {
+      return section("components", `7 · Components (${eb.components.length}/${EB_LIMITS.rows} rows)`, () => {
+        const wrap = h("div", { class: "eb-components" });
+        eb.components.forEach((row, ri) => {
+          const card = h("div", { class: "eb-comp-card" });
+          card.append(h("div", { class: "eb-comp-head" },
+            h("span", { class: "eb-comp-type" }, row.type === "buttons" ? "🔘 Button row" : "▼ Select menu"),
+            h("div", { class: "eb-field-actions" },
+              h("button", { type: "button", class: "eb-icon-btn", title: "Move up", disabled: ri === 0 ? true : null, onclick: () => { [eb.components[ri - 1], eb.components[ri]] = [eb.components[ri], eb.components[ri - 1]]; renderAll(); } }, "↑"),
+              h("button", { type: "button", class: "eb-icon-btn", title: "Move down", disabled: ri === eb.components.length - 1 ? true : null, onclick: () => { [eb.components[ri + 1], eb.components[ri]] = [eb.components[ri], eb.components[ri + 1]]; renderAll(); } }, "↓"),
+              h("button", { type: "button", class: "eb-icon-btn danger", title: "Remove row", onclick: () => { eb.components.splice(ri, 1); renderAll(); } }, "✕")
+            )
+          ));
+          if (row.type === "buttons") {
+            (row.buttons || []).forEach((b, bi) => {
+              card.append(h("div", { class: "eb-btn-row" },
+                h("div", { class: "eb-btn-grid" },
+                  field("Label", textInput(b.label, (v) => { b.label = v; syncPreview(); })),
+                  field("Style", h("select", { class: "eb-select", onchange: (ev) => { b.style = ev.target.value; renderAll(); } }, ...EB_BTN_STYLES.map(([v, l]) => h("option", { value: v, selected: (b.style || "secondary") === v ? true : null }, l)))),
+                  field("Emoji", textInput(b.emoji, (v) => { b.emoji = v; syncPreview(); }, "😀 or <:n:id>")),
+                  b.style === "link" ? field("URL", urlInput(b.url, (v) => { b.url = v; syncPreview(); })) : field("Custom ID", textInput(b.custom_id, (v) => { b.custom_id = v; syncPreview(); }, "my_button_id"))
+                ),
+                h("div", { class: "eb-btn-row-foot" },
+                  h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: b.disabled ? true : null, onchange: (ev) => { b.disabled = ev.target.checked; syncPreview(); } }), h("span", null, "Disabled")),
+                  h("button", { type: "button", class: "eb-icon-btn danger", title: "Remove button", onclick: () => { row.buttons.splice(bi, 1); renderAll(); } }, "✕")
+                )
+              ));
+            });
+            if ((row.buttons || []).length < EB_LIMITS.buttonsPerRow) card.append(btn("+ Add button", { kind: "btn-ghost", onclick: () => { row.buttons = row.buttons || []; row.buttons.push({ label: "Button", style: "primary", custom_id: "", url: "", emoji: "", disabled: false }); renderAll(); } }));
+          } else {
+            card.append(
+              field("Placeholder", textInput(row.placeholder, (v) => { row.placeholder = v; syncPreview(); })),
+              h("div", { class: "eb-btn-grid" },
+                field("Custom ID", textInput(row.custom_id, (v) => { row.custom_id = v; syncPreview(); }, "my_select_id")),
+                field("Min values", h("input", { class: "eb-input", type: "number", min: 0, max: 25, value: row.min_values ?? 1, oninput: (ev) => { row.min_values = parseInt(ev.target.value, 10) || 0; } })),
+                field("Max values", h("input", { class: "eb-input", type: "number", min: 1, max: 25, value: row.max_values ?? 1, oninput: (ev) => { row.max_values = parseInt(ev.target.value, 10) || 1; } }))
+              ),
+              h("div", { class: "eb-opts" }, ...(row.options || []).map((o, oi) => h("div", { class: "eb-opt-card" },
+                h("div", { class: "eb-opt-grid" },
+                  field("Label", textInput(o.label, (v) => { o.label = v; syncPreview(); })),
+                  field("Value", textInput(o.value, (v) => { o.value = v; syncPreview(); })),
+                  field("Description", textInput(o.description, (v) => { o.description = v; syncPreview(); })),
+                  field("Emoji", textInput(o.emoji, (v) => { o.emoji = v; syncPreview(); }))
+                ),
+                h("div", { class: "eb-btn-row-foot" },
+                  h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: o.default ? true : null, onchange: (ev) => { o.default = ev.target.checked; syncPreview(); } }), h("span", null, "Default")),
+                  h("button", { type: "button", class: "eb-icon-btn", title: "Move up", disabled: oi === 0 ? true : null, onclick: () => { [row.options[oi - 1], row.options[oi]] = [row.options[oi], row.options[oi - 1]]; renderAll(); } }, "↑"),
+                  h("button", { type: "button", class: "eb-icon-btn", title: "Move down", disabled: oi === row.options.length - 1 ? true : null, onclick: () => { [row.options[oi + 1], row.options[oi]] = [row.options[oi], row.options[oi + 1]]; renderAll(); } }, "↓"),
+                  h("button", { type: "button", class: "eb-icon-btn danger", title: "Remove option", onclick: () => { row.options.splice(oi, 1); renderAll(); } }, "✕")
+                )
+              ))),
+              (row.options || []).length < EB_LIMITS.options ? btn("+ Add option", { kind: "btn-ghost", onclick: () => { row.options = row.options || []; row.options.push({ label: "Option", value: "value_" + ((row.options || []).length + 1), description: "", emoji: "", default: false }); renderAll(); } }) : null
+            );
+          }
+          wrap.append(card);
+        });
+        return [
+          wrap,
+          eb.components.length < EB_LIMITS.rows ? h("div", { class: "eb-row-btns" },
+            btn("+ Button row", { kind: "btn-secondary", onclick: () => { eb.components.push({ type: "buttons", buttons: [{ label: "Button", style: "primary", custom_id: "", url: "", emoji: "", disabled: false }] }); renderAll(); } }),
+            btn("+ Select menu", { kind: "btn-secondary", onclick: () => { eb.components.push({ type: "select", custom_id: "", placeholder: "Choose…", min_values: 1, max_values: 1, options: [{ label: "Option", value: "value_1", description: "", emoji: "", default: false }] }); renderAll(); } })
+          ) : notice("warn", "Max 5 action rows reached"),
+          h("p", { class: "eb-microcopy" }, "Custom-ID buttons/menus are stored on the message; the bot routes them only if a handler exists for that ID. Link buttons need a URL."),
+        ];
+      });
+    }
+
+    // ===== Section: Templates =====
+    function sectionTemplates() {
+      return section("templates", `8 · Templates (${templates.length})`, () => {
+        const search = h("input", { class: "eb-input", type: "search", placeholder: "Search templates…", oninput: (ev) => { const q = ev.target.value.toLowerCase(); grid.querySelectorAll(".eb-tpl-card").forEach((c) => { c.style.display = c.dataset.name.includes(q) ? "" : "none"; }); } });
+        const grid = h("div", { class: "eb-tpl-grid" });
+        if (!templates.length) grid.append(h("div", { class: "eb-empty" }, "No templates yet. Build an embed and hit “Save template”."));
+        templates.forEach((t) => {
+          grid.append(h("div", { class: "eb-tpl-card", "data-name": (t.name || "").toLowerCase() },
+            h("div", { class: "eb-tpl-top" }, h("span", { class: "eb-tpl-name" }, t.name), t.category ? h("span", { class: "eb-tpl-cat" }, t.category) : null),
+            h("div", { class: "eb-tpl-snippet" }, (t.embedJson && t.embedJson[0] && (t.embedJson[0].title || t.embedJson[0].description)) || t.messageContent || "—"),
+            h("div", { class: "eb-tpl-meta" }, "Updated " + ebRel(t.updatedAt)),
+            h("div", { class: "eb-tpl-actions" },
+              btn("Load", { kind: "btn-secondary", onclick: () => ebLoadTemplate(t) }),
+              btn("Duplicate", { kind: "btn-ghost", onclick: () => ebDuplicateTemplate(t) }),
+              btn("Delete", { kind: "btn-ghost", onclick: () => ebDeleteTemplate(t) })
+            )
+          ));
+        });
+        return [search, grid];
+      });
+    }
+
+    // ---- live preview ----
+    function renderPreview() {
+      clear(previewEl);
+      const device = h("div", { class: "eb-discord" });
+      // message content
+      if (s2(eb.content)) device.append(h("div", { class: "eb-msg-content", html: ebMarkdown(eb.content) }));
+      const anyEmbed = eb.embeds.some((e) => !ebEmbedEmpty(e));
+      eb.embeds.forEach((e) => { if (!ebEmbedEmpty(e)) device.append(ebPreviewEmbed(e)); });
+      eb.components.forEach((row) => device.append(ebPreviewComponentRow(row)));
+      if (!s2(eb.content) && !anyEmbed && !eb.components.length) device.append(h("div", { class: "eb-empty-preview" }, h("div", { class: "eb-empty-ico" }, "🪶"), h("div", null, "Your message preview will appear here"), h("div", { class: "eb-empty-sub" }, "Start typing on the left.")));
+      previewEl.append(device);
+    }
+    function ebPreviewEmbed(e) {
+      const col = /^#[0-9a-f]{6}$/i.test(e.color || "") ? e.color : "#e23b2e";
+      const box = h("div", { class: "eb-embed", style: { borderColor: col } });
+      const inner = h("div", { class: "eb-embed-inner" });
+      if (s2(e.author && e.author.name)) inner.append(h("div", { class: "eb-e-author" }, s2(e.author.icon_url) ? h("img", { class: "eb-e-author-ico", src: e.author.icon_url, onerror: "this.style.display='none'" }) : null, h("span", null, e.author.name)));
+      if (s2(e.title)) inner.append(e.url ? h("a", { class: "eb-e-title link", href: e.url, target: "_blank", rel: "noopener" }, e.title) : h("div", { class: "eb-e-title" }, e.title));
+      if (s2(e.description)) inner.append(h("div", { class: "eb-e-desc", html: ebMarkdown(e.description) }));
+      const inlineFields = (e.fields || []).filter((f) => s2(f.name) || s2(f.value));
+      if (inlineFields.length) {
+        const fg = h("div", { class: "eb-e-fields" });
+        inlineFields.forEach((f) => fg.append(h("div", { class: `eb-e-field ${f.inline ? "inline" : ""}` }, h("div", { class: "eb-e-field-name", html: ebMarkdown(f.name) }), h("div", { class: "eb-e-field-val", html: ebMarkdown(f.value) }))));
+        inner.append(fg);
+      }
+      if (s2(e.image && e.image.url)) inner.append(h("img", { class: "eb-e-image", src: e.image.url, onerror: "this.style.display='none'" }));
+      if (s2(e.footer && e.footer.text) || e.timestamp) {
+        const ts = e.timestamp ? new Date(e.timestamp) : null;
+        inner.append(h("div", { class: "eb-e-footer" },
+          s2(e.footer && e.footer.icon_url) ? h("img", { class: "eb-e-footer-ico", src: e.footer.icon_url, onerror: "this.style.display='none'" }) : null,
+          h("span", null, [s2(e.footer && e.footer.text) ? e.footer.text : null, ts && !isNaN(ts) ? (s2(e.footer && e.footer.text) ? " • " : "") + ts.toLocaleString() : null].filter(Boolean).join(""))
+        ));
+      }
+      box.append(inner);
+      if (s2(e.thumbnail && e.thumbnail.url)) { box.classList.add("has-thumb"); inner.append(h("img", { class: "eb-e-thumb", src: e.thumbnail.url, onerror: "this.style.display='none'" })); }
+      return box;
+    }
+    function ebPreviewComponentRow(row) {
+      const r = h("div", { class: "eb-comp-preview-row" });
+      if (row.type === "buttons") (row.buttons || []).forEach((b) => r.append(h("button", { type: "button", class: `eb-d-btn ${b.style || "secondary"} ${b.disabled ? "disabled" : ""}`, disabled: true }, s2(b.emoji) ? b.emoji + " " : "", b.label || (b.style === "link" ? "Link" : "Button"))));
+      else r.append(h("div", { class: "eb-d-select" }, h("span", null, row.placeholder || "Make a selection"), h("span", { class: "eb-d-select-chev" }, "▾")));
+      return r;
+    }
+
+    // ---- validation panel ----
+    function renderValidation() {
+      clear(validEl);
+      const errs = ebValidate(eb);
+      if (!errs.length) { validEl.append(h("div", { class: "eb-valid-ok" }, "✓ Ready to send")); return; }
+      validEl.append(h("div", { class: "eb-valid-head" }, `${errs.length} issue${errs.length > 1 ? "s" : ""} to fix`));
+      errs.slice(0, 8).forEach((m) => validEl.append(h("div", { class: "eb-valid-item" }, "• " + m)));
+    }
+
+    // ---- actions ----
+    function ebReset() {
+      if (!confirm("Reset the builder and clear your draft?")) return;
+      eb.channelId = ""; eb.content = ""; eb.allowedMentions = "default"; eb.embeds = [ebBlankEmbed()]; eb.activeEmbed = 0; eb.components = []; eb.templateId = null;
+      data.embDraftSave(gid, serializeModel(eb)).catch(() => {});
+      renderAll(); toast("info", "Builder reset");
+    }
+    function ebCopyJson() { navigator.clipboard.writeText(JSON.stringify(serializeModel(eb), null, 2)).then(() => toast("success", "JSON copied"), () => toast("error", "Copy failed")); }
+    function ebExport() {
+      const blob = new Blob([JSON.stringify({ _type: "quicksark_embed_template", name: "Embed export", payload: serializeModel(eb) }, null, 2)], { type: "application/json" });
+      const a = h("a", { href: URL.createObjectURL(blob), download: "embed-template.json" }); document.body.append(a); a.click(); a.remove(); toast("success", "Exported JSON");
+    }
+    function ebImport() {
+      const inp = h("input", { type: "file", accept: "application/json" });
+      inp.onchange = () => { const file = inp.files[0]; if (!file) return; const rd = new FileReader(); rd.onload = () => { try { const j = JSON.parse(rd.result); const payload = j.payload || j; applyModel(eb, payload); renderAll(); syncPreview(); toast("success", "Template imported"); } catch { toast("error", "Invalid JSON file"); } }; rd.readAsText(file); };
+      inp.click();
+    }
+    async function ebSaveTemplate() {
+      const name = prompt("Template name:", eb._name || "My Embed"); if (!name) return;
+      try { const r = await data.embTplCreate(gid, { name, payload: serializeModel(eb) }); if (r && r.template) { templates.unshift(r.template); eb.templateId = r.template.id; eb._name = r.template.name; renderEditor(); toast("success", `Saved “${r.template.name}”`); } }
+      catch (e) { toast("error", ebErr(e) || "Could not save template"); }
+    }
+    function ebLoadTemplate(t) { applyModel(eb, { content: t.messageContent, allowedMentions: t.allowedMentions, embeds: t.embedJson, components: t.componentsJson }); eb.templateId = t.id; eb._name = t.name; renderAll(); syncPreview(); toast("success", `Loaded “${t.name}”`); }
+    async function ebDuplicateTemplate(t) {
+      try { const r = await data.embTplCreate(gid, { name: t.name + " (copy)", category: t.category, payload: { content: t.messageContent, allowedMentions: t.allowedMentions, embeds: t.embedJson, components: t.componentsJson } }); if (r && r.template) { templates.unshift(r.template); renderEditor(); toast("success", "Duplicated"); } }
+      catch (e) { toast("error", "Could not duplicate"); }
+    }
+    async function ebDeleteTemplate(t) {
+      if (!confirm(`Delete template “${t.name}”?`)) return;
+      try { await data.embTplDelete(gid, t.id); templates = templates.filter((x) => x.id !== t.id); renderEditor(); toast("info", "Template deleted"); }
+      catch { toast("error", "Could not delete"); }
+    }
+
+    // ---- send flow ----
+    function ebOpenSend() {
+      const errs = ebValidate(eb);
+      if (errs.length) { toast("error", "Fix validation issues first"); eb.open.add("message"); renderEditor(); return; }
+      if (!eb.channelId) { toast("error", "Pick a channel first"); eb.open.add("message"); renderEditor(); return; }
+      const ch = channels.find((c) => c.id === eb.channelId);
+      const guild = state.guilds.find((g) => g.id === gid);
+      ebModal("Confirm send", h("div", null,
+        h("p", { class: "eb-modal-text" }, "This will post the message to your server immediately."),
+        h("div", { class: "eb-confirm-grid" },
+          h("div", null, h("span", { class: "eb-confirm-k" }, "Server"), h("span", { class: "eb-confirm-v" }, (guild && guild.name) || gid)),
+          h("div", null, h("span", { class: "eb-confirm-k" }, "Channel"), h("span", { class: "eb-confirm-v" }, ch ? "#" + ch.name : eb.channelId)),
+          h("div", null, h("span", { class: "eb-confirm-k" }, "Embeds"), h("span", { class: "eb-confirm-v" }, String(eb.embeds.filter((e) => !ebEmbedEmpty(e)).length))),
+          h("div", null, h("span", { class: "eb-confirm-k" }, "Components"), h("span", { class: "eb-confirm-v" }, String(eb.components.length) + " row(s)"))
+        )
+      ), [
+        { label: "Cancel", kind: "btn-ghost" },
+        { label: "🚀 Confirm send", kind: "btn-primary", onConfirm: ebDoSend },
+      ]);
+    }
+    async function ebDoSend(close) {
+      try {
+        const r = await data.embSend(gid, { channelId: eb.channelId, payload: serializeModel(eb), templateId: eb.templateId });
+        close();
+        if (r && r.ok) { toast("success", "Embed sent ✓"); if (r.messageUrl) ebModal("Sent!", h("div", null, h("p", { class: "eb-modal-text" }, "Your message is live."), h("a", { class: "eb-msg-link", href: r.messageUrl, target: "_blank", rel: "noopener" }, "Open message in Discord ↗")), [{ label: "Done", kind: "btn-primary" }]); }
+        else { toast("error", ebSendErr(r)); }
+      } catch (e) { close(); toast("error", ebErr(e) || "Send failed"); }
+    }
+
+    // ---- helpers ----
+    function ebModal(title, bodyNode, actions) {
+      const overlay = h("div", { class: "eb-modal-overlay" });
+      const close = () => { overlay.classList.remove("show"); setTimeout(() => overlay.remove(), 200); };
+      const acts = h("div", { class: "eb-modal-actions" });
+      (actions || []).forEach((a) => acts.append(btn(a.label, { kind: a.kind, onclick: () => { if (a.onConfirm) a.onConfirm(close); else close(); } })));
+      overlay.append(h("div", { class: "eb-modal", onclick: (e) => e.stopPropagation() }, h("div", { class: "eb-modal-title" }, title), bodyNode, acts));
+      overlay.addEventListener("click", close);
+      document.body.append(overlay); setTimeout(() => overlay.classList.add("show"), 10);
+      return close;
+    }
+
+    renderAll();
+    // keyboard: Ctrl+S save template, Ctrl+Enter send
+    const keyHandler = (ev) => {
+      if (state.activeTab !== "embed-builder") { document.removeEventListener("keydown", keyHandler); return; }
+      if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") { ev.preventDefault(); ebSaveTemplate(); }
+      if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") { ev.preventDefault(); ebOpenSend(); }
+    };
+    document.addEventListener("keydown", keyHandler);
+  }
+
+  /* Embed builder model (de)serialisation + validation + tiny markdown */
+  function serializeModel(eb) {
+    return {
+      content: eb.content || "", allowedMentions: eb.allowedMentions || "default",
+      embeds: (eb.embeds || []).map((e) => ({ title: e.title || "", url: e.url || "", description: e.description || "", color: e.color || "", timestamp: e.timestamp || null, author: { name: (e.author || {}).name || "", url: (e.author || {}).url || "", icon_url: (e.author || {}).icon_url || "" }, thumbnail: { url: (e.thumbnail || {}).url || "" }, image: { url: (e.image || {}).url || "" }, footer: { text: (e.footer || {}).text || "", icon_url: (e.footer || {}).icon_url || "" }, fields: (e.fields || []).map((f) => ({ name: f.name || "", value: f.value || "", inline: !!f.inline })) })),
+      components: (eb.components || []),
+    };
+  }
+  function applyModel(eb, m) {
+    m = m || {};
+    eb.content = m.content || "";
+    eb.allowedMentions = m.allowedMentions || "default";
+    const arr = Array.isArray(m.embeds) ? m.embeds : (m.embed ? [m.embed] : []);
+    eb.embeds = (arr.length ? arr : [ebBlankEmbed()]).map((e) => Object.assign(ebBlankEmbed(), e, { author: Object.assign({ name: "", url: "", icon_url: "" }, e.author || {}), thumbnail: Object.assign({ url: "" }, e.thumbnail || {}), image: Object.assign({ url: "" }, e.image || {}), footer: Object.assign({ text: "", icon_url: "" }, e.footer || {}), fields: Array.isArray(e.fields) ? e.fields : [] }));
+    eb.activeEmbed = 0;
+    eb.components = Array.isArray(m.components) ? m.components : [];
+  }
+  function ebValidate(eb) {
+    const errs = [];
+    if ((eb.content || "").length > EB_LIMITS.content) errs.push(`Message content over ${EB_LIMITS.content}.`);
+    if (eb.embeds.length > EB_LIMITS.embeds) errs.push(`Max ${EB_LIMITS.embeds} embeds.`);
+    eb.embeds.forEach((e, i) => {
+      if ((e.title || "").length > EB_LIMITS.title) errs.push(`Embed ${i + 1}: title over ${EB_LIMITS.title}.`);
+      if ((e.description || "").length > EB_LIMITS.description) errs.push(`Embed ${i + 1}: description over ${EB_LIMITS.description}.`);
+      if (((e.footer || {}).text || "").length > EB_LIMITS.footer) errs.push(`Embed ${i + 1}: footer over ${EB_LIMITS.footer}.`);
+      if ((e.fields || []).length > EB_LIMITS.fields) errs.push(`Embed ${i + 1}: over ${EB_LIMITS.fields} fields.`);
+      (e.fields || []).forEach((f, j) => { if ((s2(f.name) && !s2(f.value)) || (!s2(f.name) && s2(f.value))) errs.push(`Embed ${i + 1} field ${j + 1}: name and value both required.`); if ((f.value || "").length > EB_LIMITS.fieldValue) errs.push(`Embed ${i + 1} field ${j + 1}: value over ${EB_LIMITS.fieldValue}.`); });
+      if (ebCharCount(e) > EB_LIMITS.total) errs.push(`Embed ${i + 1}: total over ${EB_LIMITS.total} characters.`);
+    });
+    const ids = new Set();
+    if (eb.components.length > EB_LIMITS.rows) errs.push(`Max ${EB_LIMITS.rows} action rows.`);
+    eb.components.forEach((row, i) => {
+      if (row.type === "buttons") {
+        if ((row.buttons || []).length > EB_LIMITS.buttonsPerRow) errs.push(`Row ${i + 1}: max ${EB_LIMITS.buttonsPerRow} buttons.`);
+        (row.buttons || []).forEach((b, j) => {
+          if (!s2(b.label) && !s2(b.emoji)) errs.push(`Row ${i + 1} button ${j + 1}: needs a label or emoji.`);
+          if (b.style === "link") { if (!/^https?:\/\//i.test(b.url || "")) errs.push(`Row ${i + 1} button ${j + 1}: link needs http(s) URL.`); }
+          else if (!s2(b.custom_id)) errs.push(`Row ${i + 1} button ${j + 1}: needs a custom ID.`);
+          else if (ids.has(b.custom_id)) errs.push(`Duplicate custom ID “${b.custom_id}”.`); else ids.add(b.custom_id);
+        });
+      } else if (row.type === "select") {
+        if (!s2(row.custom_id)) errs.push(`Row ${i + 1}: select needs a custom ID.`); else if (ids.has(row.custom_id)) errs.push(`Duplicate custom ID “${row.custom_id}”.`); else ids.add(row.custom_id);
+        if (!(row.options || []).length) errs.push(`Row ${i + 1}: select needs an option.`);
+        if ((row.options || []).length > EB_LIMITS.options) errs.push(`Row ${i + 1}: max ${EB_LIMITS.options} options.`);
+        (row.options || []).forEach((o, j) => { if (!s2(o.label) || !s2(o.value)) errs.push(`Row ${i + 1} option ${j + 1}: label and value required.`); });
+      }
+    });
+    const anyEmbed = eb.embeds.some((e) => !ebEmbedEmpty(e));
+    if (!s2(eb.content) && !anyEmbed && !eb.components.length) errs.push("Message is empty — add content, an embed, or components.");
+    return errs;
+  }
+  function ebMarkdown(t) {
+    let x = escapeHtml(t || "");
+    x = x.replace(/```([\s\S]*?)```/g, (_, c) => `<pre>${c}</pre>`).replace(/`([^`]+)`/g, "<code>$1</code>");
+    x = x.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>").replace(/__([^_]+)__/g, "<u>$1</u>").replace(/~~([^~]+)~~/g, "<s>$1</s>");
+    x = x.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    x = x.replace(/^&gt; (.*)$/gm, "<span class='eb-quote'>$1</span>").replace(/^- (.*)$/gm, "• $1");
+    return x.replace(/\n/g, "<br>");
+  }
+  function ebRel(dbStr) { const ms = dbStr ? Date.parse(String(dbStr).replace(" ", "T") + (String(dbStr).includes("Z") ? "" : "Z")) : NaN; if (isNaN(ms)) return "—"; const d = Math.round((Date.now() - ms) / 86400000); return d <= 0 ? "today" : d === 1 ? "yesterday" : d + "d ago"; }
+  function eb_tsMode(e) { return !e.timestamp ? "none" : (e.timestamp === true || e.timestamp === "now") ? "now" : "custom"; }
+  function eb_tsLocal(e) { try { const d = new Date(e.timestamp); return isNaN(d) ? "" : new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); } catch { return ""; } }
+  function eb_setTimestamp(e, mode) { e.timestamp = mode === "none" ? null : mode === "now" ? "now" : new Date().toISOString(); }
+  function wrapSel(ta, pre, post, cb) { const a = ta.selectionStart || 0, b = ta.selectionEnd || 0, v = ta.value; ta.value = v.slice(0, a) + pre + v.slice(a, b) + post + v.slice(b); ta.focus(); ta.selectionStart = a + pre.length; ta.selectionEnd = b + pre.length; cb(ta.value); }
+  function ebErr(e) { return (e && e.body && (e.body.error || (e.body.errors && e.body.errors[0] && e.body.errors[0].msg))) || (e && e.message) || ""; }
+  function ebSendErr(r) { const m = { validation: "Validation failed — check the issues panel.", channel_not_found: "Channel no longer exists.", not_text_channel: "That channel can't receive messages.", missing_send_permission: "The bot can't send messages in that channel.", missing_embed_permission: "The bot lacks the Embed Links permission there.", bot_not_in_guild: "The bot isn't in this server.", send_failed: "Discord rejected the message." }; return (r && (m[r.error] || r.detail || r.error)) || "Send failed"; }
 
   /** Generic shimmer used while a module / tab is loading. */
   function renderGenericSkeleton() {
