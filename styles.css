@@ -10185,3 +10185,41 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   .dash-content::after, .dash-content::before, .eb-tpl-card::after, .eb-post-btn::after { animation: none !important; }
 }
+
+/* ============================================================
+   EMBED BUILDER — TABBED LAYOUT + PER-OPTION ACTIONS + TEST
+   ============================================================ */
+.eb-tabbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; margin-bottom: 16px; background: rgba(0,0,0,.32); border: 1px solid var(--border, rgba(255,255,255,.08)); border-radius: 14px; position: relative; }
+.eb-tab { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--text-dim, #9ca3af); font-weight: 600; font-size: .86rem; cursor: pointer; transition: color var(--t-fast), background var(--t-fast), box-shadow var(--t-fast); white-space: nowrap; }
+.eb-tab:hover { color: #fff; background: rgba(255,255,255,.05); }
+.eb-tab.active { color: #fff; background: linear-gradient(135deg, rgba(226,59,46,.22), rgba(245,133,31,.12)); box-shadow: inset 0 0 0 1px rgba(245,133,31,.36), 0 8px 22px -16px var(--glow-iron); }
+.eb-tab-badge { min-width: 18px; height: 18px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; font-size: .68rem; font-weight: 800; border-radius: 9px; background: var(--grad-iron); color: #fff; box-shadow: 0 2px 6px -2px var(--glow-iron); }
+.eb-tab.active .eb-tab-badge { background: #fff; color: var(--iron); }
+.eb-tabpanel { display: flex; flex-direction: column; gap: 14px; animation: ebPanelIn .26s ease; }
+@keyframes ebPanelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* per-option action editor */
+.eb-opt-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.eb-action { margin-top: 4px; padding: 12px; border-radius: 11px; background: linear-gradient(180deg, rgba(245,133,31,.07), rgba(0,0,0,.18)); border: 1px solid rgba(245,133,31,.18); display: flex; flex-direction: column; gap: 11px; }
+.eb-action .eb-textarea { width: 100%; }
+
+/* interactive preview select */
+.eb-d-select-wrap { width: 100%; max-width: 400px; margin-top: 8px; }
+.eb-d-select { margin-top: 0; cursor: pointer; transition: border-color var(--t-fast); }
+.eb-d-select-wrap .eb-d-select { margin-top: 0; }
+.eb-d-select:not(.disabled):hover { border-color: #5865f2; }
+.eb-d-select.disabled { opacity: .55; cursor: not-allowed; }
+.eb-d-options { margin-top: 4px; background: #2b2d31; border: 1px solid #1e1f22; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 30px -12px rgba(0,0,0,.7); }
+.eb-d-option { display: flex; align-items: center; gap: 9px; padding: 9px 12px; cursor: pointer; transition: background var(--t-fast); }
+.eb-d-option:hover { background: rgba(88,101,242,.22); }
+.eb-d-opt-emoji { font-size: 1.05rem; line-height: 1; }
+.eb-d-opt-text { min-width: 0; }
+.eb-d-opt-label { color: #f2f3f5; font-weight: 600; font-size: .9rem; }
+.eb-d-opt-desc { color: #b5bac1; font-size: .78rem; margin-top: 1px; }
+
+/* test result card under preview */
+.eb-test-result { margin-top: 12px; padding: 12px; border-radius: 10px; background: rgba(0,0,0,.3); border: 1px dashed rgba(245,133,31,.4); animation: ebPanelIn .22s ease; }
+.eb-test-head { display: flex; align-items: center; gap: 8px; font-size: .76rem; font-weight: 700; color: var(--ember-2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.eb-test-eph { font-size: .66rem; font-weight: 600; color: #b5bac1; text-transform: none; letter-spacing: 0; padding: 2px 7px; border-radius: 8px; background: rgba(255,255,255,.07); }
+.eb-test-text { color: #dbdee1; font-size: .9rem; line-height: 1.45; white-space: pre-wrap; }
+.eb-test-text.muted { color: #80848e; font-style: italic; }

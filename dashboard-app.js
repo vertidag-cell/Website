@@ -883,6 +883,7 @@
   const EB_LIMITS = { content: 2000, title: 256, description: 4096, footer: 2048, authorName: 256, fieldName: 256, fieldValue: 1024, fields: 25, total: 6000, embeds: 10, rows: 5, buttonsPerRow: 5, options: 25, placeholder: 150, optLabel: 100, optValue: 100, optDesc: 100, label: 80 };
   const EB_PRESET_COLORS = ["#e23b2e", "#f5851f", "#ffcc4d", "#2ecc71", "#3498db", "#9b59b6", "#e91e63", "#1abc9c", "#34495e", "#95a5a6", "#000000", "#ffffff"];
   const EB_BTN_STYLES = [["primary", "Primary"], ["secondary", "Secondary"], ["success", "Success"], ["danger", "Danger"], ["link", "Link"]];
+  const EB_ACTION_TYPES = [["none", "Nothing"], ["info_embed", "Show info embed"], ["text", "Send text reply"], ["give_role", "Give role"], ["remove_role", "Remove role"], ["toggle_role", "Toggle role"], ["open_ticket", "Open ticket"], ["custom", "Custom action"]];
 
   function ebBlankEmbed() { return { title: "", url: "", description: "", color: "#e23b2e", timestamp: null, author: { name: "", url: "", icon_url: "" }, thumbnail: { url: "" }, image: { url: "" }, footer: { text: "", icon_url: "" }, fields: [] }; }
   function ebEmbedEmpty(e) { return !s2(e.title) && !s2(e.description) && !(e.fields || []).length && !s2(e.image && e.image.url) && !s2(e.thumbnail && e.thumbnail.url) && !s2(e.author && e.author.name) && !s2(e.footer && e.footer.text); }
@@ -898,17 +899,19 @@
     const eb = {
       channelId: "", content: "", allowedMentions: "default",
       embeds: [ebBlankEmbed()], activeEmbed: 0, components: [], templateId: null,
-      open: new Set(["message", "embed"]),
+      tab: "message",
     };
-    let channels = [], templates = [];
+    let channels = [], templates = [], roles = [];
     try {
-      const [chRes, tplRes, draftRes] = await Promise.all([
+      const [chRes, tplRes, draftRes, rolesRes] = await Promise.all([
         data.channels(gid).catch(() => ({ channels: [] })),
         data.embTplList(gid).catch(() => ({ templates: [] })),
         data.embDraftGet(gid).catch(() => ({ draft: null })),
+        data.roles(gid).catch(() => ({ roles: [] })),
       ]);
       channels = chRes.channels || [];
       templates = tplRes.templates || [];
+      roles = rolesRes.roles || [];
       if (draftRes && draftRes.draft && draftRes.draft.draft) {
         try { applyModel(eb, draftRes.draft.draft); toast("info", "Restored your unsaved draft"); } catch {}
       }
@@ -970,15 +973,9 @@
     function syncPreview() { renderPreview(); renderValidation(); scheduleAutosave(); }
     function renderAll() { renderEditor(); renderPreview(); renderValidation(); }
 
-    function section(id, title, bodyFn) {
-      const isOpen = eb.open.has(id);
-      const head = h("button", { type: "button", class: `eb-sec-head ${isOpen ? "open" : ""}`, onclick: () => { isOpen ? eb.open.delete(id) : eb.open.add(id); renderEditor(); } },
-        h("span", { class: "eb-sec-title" }, title),
-        h("span", { class: "eb-sec-chev" }, isOpen ? "▾" : "▸"));
-      const sec = h("div", { class: `eb-sec ${isOpen ? "open" : ""}` }, head);
-      if (isOpen) sec.append(h("div", { class: "eb-sec-body" }, bodyFn()));
-      return sec;
-    }
+    // Tabs replace the old accordion → one compact panel at a time.
+    const EB_TABS = [["message", "Message"], ["embed", "Embed"], ["author", "Author"], ["media", "Media"], ["fields", "Fields"], ["buttons", "Buttons"], ["dropdowns", "Dropdowns"], ["footer", "Footer"], ["templates", "Templates"], ["send", "Send"]];
+    function section(id, title, bodyFn) { return bodyFn(); } // body only; chrome lives on the tab panel
     function field(labelText, child, hint) {
       return h("label", { class: "eb-field" }, h("span", { class: "eb-label" }, labelText), child, hint ? h("span", { class: "eb-hint" }, hint) : null);
     }
@@ -986,12 +983,20 @@
     function textInput(val, oninput, ph) { return h("input", { class: "eb-input", type: "text", value: val || "", placeholder: ph || "", oninput: (e) => oninput(e.target.value) }); }
     function urlInput(val, oninput, ph) { const i = textInput(val, oninput, ph || "https://…"); i.type = "url"; return i; }
 
+    const EB_TAB_BUILDERS = {
+      message: () => sectionMessage(), embed: () => sectionEmbed(), author: () => sectionAuthor(),
+      media: () => sectionMedia(), fields: () => sectionFields(), footer: () => sectionFooter(),
+      buttons: () => sectionButtons(), dropdowns: () => sectionDropdowns(),
+      templates: () => sectionTemplates(), send: () => sectionSend(),
+    };
     function renderEditor() {
       clear(editorEl);
-      editorEl.append(
-        sectionMessage(), sectionEmbed(), sectionAuthor(), sectionMedia(),
-        sectionFields(), sectionFooter(), sectionComponents(), sectionTemplates()
-      );
+      if (!eb.tab || !EB_TAB_BUILDERS[eb.tab]) eb.tab = "message";
+      const counts = { fields: curEmbed().fields.length, buttons: eb.components.filter((c) => c.type === "buttons").length, dropdowns: eb.components.filter((c) => c.type === "select").length, templates: templates.length };
+      const bar = h("div", { class: "eb-tabbar" }, ...EB_TABS.map(([id, label]) =>
+        h("button", { type: "button", class: `eb-tab ${eb.tab === id ? "active" : ""}`, onclick: () => { eb.tab = id; renderEditor(); } },
+          label, counts[id] ? h("span", { class: "eb-tab-badge" }, String(counts[id])) : null)));
+      editorEl.append(bar, h("div", { class: "eb-tabpanel" }, EB_TAB_BUILDERS[eb.tab]()));
     }
 
     // ===== Section: Message & Channel =====
@@ -1118,69 +1123,142 @@
     }
 
     // ===== Section: Components (buttons + selects) =====
-    function sectionComponents() {
-      return section("components", `7 · Components (${eb.components.length}/${EB_LIMITS.rows} rows)`, () => {
+    function compHead(row, ri, label) {
+      return h("div", { class: "eb-comp-head" },
+        h("span", { class: "eb-comp-type" }, label),
+        h("div", { class: "eb-field-actions" },
+          h("button", { type: "button", class: "eb-icon-btn", title: "Duplicate", onclick: () => { eb.components.splice(ri + 1, 0, JSON.parse(JSON.stringify(row))); renderAll(); } }, "⧉"),
+          h("button", { type: "button", class: "eb-icon-btn", title: "Move up", disabled: ri === 0 ? true : null, onclick: () => { [eb.components[ri - 1], eb.components[ri]] = [eb.components[ri], eb.components[ri - 1]]; renderAll(); } }, "↑"),
+          h("button", { type: "button", class: "eb-icon-btn", title: "Move down", disabled: ri === eb.components.length - 1 ? true : null, onclick: () => { [eb.components[ri + 1], eb.components[ri]] = [eb.components[ri], eb.components[ri + 1]]; renderAll(); } }, "↓"),
+          h("button", { type: "button", class: "eb-icon-btn danger", title: "Remove", onclick: () => { eb.components.splice(ri, 1); renderAll(); } }, "✕")
+        )
+      );
+    }
+
+    // ===== Tab: Buttons =====
+    function sectionButtons() {
+      return section("buttons", "Buttons", () => {
         const wrap = h("div", { class: "eb-components" });
         eb.components.forEach((row, ri) => {
-          const card = h("div", { class: "eb-comp-card" });
-          card.append(h("div", { class: "eb-comp-head" },
-            h("span", { class: "eb-comp-type" }, row.type === "buttons" ? "🔘 Button row" : "▼ Select menu"),
-            h("div", { class: "eb-field-actions" },
-              h("button", { type: "button", class: "eb-icon-btn", title: "Move up", disabled: ri === 0 ? true : null, onclick: () => { [eb.components[ri - 1], eb.components[ri]] = [eb.components[ri], eb.components[ri - 1]]; renderAll(); } }, "↑"),
-              h("button", { type: "button", class: "eb-icon-btn", title: "Move down", disabled: ri === eb.components.length - 1 ? true : null, onclick: () => { [eb.components[ri + 1], eb.components[ri]] = [eb.components[ri], eb.components[ri + 1]]; renderAll(); } }, "↓"),
-              h("button", { type: "button", class: "eb-icon-btn danger", title: "Remove row", onclick: () => { eb.components.splice(ri, 1); renderAll(); } }, "✕")
-            )
-          ));
-          if (row.type === "buttons") {
-            (row.buttons || []).forEach((b, bi) => {
-              card.append(h("div", { class: "eb-btn-row" },
-                h("div", { class: "eb-btn-grid" },
-                  field("Label", textInput(b.label, (v) => { b.label = v; syncPreview(); })),
-                  field("Style", h("select", { class: "eb-select", onchange: (ev) => { b.style = ev.target.value; renderAll(); } }, ...EB_BTN_STYLES.map(([v, l]) => h("option", { value: v, selected: (b.style || "secondary") === v ? true : null }, l)))),
-                  field("Emoji", textInput(b.emoji, (v) => { b.emoji = v; syncPreview(); }, "😀 or <:n:id>")),
-                  b.style === "link" ? field("URL", urlInput(b.url, (v) => { b.url = v; syncPreview(); })) : field("Custom ID", textInput(b.custom_id, (v) => { b.custom_id = v; syncPreview(); }, "my_button_id"))
-                ),
-                h("div", { class: "eb-btn-row-foot" },
-                  h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: b.disabled ? true : null, onchange: (ev) => { b.disabled = ev.target.checked; syncPreview(); } }), h("span", null, "Disabled")),
-                  h("button", { type: "button", class: "eb-icon-btn danger", title: "Remove button", onclick: () => { row.buttons.splice(bi, 1); renderAll(); } }, "✕")
-                )
-              ));
-            });
-            if ((row.buttons || []).length < EB_LIMITS.buttonsPerRow) card.append(btn("+ Add button", { kind: "btn-ghost", onclick: () => { row.buttons = row.buttons || []; row.buttons.push({ label: "Button", style: "primary", custom_id: "", url: "", emoji: "", disabled: false }); renderAll(); } }));
-          } else {
-            card.append(
-              field("Placeholder", textInput(row.placeholder, (v) => { row.placeholder = v; syncPreview(); })),
+          if (row.type !== "buttons") return;
+          const card = h("div", { class: "eb-comp-card" }, compHead(row, ri, "🔘 Button row"));
+          (row.buttons || []).forEach((b, bi) => {
+            card.append(h("div", { class: "eb-btn-row" },
               h("div", { class: "eb-btn-grid" },
-                field("Custom ID", textInput(row.custom_id, (v) => { row.custom_id = v; syncPreview(); }, "my_select_id")),
-                field("Min values", h("input", { class: "eb-input", type: "number", min: 0, max: 25, value: row.min_values ?? 1, oninput: (ev) => { row.min_values = parseInt(ev.target.value, 10) || 0; } })),
-                field("Max values", h("input", { class: "eb-input", type: "number", min: 1, max: 25, value: row.max_values ?? 1, oninput: (ev) => { row.max_values = parseInt(ev.target.value, 10) || 1; } }))
+                field("Label", textInput(b.label, (v) => { b.label = v; syncPreview(); })),
+                field("Style", h("select", { class: "eb-select", onchange: (ev) => { b.style = ev.target.value; renderAll(); } }, ...EB_BTN_STYLES.map(([v, l]) => h("option", { value: v, selected: (b.style || "secondary") === v ? true : null }, l)))),
+                field("Emoji", textInput(b.emoji, (v) => { b.emoji = v; syncPreview(); }, "😀 or <:n:id>")),
+                b.style === "link" ? field("URL", urlInput(b.url, (v) => { b.url = v; syncPreview(); })) : field("Custom ID", textInput(b.custom_id, (v) => { b.custom_id = v; syncPreview(); }, "my_button_id"))
               ),
-              h("div", { class: "eb-opts" }, ...(row.options || []).map((o, oi) => h("div", { class: "eb-opt-card" },
-                h("div", { class: "eb-opt-grid" },
-                  field("Label", textInput(o.label, (v) => { o.label = v; syncPreview(); })),
-                  field("Value", textInput(o.value, (v) => { o.value = v; syncPreview(); })),
-                  field("Description", textInput(o.description, (v) => { o.description = v; syncPreview(); })),
-                  field("Emoji", textInput(o.emoji, (v) => { o.emoji = v; syncPreview(); }))
-                ),
-                h("div", { class: "eb-btn-row-foot" },
-                  h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: o.default ? true : null, onchange: (ev) => { o.default = ev.target.checked; syncPreview(); } }), h("span", null, "Default")),
-                  h("button", { type: "button", class: "eb-icon-btn", title: "Move up", disabled: oi === 0 ? true : null, onclick: () => { [row.options[oi - 1], row.options[oi]] = [row.options[oi], row.options[oi - 1]]; renderAll(); } }, "↑"),
-                  h("button", { type: "button", class: "eb-icon-btn", title: "Move down", disabled: oi === row.options.length - 1 ? true : null, onclick: () => { [row.options[oi + 1], row.options[oi]] = [row.options[oi], row.options[oi + 1]]; renderAll(); } }, "↓"),
-                  h("button", { type: "button", class: "eb-icon-btn danger", title: "Remove option", onclick: () => { row.options.splice(oi, 1); renderAll(); } }, "✕")
-                )
-              ))),
-              (row.options || []).length < EB_LIMITS.options ? btn("+ Add option", { kind: "btn-ghost", onclick: () => { row.options = row.options || []; row.options.push({ label: "Option", value: "value_" + ((row.options || []).length + 1), description: "", emoji: "", default: false }); renderAll(); } }) : null
-            );
-          }
+              h("div", { class: "eb-btn-row-foot" },
+                h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: b.disabled ? true : null, onchange: (ev) => { b.disabled = ev.target.checked; syncPreview(); } }), h("span", null, "Disabled")),
+                h("button", { type: "button", class: "eb-icon-btn danger", title: "Remove button", onclick: () => { row.buttons.splice(bi, 1); renderAll(); } }, "✕")
+              )
+            ));
+          });
+          if ((row.buttons || []).length < EB_LIMITS.buttonsPerRow) card.append(btn("+ Add button", { kind: "btn-ghost", onclick: () => { row.buttons = row.buttons || []; row.buttons.push({ label: "Button", style: "primary", custom_id: "", url: "", emoji: "", disabled: false }); renderAll(); } }));
           wrap.append(card);
         });
+        if (!eb.components.some((c) => c.type === "buttons")) wrap.append(h("div", { class: "eb-empty" }, "No buttons yet — add a button row below."));
         return [
           wrap,
-          eb.components.length < EB_LIMITS.rows ? h("div", { class: "eb-row-btns" },
-            btn("+ Button row", { kind: "btn-secondary", onclick: () => { eb.components.push({ type: "buttons", buttons: [{ label: "Button", style: "primary", custom_id: "", url: "", emoji: "", disabled: false }] }); renderAll(); } }),
-            btn("+ Select menu", { kind: "btn-secondary", onclick: () => { eb.components.push({ type: "select", custom_id: "", placeholder: "Choose…", min_values: 1, max_values: 1, options: [{ label: "Option", value: "value_1", description: "", emoji: "", default: false }] }); renderAll(); } })
-          ) : notice("warn", "Max 5 action rows reached"),
-          h("p", { class: "eb-microcopy" }, "Custom-ID buttons/menus are stored on the message; the bot routes them only if a handler exists for that ID. Link buttons need a URL."),
+          eb.components.length < EB_LIMITS.rows ? btn("+ Add button row", { kind: "btn-secondary", onclick: () => { eb.components.push({ type: "buttons", buttons: [{ label: "Button", style: "primary", custom_id: "", url: "", emoji: "", disabled: false }] }); renderAll(); } }) : notice("warn", "Max 5 action rows reached"),
+          h("p", { class: "eb-microcopy" }, "Link buttons need a URL. Custom-ID buttons need a matching bot handler to do something."),
+        ];
+      });
+    }
+
+    // ===== Tab: Dropdown menus (with per-option actions) =====
+    function sectionDropdowns() {
+      return section("dropdowns", "Dropdowns", () => {
+        const wrap = h("div", { class: "eb-components" });
+        eb.components.forEach((row, ri) => {
+          if (row.type !== "select") return;
+          const card = h("div", { class: "eb-comp-card" }, compHead(row, ri, "▼ Dropdown menu"));
+          card.append(
+            field("Placeholder", textInput(row.placeholder, (v) => { row.placeholder = v; syncPreview(); })),
+            h("div", { class: "eb-btn-grid" },
+              field("Custom ID", textInput(row.custom_id, (v) => { row.custom_id = v; syncPreview(); }, "my_select_id")),
+              field("Min values", h("input", { class: "eb-input", type: "number", min: 0, max: 25, value: row.min_values ?? 1, oninput: (ev) => { row.min_values = parseInt(ev.target.value, 10) || 0; scheduleAutosave(); } })),
+              field("Max values", h("input", { class: "eb-input", type: "number", min: 1, max: 25, value: row.max_values ?? 1, oninput: (ev) => { row.max_values = parseInt(ev.target.value, 10) || 1; scheduleAutosave(); } }))
+            ),
+            h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: row.disabled ? true : null, onchange: (ev) => { row.disabled = ev.target.checked; syncPreview(); } }), h("span", null, "Disabled"))
+          );
+          (row.options || []).forEach((o, oi) => {
+            o.action = o.action || { type: "none", ephemeral: true };
+            card.append(h("div", { class: "eb-opt-card" },
+              h("div", { class: "eb-opt-head" }, h("span", { class: "eb-field-num" }, `Option ${oi + 1}`),
+                h("div", { class: "eb-field-actions" },
+                  h("button", { type: "button", class: "eb-icon-btn", title: "Duplicate", onclick: () => { row.options.splice(oi + 1, 0, JSON.parse(JSON.stringify(o))); renderAll(); } }, "⧉"),
+                  h("button", { type: "button", class: "eb-icon-btn", title: "Move up", disabled: oi === 0 ? true : null, onclick: () => { [row.options[oi - 1], row.options[oi]] = [row.options[oi], row.options[oi - 1]]; renderAll(); } }, "↑"),
+                  h("button", { type: "button", class: "eb-icon-btn", title: "Move down", disabled: oi === row.options.length - 1 ? true : null, onclick: () => { [row.options[oi + 1], row.options[oi]] = [row.options[oi], row.options[oi + 1]]; renderAll(); } }, "↓"),
+                  h("button", { type: "button", class: "eb-icon-btn danger", title: "Remove option", onclick: () => { row.options.splice(oi, 1); renderAll(); } }, "✕"))),
+              h("div", { class: "eb-opt-grid" },
+                field("Label", textInput(o.label, (v) => { o.label = v; syncPreview(); })),
+                field("Value", textInput(o.value, (v) => { o.value = v; syncPreview(); })),
+                field("Description", textInput(o.description, (v) => { o.description = v; syncPreview(); })),
+                field("Emoji", textInput(o.emoji, (v) => { o.emoji = v; syncPreview(); }))
+              ),
+              h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: o.default ? true : null, onchange: (ev) => { o.default = ev.target.checked; syncPreview(); } }), h("span", null, "Selected by default")),
+              h("div", { class: "eb-action" },
+                field("On select → does", h("select", { class: "eb-select", onchange: (ev) => { o.action.type = ev.target.value; renderAll(); } }, ...EB_ACTION_TYPES.map(([v, l]) => h("option", { value: v, selected: o.action.type === v ? true : null }, l)))),
+                ...actionFields(o.action)
+              )
+            ));
+          });
+          if ((row.options || []).length < EB_LIMITS.options) card.append(btn("+ Add option", { kind: "btn-ghost", onclick: () => { row.options = row.options || []; row.options.push({ label: "Option", value: "value_" + ((row.options || []).length + 1), description: "", emoji: "", default: false, action: { type: "none", ephemeral: true } }); renderAll(); } }));
+          wrap.append(card);
+        });
+        if (!eb.components.some((c) => c.type === "select")) wrap.append(h("div", { class: "eb-empty" }, "No dropdown menus yet — add one below."));
+        return [
+          wrap,
+          eb.components.length < EB_LIMITS.rows ? btn("+ Add dropdown menu", { kind: "btn-secondary", onclick: () => { eb.components.push({ type: "select", custom_id: "", placeholder: "Choose…", min_values: 1, max_values: 1, disabled: false, options: [{ label: "Option", value: "value_1", description: "", emoji: "", default: false, action: { type: "none", ephemeral: true } }] }); renderAll(); } }) : notice("warn", "Max 5 action rows reached"),
+          h("p", { class: "eb-microcopy" }, "Each option can trigger an action when picked. Info-embed, text and role actions run automatically; ticket/custom need bot setup."),
+        ];
+      });
+    }
+
+    function actionFields(act) {
+      const ephToggle = () => h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: act.ephemeral !== false ? true : null, onchange: (ev) => { act.ephemeral = ev.target.checked; scheduleAutosave(); } }), h("span", null, "Only the clicker sees the response (ephemeral)"));
+      if (act.type === "info_embed") {
+        act.embed = act.embed || { title: "", description: "", color: "#e23b2e", image: { url: "" }, footer: { text: "" } };
+        const e = act.embed;
+        return [
+          field("Response title", textInput(e.title, (v) => { e.title = v; scheduleAutosave(); })),
+          field("Response description", h("textarea", { class: "eb-textarea", rows: 3, oninput: (ev) => { e.description = ev.target.value; scheduleAutosave(); } }, e.description || "")),
+          h("div", { class: "eb-btn-grid" },
+            field("Colour", h("input", { class: "eb-color", type: "color", value: /^#[0-9a-f]{6}$/i.test(e.color || "") ? e.color : "#e23b2e", oninput: (ev) => { e.color = ev.target.value; scheduleAutosave(); } })),
+            field("Footer", textInput(e.footer.text, (v) => { e.footer.text = v; scheduleAutosave(); }))
+          ),
+          field("Image URL", urlInput(e.image.url, (v) => { e.image.url = v; scheduleAutosave(); })),
+          ephToggle(),
+        ];
+      }
+      if (act.type === "text") return [field("Response text", h("textarea", { class: "eb-textarea", rows: 2, oninput: (ev) => { act.text = ev.target.value; scheduleAutosave(); } }, act.text || "")), ephToggle()];
+      if (act.type === "give_role" || act.type === "remove_role" || act.type === "toggle_role") {
+        return [field("Role", h("select", { class: "eb-select", onchange: (ev) => { act.roleId = ev.target.value; scheduleAutosave(); } },
+          h("option", { value: "" }, roles.length ? "Select a role…" : "No roles found"),
+          ...roles.map((r) => h("option", { value: r.id, selected: r.id === act.roleId ? true : null }, r.name))))];
+      }
+      if (act.type === "open_ticket") return [h("p", { class: "eb-microcopy" }, "Opens a ticket on select. Requires a configured Ticket Panel — until then the bot replies with a notice.")];
+      if (act.type === "custom") return [field("Custom action ID", textInput(act.customActionId, (v) => { act.customActionId = v; scheduleAutosave(); }, "my_custom_action"))];
+      return [];
+    }
+
+    // ===== Tab: Send =====
+    function sectionSend() {
+      return section("send", "Send", () => {
+        const errs = ebValidate(eb);
+        const chSel = h("select", { class: "eb-select", onchange: (ev) => { eb.channelId = ev.target.value; } },
+          h("option", { value: "" }, channels.length ? "Choose a channel…" : "No sendable channels found"),
+          ...channels.map((c) => h("option", { value: c.id, selected: c.id === eb.channelId ? true : null }, `#${c.name}${c.parentName ? "  ·  " + c.parentName : ""}`)));
+        return [
+          field("Channel", chSel, "Only channels the bot can post in are listed."),
+          errs.length ? notice("warn", `${errs.length} issue${errs.length > 1 ? "s" : ""} to fix first`, errs[0]) : notice("success", "Everything looks valid — ready to post."),
+          h("div", { class: "eb-row-btns" },
+            btn("📨 Post to channel", { kind: "btn-primary eb-post-btn", onclick: ebOpenPost }),
+            btn("💾 Save as template", { kind: "btn-secondary", onclick: ebSaveTemplate })
+          ),
         ];
       });
     }
@@ -1246,9 +1324,36 @@
     }
     function ebPreviewComponentRow(row) {
       const r = h("div", { class: "eb-comp-preview-row" });
-      if (row.type === "buttons") (row.buttons || []).forEach((b) => r.append(h("button", { type: "button", class: `eb-d-btn ${b.style || "secondary"} ${b.disabled ? "disabled" : ""}`, disabled: true }, s2(b.emoji) ? b.emoji + " " : "", b.label || (b.style === "link" ? "Link" : "Button"))));
-      else r.append(h("div", { class: "eb-d-select" }, h("span", null, row.placeholder || "Make a selection"), h("span", { class: "eb-d-select-chev" }, "▾")));
+      if (row.type === "buttons") { (row.buttons || []).forEach((b) => r.append(h("button", { type: "button", class: `eb-d-btn ${b.style || "secondary"} ${b.disabled ? "disabled" : ""}`, disabled: true }, s2(b.emoji) ? b.emoji + " " : "", b.label || (b.style === "link" ? "Link" : "Button")))); return r; }
+      // interactive select — click to open, click an option to test its action
+      const closed = h("div", { class: `eb-d-select ${row.disabled ? "disabled" : ""}` }, h("span", null, row.placeholder || "Make a selection"), h("span", { class: "eb-d-select-chev" }, "▾"));
+      const list = h("div", { class: "eb-d-options", style: { display: "none" } });
+      (row.options || []).forEach((o) => {
+        if (!s2(o.label)) return;
+        list.append(h("div", { class: "eb-d-option", onclick: () => { list.style.display = "none"; showTestResult(o); } },
+          s2(o.emoji) ? h("span", { class: "eb-d-opt-emoji" }, o.emoji) : null,
+          h("div", { class: "eb-d-opt-text" }, h("div", { class: "eb-d-opt-label" }, o.label), s2(o.description) ? h("div", { class: "eb-d-opt-desc" }, o.description) : null)));
+      });
+      if (!row.disabled) closed.onclick = () => { list.style.display = list.style.display === "none" ? "block" : "none"; };
+      r.append(h("div", { class: "eb-d-select-wrap" }, closed, list));
       return r;
+    }
+    function showTestResult(o) {
+      const device = previewEl.querySelector(".eb-discord");
+      if (!device) return;
+      const old = device.querySelector(".eb-test-result"); if (old) old.remove();
+      const act = (o && o.action) || { type: "none" };
+      let body;
+      if (act.type === "info_embed") body = ebPreviewEmbed(Object.assign({ color: "#e23b2e" }, act.embed || {}));
+      else if (act.type === "text") body = h("div", { class: "eb-test-text" }, s2(act.text) ? act.text : "(no text set)");
+      else if (act.type === "give_role" || act.type === "remove_role" || act.type === "toggle_role") { const rl = roles.find((x) => x.id === act.roleId); const verb = act.type === "give_role" ? "Gives you" : act.type === "remove_role" ? "Removes" : "Toggles"; body = h("div", { class: "eb-test-text" }, rl ? `${verb} the @${rl.name} role.` : "⚠ No role selected for this option."); }
+      else if (act.type === "open_ticket") body = h("div", { class: "eb-test-text" }, "Would open a ticket (needs a Ticket Panel — bot replies with a notice for now).");
+      else if (act.type === "custom") body = h("div", { class: "eb-test-text" }, s2(act.customActionId) ? `Runs custom action: ${act.customActionId}` : "Custom action (no ID set).");
+      else body = h("div", { class: "eb-test-text muted" }, "No action configured — picking this does nothing.");
+      const eph = act.type !== "none" && act.ephemeral !== false;
+      device.append(h("div", { class: "eb-test-result" },
+        h("div", { class: "eb-test-head" }, `🧪 Test · you picked “${o.label || "option"}”`, eph ? h("span", { class: "eb-test-eph" }, "only you see this") : null),
+        body));
     }
 
     // ---- validation panel ----
