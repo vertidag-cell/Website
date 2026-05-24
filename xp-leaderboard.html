@@ -80,6 +80,23 @@
       .xprow-stats { text-align: right; white-space: nowrap; }
       .xprow-lvl { font-weight: 800; font-size: 15px; }
       .xprow-xp { font-size: 12px; color: var(--text-muted, #a1a1aa); }
+      .xprow-meta { font-size: 11.5px; color: var(--text-dim, #71717a); margin-top: 3px; }
+      .pod-meta { font-size: 11px; color: var(--text-dim, #71717a); margin-top: 5px; }
+
+      /* Initial-letter fallback for a broken/missing avatar or logo (the CSP
+         blocks inline onerror, so this is swapped in by JS). Sits on top of the
+         size/shape from .xplb-logo / .pod-av / .xprow-av. */
+      .xplb-avfb { display: flex; align-items: center; justify-content: center; font-weight: 800;
+                   color: var(--text); background: color-mix(in srgb, var(--accent) 22%, rgba(255,255,255,0.06)); }
+      .xplb-logo.xplb-avfb { font-size: 30px; }
+      .pod-av.xplb-avfb { font-size: 24px; }
+      .xprow-av.xplb-avfb { font-size: 17px; }
+
+      /* Server-totals strip in the hero */
+      .xplb-totals { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+      .xplb-totals span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
+        color: var(--text-muted, #a1a1aa); background: var(--card, rgba(255,255,255,0.05));
+        border: 1px solid var(--border, rgba(255,255,255,0.1)); padding: 6px 13px; border-radius: 999px; }
 
       .xplb-state { text-align: center; padding: 60px 24px; border: 1px dashed var(--border); border-radius: var(--radius-lg, 20px);
                     background: var(--card, rgba(255,255,255,0.04)); }
