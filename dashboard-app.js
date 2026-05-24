@@ -2825,6 +2825,11 @@
      ============================================================ */
   async function loadModule(content, name) {
     try {
+      // Instant skeleton so switching tabs never lingers on the previous tab's
+      // content (or a blank flash) while channels/roles/the module schema load.
+      clear(content);
+      content.append(renderGenericSkeleton());
+
       // Make sure channel/category/role pickers are ready
       if (!state.channels || !state.roles || !state.categories) await loadDiscordLists();
 
@@ -3730,6 +3735,7 @@
 
   async function renderRoleMenuList(content) {
     try {
+      clear(content); content.append(renderGenericSkeleton());
       const r = await data.rmList(state.selectedGuildId);
       const menus = r.menus || [];
       clear(content);
