@@ -2832,16 +2832,22 @@
       clear(content);
       const mod = m.module;
 
-      // Premium gate
+      // Premium gate — this is a conversion moment, so sell it (don't just block).
       if (m.tierLocked) {
+        const price = (cfg.pricing && cfg.pricing.monthly) ? `${cfg.pricing.monthly.price}${cfg.pricing.monthly.period || ""}` : "$15 / month";
         content.append(
-          h("div", { class: "dash-card" },
-            h("h3", null, mod.label),
-            h("p", null, mod.description),
-            notice("warn", "Premium required",
-              "This module is part of the Premium plan. Free modules remain active. Use /subscribe inside Discord to activate Premium."),
-            h("div", { class: "dash-actions", style: { marginTop: "12px" } },
-              btn("View subscribe flow", { kind: "btn-primary", onclick: () => { state.activeTab = "premium"; render(); } }),
+          h("div", { class: "dash-card dash-upsell" },
+            h("div", { class: "dash-upsell-badge" }, "✨ Premium"),
+            h("h3", { class: "dash-upsell-title" }, `${mod.label} is a Premium feature`),
+            h("p", { class: "dash-upsell-lead" }, mod.description || "Unlock this module with Premium."),
+            h("div", { class: "dash-upsell-chips" },
+              ...["Payments", "Staff Pay", "Hype Rewards", "Advanced Tickets", "Premium Branding", "Priority Support"]
+                .map((t) => h("span", { class: "dash-upsell-chip" }, t))),
+            h("div", { class: "dash-upsell-note" },
+              `Premium is ${price} and unlocks every premium module for this server — your free modules keep working. Activate it by running `,
+              h("code", null, "/subscribe"), " inside your Discord server."),
+            h("div", { class: "dash-actions", style: { marginTop: "18px" } },
+              btn("See how to subscribe →", { kind: "btn-primary", onclick: () => { state.activeTab = "premium"; render(); } }),
               btn("Invite Bot", { kind: "btn-ghost", href: cfg.links?.inviteBot, external: true })
             )
           )
