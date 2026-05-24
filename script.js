@@ -858,7 +858,7 @@
                 title: "Payment #1283 Created",
                 desc: "Awaiting PayPal confirmation.",
                 fields: [
-                  { name: "Amount", value: "£25.00" },
+                  { name: "Amount", value: "$25.00" },
                   { name: "User", value: "@Player" },
                   {
                     name: "Status",
@@ -879,7 +879,7 @@
                 title: "Payment #1283 Confirmed",
                 desc: "PayPal webhook received. Funds settled.",
                 fields: [
-                  { name: "Amount", value: "£25.00" },
+                  { name: "Amount", value: "$25.00" },
                   {
                     name: "Status",
                     value: '<span class="dchecky">✓</span>&nbsp;&nbsp;Paid',
@@ -897,9 +897,9 @@
             api.botRow({
               embed: {
                 title: "Staff Pay — March 2026",
-                desc: "+£5.00 commission added to @StaffOnDuty's monthly log.",
+                desc: "+$5.00 commission added to @StaffOnDuty's monthly log.",
                 fields: [
-                  { name: "Total this month", value: "£127.00" },
+                  { name: "Total this month", value: "$127.00" },
                   { name: "Payouts", value: "3 confirmed" },
                 ],
                 footer: "Payments and staff logs stay organized",
