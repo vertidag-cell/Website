@@ -57,7 +57,7 @@ window.SITE_CONFIG = {
   pricing: {
     free: {
       name: "Free",
-      price: "£0",
+      price: "$0",
       period: "",
       cadence: "Forever · no card required",
       cta: "Invite the Bot",
@@ -75,7 +75,7 @@ window.SITE_CONFIG = {
     },
     monthly: {
       name: "Premium Monthly",
-      price: "£X",
+      price: "$15",
       period: "/ month",
       cadence: "30 days access · cancel anytime",
       cta: "Subscribe in Discord",
