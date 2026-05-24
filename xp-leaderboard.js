@@ -29,23 +29,31 @@
   function initial(s) { return esc((String(s || '?').trim().charAt(0) || '?').toUpperCase()); }
   // Avatar/logo <img> with a data-letter fallback. CSP blocks inline onerror,
   // so a failed image is swapped for its initial by wireImageFallbacks().
-  function avatar(url, name, cls) {
+  function avatar(url, name, cls, fallbackUrl) {
     cls = cls || 'xprow-av';
-    if (url) return '<img class="' + cls + '" src="' + esc(url) + '" alt="" loading="lazy" data-letter="' + initial(name) + '">';
+    if (url) {
+      // Optional secondary source (e.g. broken branding logo → real Discord icon).
+      var fb = (fallbackUrl && fallbackUrl !== url) ? ' data-fallback-src="' + esc(fallbackUrl) + '"' : '';
+      return '<img class="' + cls + '" src="' + esc(url) + '" alt="" loading="lazy" data-letter="' + initial(name) + '"' + fb + '>';
+    }
     return '<div class="' + cls + ' xplb-avfb">' + initial(name) + '</div>';
   }
   function state(html) { root.innerHTML = '<div class="xplb-state">' + html + '</div>'; }
   // Replace any broken <img data-letter> with an initial-letter fallback div.
   function wireImageFallbacks() {
     root.querySelectorAll('img[data-letter]').forEach(function (img) {
-      var swap = function () {
+      var onErr = function () {
+        // Try the secondary source once (broken branding logo → Discord icon)
+        // before giving up and showing the initial-letter fallback.
+        var fb = img.getAttribute('data-fallback-src');
+        if (fb) { img.removeAttribute('data-fallback-src'); img.src = fb; return; }
         var d = document.createElement('div');
         d.className = img.className + ' xplb-avfb';
         d.textContent = img.getAttribute('data-letter') || '';
         if (img.parentNode) img.parentNode.replaceChild(d, img);
       };
-      if (img.complete && img.naturalWidth === 0) swap();   // already failed (cached)
-      else img.addEventListener('error', swap);             // fails later
+      if (img.complete && img.naturalWidth === 0) onErr();   // already failed (cached)
+      else img.addEventListener('error', onErr);             // fails later
     });
   }
 
@@ -94,7 +102,7 @@
       var html = '';
       html += '<div class="xplb-hero">';
       html += '<div class="xplb-badge">🏆 XP Leaderboard</div>';
-      html += avatar(logo, gname, 'xplb-logo');
+      html += avatar(logo, gname, 'xplb-logo', g.guildIcon);
       html += '<h1 class="xplb-title">' + esc(gname) + '</h1>';
       html += '<p class="xplb-sub">Top ' + board.length + ' members by XP · updated just now</p>';
       html += '<div class="xplb-totals">' +
