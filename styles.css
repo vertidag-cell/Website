@@ -10346,3 +10346,30 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* Distinctive display type for headings — body copy stays Inter */
 h1, h2, .hero h1 { font-family: var(--font-display); letter-spacing: -0.022em; }
+
+/* ============================================================
+   Dashboard zoom & legibility pass — bigger, clearer controls so
+   everything is easy to read and manage. Desktop (>=981px) only;
+   mobile keeps its tuned sizes. Additive; cascade-only.
+   ============================================================ */
+@media (min-width: 981px) {
+  .dash-tab { font-size: 1rem; padding: 11px 14px; gap: 12px; }
+  .dash-side-section { font-size: 0.7rem; }
+  .dash-field label { font-size: 0.96rem; }
+  .dash-field input, .dash-field textarea, .dash-field select { font-size: 1rem; padding: 12px 13px; }
+  .dash-field .hint { font-size: 0.86rem; }
+  .dash-card { padding: 22px; }
+  .dash-card h3 { font-size: 1.2rem; }
+  .dash-card h4 { font-size: 1.04rem; }
+  .dash-card p { font-size: 1rem; }
+  .dash-module-hero { padding: 22px 24px; }
+  .dash-module-hero-title { font-size: 1.5rem; }
+  .dash-module-hero-desc { font-size: 1.02rem; }
+  .dash-switch .switch-label { font-size: 0.98rem; }
+  .dash-status-pill { font-size: 0.84rem; }
+  .dash-chip { font-size: 0.95rem; }
+  .dash-layout { gap: 26px; }
+  .dash-actions .btn { min-height: 42px; font-size: 0.98rem; }
+  .picker-header-title { font-size: clamp(1.7rem, 3vw, 2.3rem); }
+  .picker-header-sub { font-size: 1.04rem; }
+}
