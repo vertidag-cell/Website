@@ -3,6 +3,8 @@
    Edit the :root variables below to retheme the entire site.
    ============================================================ */
 
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap');
+
 :root {
   /* Brand colors — Premium Visual Pass */
   --bg: #030303;
@@ -39,6 +41,7 @@
 
   /* Type */
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Sora", "Inter", system-ui, sans-serif;
 }
 
 * {
@@ -10340,3 +10343,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .btn-primary::after { display: none; }
   .feature-card, .step, .why-card, .price-card, .mockup-card { transition: none; }
 }
+
+/* Distinctive display type for headings — body copy stays Inter */
+h1, h2, .hero h1 { font-family: var(--font-display); letter-spacing: -0.022em; }
