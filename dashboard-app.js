@@ -382,7 +382,7 @@
         style: { background: "#5865f2", color: "#fff", boxShadow: "0 8px 24px rgba(88,101,242,0.45)", fontWeight: 700 } },
         "Continue with Discord"),
       h("p", { style: { fontSize: "0.74rem", color: "var(--dash-muted-2)", margin: "16px 0 0" } },
-        "We request only ", h("code", null, "identify"), " and ", h("code", null, "guilds"), " scopes — no message read, no member list.")
+        "We request ", h("code", null, "identify"), ", ", h("code", null, "guilds"), " and ", h("code", null, "connections"), " (to link your Xbox gamertag for /kickmyself) — no message read, no member list.")
     );
     root.append(card);
   }
