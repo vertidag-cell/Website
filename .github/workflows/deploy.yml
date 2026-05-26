@@ -1,0 +1,33 @@
+name: Deploy to Cloudflare Pages
+
+# Builds the site and publishes dist/ to Cloudflare Pages on every push to main
+# (and on manual "Run workflow"). The deploy step is skipped until the two
+# repo secrets below are set, so adding this file never causes a red failure:
+#   CLOUDFLARE_API_TOKEN   — a token with the "Cloudflare Pages: Edit" permission
+#   CLOUDFLARE_ACCOUNT_ID  — your Cloudflare account id
+# (Project name assumed "website-1h0" from the pages.dev URL — change below if different.)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run build
+      - name: Publish dist/ to Cloudflare Pages
+        if: env.CF_TOKEN != ''
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=website-1h0 --branch=main
