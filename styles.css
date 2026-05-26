@@ -10257,3 +10257,86 @@ footer {
 .dash-upsell-note { margin: 20px auto 0; max-width: 580px; font-size: .9rem; line-height: 1.55; color: var(--dash-muted-2, var(--text-dim, #9ca3af)); }
 .dash-upsell-note code { color: var(--text, #fff); background: rgba(255,255,255,.07); padding: 1px 7px; border-radius: 5px; font-size: .86em; }
 .dash-upsell .dash-actions { justify-content: center; }
+
+/* ============================================================
+   Premium Pass v2 — depth, glow & polish (additive; cascade-only)
+   Cohesive with the bot's brand red (#ef233c). Enhances existing
+   selectors only — no markup, class, or layout changes.
+   ============================================================ */
+
+/* Small premium signals: branded text selection + custom scrollbar */
+::selection { background: rgba(239, 35, 60, 0.28); color: #fff; }
+* { scrollbar-width: thin; scrollbar-color: var(--red-dark) transparent; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--red-dark), #5e0a16);
+  border-radius: 8px; border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--red), var(--red-dark)); }
+
+/* Accessible focus ring on every interactive element */
+a:focus-visible, button:focus-visible, .btn:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--red-bright);
+  outline-offset: 2px;
+}
+
+/* Navbar — deeper glass + a faint red hairline glow beneath it */
+.navbar {
+  background: rgba(7, 7, 10, 0.72);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 16px 44px -30px rgba(239, 35, 60, 0.5);
+}
+.brand-mark { box-shadow: 0 6px 22px var(--red-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+
+/* Buttons — layered depth, a single sheen sweep, real press, focus glow */
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.btn-primary {
+  background: linear-gradient(180deg, var(--red-bright) 0%, var(--red) 55%, var(--red-dark) 100%);
+  box-shadow:
+    0 10px 30px -6px var(--red-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+.btn-primary::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(110deg, transparent 22%, rgba(255, 255, 255, 0.22) 50%, transparent 78%);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+}
+.btn-primary:hover::after { transform: translateX(120%); }
+.btn-primary:hover {
+  box-shadow: 0 16px 46px -6px var(--red-glow), inset 0 1px 0 rgba(255, 255, 255, 0.34), inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+.btn-primary:active { transform: translateY(1px); box-shadow: 0 6px 18px -6px var(--red-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.btn-ghost:active, .btn-outline:active { transform: translateY(1px); }
+.btn-ghost:hover, .btn-outline:hover { border-color: var(--red-tint); box-shadow: 0 8px 24px -10px var(--red-glow); }
+
+/* Glass cards — top sheen line on hover + red-edge glow + richer depth */
+.feature-card, .step, .price-card, .why-card, .mockup-card {
+  position: relative;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.28s ease;
+}
+.feature-card::before, .step::before, .price-card::before {
+  content: ""; position: absolute; left: 16px; right: 16px; top: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  opacity: 0; transition: opacity 0.25s ease; pointer-events: none;
+}
+.feature-card:hover::before, .step:hover::before, .price-card:hover::before { opacity: 1; }
+.feature-card:hover, .step:hover, .why-card:hover {
+  box-shadow: 0 24px 60px -34px rgba(239, 35, 60, 0.55), 0 10px 30px -24px rgba(0, 0, 0, 0.9);
+}
+.step:hover, .why-card:hover { transform: translateY(-3px); border-color: rgba(239, 35, 60, 0.32); }
+
+/* Eyebrow numbers glow + CTA / featured-plan aura */
+.why-num { text-shadow: 0 0 18px var(--red-glow); }
+.cta-panel { box-shadow: 0 30px 80px -42px var(--red-glow), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+.price-card.featured { box-shadow: 0 30px 80px -40px var(--red-glow), inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+
+/* Respect reduced-motion: drop the sheen sweep + hover lifts */
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary::after { display: none; }
+  .feature-card, .step, .why-card, .price-card, .mockup-card { transition: none; }
+}
