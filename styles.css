@@ -1162,7 +1162,7 @@ footer {
   border-radius: 0;
   position: relative;
   overflow: visible;
-  background: url("assets/logo.png") center / contain no-repeat;
+  background: url("assets/logo.png?v=2") center / contain no-repeat;
   box-shadow: none;
   flex: 0 0 auto;
   filter: drop-shadow(0 4px 14px var(--red-glow));
@@ -7849,7 +7849,7 @@ section a.highlight-card {
   box-shadow: none !important;
   border-radius: 0 !important;
   overflow: visible !important;
-  background-image: url("assets/logo.png") !important;
+  background-image: url("assets/logo.png?v=2") !important;
   background-size: contain !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
@@ -7861,7 +7861,7 @@ section a.highlight-card {
 .dash-side-brand-mark {
   background: transparent !important;
   box-shadow: none !important;
-  background-image: url("assets/logo.png") !important;
+  background-image: url("assets/logo.png?v=2") !important;
   background-size: contain !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
@@ -10577,3 +10577,29 @@ body.menu-open { overflow: hidden; }
   body::before { background-size: 36px 36px; }
   h1 { letter-spacing: -0.015em; }
 }
+
+/* ---- ARK Command Suite showcase (homepage) ---- */
+.ark-suite-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 22px; margin-top: 36px; }
+.ark-suite-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(43, 255, 158, 0.02));
+  border: 1px solid rgba(43, 255, 158, 0.14);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
+}
+.ark-suite-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(43, 255, 158, 0.4);
+  box-shadow: 0 26px 60px -34px rgba(43, 255, 158, 0.45), 0 0 40px -18px var(--glow);
+}
+.ark-suite-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; border-bottom: 1px solid rgba(43, 255, 158, 0.12); }
+.ark-suite-body { padding: 18px 20px 22px; }
+.ark-suite-body h3 { margin: 0 0 8px; font-size: 1.1rem; }
+.ark-suite-body p { margin: 0; color: var(--text-muted); font-size: 0.92rem; }
+.ark-suite-body code { font-family: var(--font-mono); background: rgba(43, 255, 158, 0.1); padding: 1px 6px; border-radius: 6px; color: var(--accent-soft); }
+
+/* ARK eco column (now live, not "coming soon") — green accent instead of muted */
+.eco-col.ark { border-color: rgba(43, 255, 158, 0.28) !important; }
+.eco-col.ark .eco-tier { background: rgba(43, 255, 158, 0.12) !important; color: var(--accent) !important; border-color: rgba(43, 255, 158, 0.3) !important; }
