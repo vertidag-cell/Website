@@ -1,5 +1,5 @@
 /*
- * Quick's ARK Bot — Dashboard SPA (schema-driven)
+ * Arkoris — Dashboard SPA (schema-driven)
  * ------------------------------------------------------------
  * Renders ~20 module pages from a single backend schema endpoint.
  * Talks to the bot's Express server (Square Cloud) over fetch +
@@ -347,7 +347,7 @@
     ico.appendChild(iconSvg("user"));
     card.append(
       ico,
-      h("h4", null, "Sign in to your Quick's ARK Bot dashboard"),
+      h("h4", null, "Sign in to your Arkoris dashboard"),
       h("p", null,
         "Manage every module, branding, role menus, staff tiers, events and more — securely synced with your Discord server.")
     );
@@ -407,7 +407,7 @@
         (() => { const i = h("div", { class: "picker-empty-ico" }); i.appendChild(iconSvg("shield")); return i; })(),
         h("h3", null, "No manageable servers found"),
         h("p", null,
-          "You need to be a server owner, administrator, or have Manage Server permission AND have Quick's ARK Bot installed in that server."),
+          "You need to be a server owner, administrator, or have Manage Server permission AND have Arkoris installed in that server."),
         h("div", { class: "dash-actions", style: { justifyContent: "center" } },
           btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
           btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true }),
@@ -453,13 +453,13 @@
         h("div", { class: "picker-header-who" },
           h("h1", { class: "picker-header-title" }, `Welcome back, ${name}`),
           h("p", { class: "picker-header-sub" },
-            "Select a Discord server to manage setup, branding, role menus, /pop, staff pay, and every Quick's ARK Bot feature.")
+            "Select a Discord server to manage setup, branding, role menus, /pop, staff pay, and every Arkoris feature.")
         )
       ),
       h("div", { class: "picker-header-badges" },
         h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Logged in with Discord"),
         h("span", { class: "dash-status-pill" }, `${totalCount} manageable server${totalCount === 1 ? "" : "s"}`),
-        h("span", { class: "dash-status-pill premium" }, h("span", { class: "pill-dot" }), "Quick's ARK Bot Dashboard")
+        h("span", { class: "dash-status-pill premium" }, h("span", { class: "pill-dot" }), "Arkoris Dashboard")
       ),
       h("div", { class: "picker-header-actions" },
         btn("Invite Bot",      { kind: "btn-primary", href: cfg.links?.inviteBot,      external: true }),
@@ -661,7 +661,7 @@
     return h("div", { class: "picker-features-block" },
       h("div", { class: "picker-section-head" },
         h("h3", null, "What you can manage"),
-        h("p", null, "Quick's ARK Bot ships with a deep free toolkit and premium upgrades. Every module is also configurable inside Discord with /setup.")
+        h("p", null, "Arkoris ships with a deep free toolkit and premium upgrades. Every module is also configurable inside Discord with /setup.")
       ),
       h("div", { class: "picker-features-grid" },
         renderFeatureChip("hand",     "Welcome",          "free"),
@@ -793,7 +793,7 @@
       h("div", { class: "dash-side-brand" },
         h("div", { class: "dash-side-brand-mark" }, iconSvg("flag")),
         h("div", { class: "dash-side-brand-text" },
-          h("div", { class: "dash-side-brand-name" }, "Quick's ARK Bot"),
+          h("div", { class: "dash-side-brand-name" }, "Arkoris"),
           h("div", { class: "dash-side-brand-sub" }, "Dashboard")
         )
       )
@@ -1647,7 +1647,7 @@
             h("h1", { class: "hub-hero-title" }, "Setup Hub"),
             h("div", { class: "hub-hero-rule" }),
             h("p", { class: "hub-hero-desc" },
-              "Configure and customize your server with Quick's ARK Bot's powerful modules. Every card writes to the same database as ",
+              "Configure and customize your server with Arkoris's powerful modules. Every card writes to the same database as ",
               h("code", null, "/setup"), " in Discord.")
           ),
           h("div", { class: "hub-hero-glow", "aria-hidden": "true" })
@@ -3127,7 +3127,7 @@
     const shell = h("div", { class: "dc-embed-shell", style: { ["--dc-color"]: color } },
       h("div", { class: "dc-embed-bot" },
         h("div", { class: "dc-embed-bot-avatar" }),
-        h("div", { class: "dc-embed-bot-name" }, "Quick's ARK Bot"),
+        h("div", { class: "dc-embed-bot-name" }, "Arkoris"),
         h("span", { class: "dc-embed-bot-tag" }, "APP")
       ),
       v?.mentionUser !== false
@@ -3624,7 +3624,7 @@
     const previewWrap = h("div", { class: "dash-card" }, h("h3", null, "Live preview"), h("div", { id: "brand-preview-host" }));
     function refresh() {
       const color = form.querySelector("#field-embedColor")?.value || "#dc2626";
-      const brand = form.querySelector("#field-brandName")?.value || "Quick's ARK Bot";
+      const brand = form.querySelector("#field-brandName")?.value || "Arkoris";
       const footer = form.querySelector("#field-footerText")?.value || `${brand} · v1`;
       const host = previewWrap.querySelector("#brand-preview-host");
       clear(host);
@@ -4350,7 +4350,7 @@
       h("option", { value: "paypalme", selected: (cfg.prefer === "paypalme") || null }, "PayPal.me link (manual)")
     );
 
-    const brandIn   = h("input", { id: "pp-brand",  type: "text", value: cfg.brandName || "", placeholder: "Quick's ARK", maxlength: 128 });
+    const brandIn   = h("input", { id: "pp-brand",  type: "text", value: cfg.brandName || "", placeholder: "Arkoris", maxlength: 128 });
     const handleIn  = h("input", { id: "pp-handle", type: "text", value: cfg.paypalMeHandle || "", placeholder: "yourhandle", maxlength: 64 });
 
     const cidIn     = h("input", { id: "pp-cid",  type: "password", autocomplete: "off", spellcheck: "false", placeholder: secretPlaceholder(cfg.clientId) });
@@ -4776,7 +4776,7 @@
       h("div", { class: "dash-card" },
         h("h3", null, "How to subscribe"),
         h("ol", { style: { color: "var(--text-muted)", paddingLeft: "20px", lineHeight: "1.8" } },
-          h("li", null, "Make sure Quick's ARK Bot is in your server."),
+          h("li", null, "Make sure Arkoris is in your server."),
           h("li", null, "Run ", h("code", null, "/subscribe"), " in your Discord server."),
           h("li", null, "Select the Premium plan."),
           h("li", null, "Complete the PayPal checkout the bot opens."),
@@ -4835,7 +4835,7 @@
         ),
         h("div", { class: "dash-actions" },
           btn("Join Support Discord", { kind: "btn-primary", href: cfg.links?.supportDiscord, external: true }),
-          btn("Email Support", { kind: "btn-ghost", href: `mailto:${cfg.links?.contactEmail || ""}?subject=${encodeURIComponent("Quick's ARK Bot Support")}` })
+          btn("Email Support", { kind: "btn-ghost", href: `mailto:${cfg.links?.contactEmail || ""}?subject=${encodeURIComponent("Arkoris Support")}` })
         )
       )
     );

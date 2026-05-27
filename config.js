@@ -1,5 +1,5 @@
 /*
- * Quick's ARK Bot — Site Configuration (central, public)
+ * Arkoris — Site Configuration (central, public)
  * ------------------------------------------------------------
  * Edit this file to change links, pricing, contact details, and
  * brand info across the entire site. All HTML pages read from
@@ -17,8 +17,8 @@
 
 window.SITE_CONFIG = {
   brand: {
-    name: "Quick's ARK Bot",
-    short: "Quick's",
+    name: "Arkoris",
+    short: "Arkoris",
     tagline: "Advanced Discord automation for ARK and gaming communities.",
   },
 
@@ -140,7 +140,7 @@ window.applySiteConfig = function (root) {
     if (!val) return;
 
     if (EMAIL.indexOf(key) !== -1) {
-      const subject = el.getAttribute("data-email-subject") || "Quick's ARK Bot Support";
+      const subject = el.getAttribute("data-email-subject") || "Arkoris Support";
       el.setAttribute("href", "mailto:" + val + "?subject=" + encodeURIComponent(subject));
     } else if (EXTERNAL.indexOf(key) !== -1) {
       el.setAttribute("href", val);

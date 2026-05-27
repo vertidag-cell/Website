@@ -1,4 +1,4 @@
-/* Quick's ARK Bot — UI interactions
+/* Arkoris — UI interactions
  * --------------------------------------------------------------
  *  - Mobile menu toggle
  *  - Active nav link
@@ -70,7 +70,7 @@
               </svg>
             </span>
             <span class="brand-text">
-              <span class="name">Quick's ARK Bot</span>
+              <span class="name">Arkoris</span>
               <span class="sub">Discord Automation · ARK</span>
             </span>
           </a>
@@ -90,7 +90,7 @@
           <a class="btn btn-ghost" data-link="dashboardLogin" href="#">Dashboard</a>
           <a class="btn btn-outline" data-link="supportDiscord" href="#">Join Support Discord</a>
         </div>
-        <div class="menu-foot">Quick's ARK Bot · Discord Automation</div>
+        <div class="menu-foot">Arkoris · Discord Automation</div>
       </aside>`;
     document.body.appendChild(panel);
 
@@ -359,7 +359,7 @@
         <div class="davatar">Q</div>
         <div class="dbody">
           <div class="dhead">
-            <span class="dname dname-bot">Quick's ARK Bot</span>
+            <span class="dname dname-bot">Arkoris</span>
             <span class="dbadge">BOT</span>
             <span class="dtime">just now</span>
           </div>
@@ -640,7 +640,7 @@
             await api.sleep(500);
             const r = api.botRow({
               embed: {
-                title: "Subscribe to Quick's ARK Bot",
+                title: "Subscribe to Arkoris",
                 desc: "Activate full bot access for this server.",
                 fields: [
                   { name: "Plan", value: "Monthly · 30 days" },
@@ -742,7 +742,7 @@
                   { name: "Category", value: "Payments" },
                   { name: "Priority", value: "Normal" },
                 ],
-                footer: "Quick's ARK Bot · Ticket System",
+                footer: "Arkoris · Ticket System",
               },
             });
           },
@@ -825,7 +825,7 @@
                 title: "Logged to Hype History",
                 desc: "Reward record saved. Credit will expire in 14 days unless used.",
                 style: "success",
-                footer: "Quick's ARK Bot · Hype System",
+                footer: "Arkoris · Hype System",
               },
             });
           },
@@ -866,7 +866,7 @@
                   },
                   { name: "Method", value: "PayPal" },
                 ],
-                footer: "Quick's ARK Bot · Payments",
+                footer: "Arkoris · Payments",
               },
             });
           },
@@ -937,7 +937,7 @@
           api.botRow({
             embed: {
               title: "ARK Cluster Population",
-              desc: "Quick's ARK · ARK Survival Ascended · Steam",
+              desc: "Arkoris · ARK Survival Ascended · Steam",
               fields: [
                 { name: "Total Players", value: "<strong style=\"color:#fff\">184</strong> / 620" },
                 { name: "Online Maps", value: "11 / 12" },
@@ -1023,14 +1023,14 @@
           await api.sleep(500);
           api.botRow({
             embed: {
-              title: "Default Branding — Quick's ARK Bot",
+              title: "Default Branding — Arkoris",
               desc: "This is how embeds look out of the box.",
               fields: [
-                { name: "Brand Name", value: "Quick's ARK Bot" },
+                { name: "Brand Name", value: "Arkoris" },
                 { name: "Accent Color", value: "Red" },
-                { name: "Footer", value: "Quick's ARK Bot · v1.0" },
+                { name: "Footer", value: "Arkoris · v1.0" },
               ],
-              footer: "Quick's ARK Bot · default branding",
+              footer: "Arkoris · default branding",
             },
           });
         },
@@ -1064,7 +1064,7 @@
                 { name: "Applies to", value: "Embeds · Panels · Charts" },
                 { name: "Tier", value: "Premium" },
               ],
-              footer: "Iron ARK · powered by Quick's ARK Bot",
+              footer: "Iron ARK · powered by Arkoris",
               style: "warn",
             },
           });
@@ -1101,7 +1101,7 @@
                 { name: "Slots", value: "2 / 3 used" },
                 { name: "Tier", value: '<span style="color:#4ade80;font-weight:600">Free</span>' },
               ],
-              footer: "Quick's ARK Bot · Pets",
+              footer: "Arkoris · Pets",
             },
           });
           r.addButtons([

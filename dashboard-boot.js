@@ -1,5 +1,5 @@
 /*
- * Quick's ARK Bot — Dashboard safety boot
+ * Arkoris — Dashboard safety boot
  * ------------------------------------------------------------
  * Loads BEFORE dashboard-app.js. If the SPA hasn't replaced the
  * initial loading state within 4 seconds (e.g. dashboard-app.js
