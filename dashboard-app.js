@@ -19,7 +19,7 @@
 
   window.__DASH_TOUCHED__ = true;
 
-  const DEBUG = true;
+  const DEBUG = false; // keep internal API wiring out of the production console
   if (DEBUG) {
     console.log("[dashboard] backendApiUrl:", cfg.backendApiUrl || "(empty)");
     console.log("[dashboard] resolved API_BASE:", API_BASE || "(empty)");

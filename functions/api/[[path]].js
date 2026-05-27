@@ -12,11 +12,18 @@ const BACKEND = 'https://quicksark.squareweb.app';
 export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
-  const target = BACKEND + url.pathname + url.search;
+
+  // Defense-in-depth: only ever forward the dashboard API surface. This
+  // function is routed for /api/* already, but the explicit check guarantees
+  // it can never act as an open relay to other backend paths.
+  if (!url.pathname.startsWith('/api/')) {
+    return new Response('Not found', { status: 404 });
+  }
 
   // Rebuild the request against the backend URL. `redirect: 'manual'` keeps
   // any 3xx (e.g. Discord OAuth) flowing back to the browser instead of being
   // followed here. The Host header is set automatically from the target URL.
+  const target = BACKEND + url.pathname + url.search;
   const proxied = new Request(target, request);
   return fetch(proxied, { redirect: 'manual' });
 }
