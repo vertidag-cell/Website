@@ -138,6 +138,7 @@
     "setup-hub":  "grid",
     overview:     "activity",
     analytics:    "poll",
+    ark:          "shield",
     welcome:      "hand",
     autoRoles:    "shield",
     roleMenus:    "masks",
@@ -2865,6 +2866,7 @@
         if (mod.name === "branding") return renderBrandingForm(content, mod, m.values);
         if (mod.name === "population") return renderPopulationView(content);
         if (mod.name === "roleMenus") return renderRoleMenusInfo(content);
+        if (mod.name === "ark") return renderArkInfo(content);
         if (mod.name === "logs") return loadAudit(content);
       }
 
@@ -3668,6 +3670,52 @@
             h("span", null, "Total online"),
             h("strong", null, grandTotal.toLocaleString()))
         : null
+    );
+  }
+
+  function renderArkInfo(content) {
+    clear(content);
+    const featCard = (title, body) => h("div", { class: "dash-card" },
+      h("h3", { style: { margin: "0 0 6px" } }, title),
+      h("p", { style: { margin: 0, color: "var(--text-muted)" } }, body));
+
+    content.append(
+      h("div", { class: "dash-card" },
+        h("h3", { style: { margin: "0 0 6px" } }, "🦖 ARK Server Suite"),
+        h("p", { style: { margin: 0 } },
+          "Full management for your linked Nitrado ARK servers — player intel, anti-cheat, logs, leaderboards, bans, wipes, rollbacks and a live game-chat mirror. Set up once, then run it all from Discord.")
+      )
+    );
+
+    const feats = [
+      ["🔎 Player Lookup", "Search any player or tribe — sessions, maps, in-game chat, tribemates, names, bans and risk flags."],
+      ["🛡️ ARK Guard", "19 cheater-detection signals (ban-evasion, dupes, aimbot cadence, account-sharing…) with auto-alerts on top suspects."],
+      ["📜 Live Logs", "Cluster-wide chat, joins/leaves, kills, tribe events and admin commands — timestamped and map-labelled."],
+      ["🏆 Leaderboards", "Playtime and K/D rankings across your maps."],
+      ["🔨 Bans", "Banlist management across every linked map, with durations + audit."],
+      ["🧨 Wipe & ⏪ Rollback", "Confirmed, audited save wipes — and one-tap rollback to a Nitrado backup."],
+      ["💬 Game-Chat Relay", "Mirror in-game chat into a Discord channel so everyone can read it."],
+      ["🎛️ Server Controls", "Start / stop / restart, join password & cluster ID — per map or in bulk."],
+    ];
+    const grid = h("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px", margin: "14px 0" } });
+    for (const [t, d] of feats) grid.append(featCard(t, d));
+    content.append(grid);
+
+    content.append(
+      h("div", { class: "dash-card" },
+        h("h3", { style: { margin: "0 0 6px" } }, "⚙️ Set up & manage in Discord"),
+        h("p", { style: { marginTop: 0 } },
+          "ARK is panel-driven inside Discord — destructive actions (wipes, bans, rollbacks) require in-server confirmation + an audit trail, so they're intentionally not exposed on the web."),
+        h("ol", { style: { margin: "0 0 14px", paddingLeft: "20px", color: "var(--text-muted)", lineHeight: "1.8" } },
+          h("li", null, "Connect your Nitrado token + link maps — ", h("code", null, "/setup → 🦖 ARK Server")),
+          h("li", null, "Manage everything — ", h("code", null, "/ark"), " (Lookup, ARK Guard, Live Logs, Leaderboards, Bans, Wipe/Rollback, Controls)"),
+          h("li", null, "Optional live chat mirror — ", h("code", null, "/setup → 📰 Forum Logs"))
+        ),
+        h("div", { class: "dash-actions" },
+          btn("Add / Open Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
+          btn("Support Server", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
+        )
+      )
     );
   }
 
