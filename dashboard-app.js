@@ -2073,7 +2073,7 @@
     const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
     const area = line + ` L${W} ${H} L0 ${H} Z`;
     return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="spark-svg">`
-      + `<path d="${area}" fill="rgba(239,35,60,0.16)"/>`
+      + `<path d="${area}" fill="rgba(43,255,158,0.16)"/>`
       + `<path d="${line}" fill="none" stroke="var(--dash-red-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
       + `</svg>`;
   }
@@ -2115,8 +2115,8 @@
       + `<circle class="chart-hover-dot" cx="0" cy="0" r="5" style="opacity:0"/>`;
     const svg = `<svg viewBox="0 0 ${W} ${H}" class="area-chart" preserveAspectRatio="xMidYMid meet">`
       + `<defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">`
-      + `<stop offset="0%" stop-color="rgba(239,35,60,0.44)"/>`
-      + `<stop offset="100%" stop-color="rgba(239,35,60,0.02)"/>`
+      + `<stop offset="0%" stop-color="rgba(43,255,158,0.44)"/>`
+      + `<stop offset="100%" stop-color="rgba(43,255,158,0.02)"/>`
       + `</linearGradient></defs>`
       + grid
       + `<path d="${area}" fill="url(#areaGrad)"/>`
@@ -2565,7 +2565,7 @@
           style: {
             background: v === 0
               ? "rgba(255,255,255,0.03)"
-              : `rgba(239,35,60,${(0.16 + intensity * 0.72).toFixed(3)})`,
+              : `rgba(43,255,158,${(0.16 + intensity * 0.72).toFixed(3)})`,
           },
         });
         row.appendChild(cell);
