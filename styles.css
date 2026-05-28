@@ -10603,3 +10603,9 @@ body.menu-open { overflow: hidden; }
 /* ARK eco column (now live, not "coming soon") — green accent instead of muted */
 .eco-col.ark { border-color: rgba(43, 255, 158, 0.28) !important; }
 .eco-col.ark .eco-tier { background: rgba(43, 255, 158, 0.12) !important; color: var(--accent) !important; border-color: rgba(43, 255, 158, 0.3) !important; }
+
+/* ---- "Just Shipped" cards (was the Coming Soon roadmap) ---- */
+.soon-card.live { border-color: rgba(43, 255, 158, 0.32) !important; background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(43, 255, 158, 0.03)) !important; }
+.soon-card.live .soon-tag { background: rgba(43, 255, 158, 0.14) !important; color: var(--accent) !important; border: 1px solid rgba(43, 255, 158, 0.35) !important; font-weight: 700; letter-spacing: 0.04em; }
+.soon-card.live h3 { color: var(--text); }
+.soon-card.live::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 80% 0%, rgba(43, 255, 158, 0.08), transparent 60%); opacity: 0.7; }
