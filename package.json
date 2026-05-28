@@ -7,11 +7,13 @@
     "build": "node build.mjs",
     "preview": "npx --yes serve dist -l 8080",
     "dev": "npx --yes serve . -l 8080",
-    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "deploy": "npm run build && wrangler deploy"
   },
   "devDependencies": {
     "clean-css": "^5.3.3",
     "html-minifier-terser": "^7.2.0",
-    "terser": "^5.36.0"
+    "terser": "^5.36.0",
+    "wrangler": "^4.95.0"
   }
 }

@@ -1,0 +1,25 @@
+/**
+ * Cloudflare Worker config for quicksbot.
+ * The actual Worker in the dashboard is named "quicksbot" — keep this in sync.
+ *
+ * Background: Cloudflare auto-setup previously generated `assets: { directory: "." }`
+ * which uploaded the whole repo (including 119 MiB workerd binary in node_modules),
+ * blowing past the 25 MiB asset limit. This config points uploads at ./dist where
+ * `npm run build` outputs the 21 static files, and routes /api/* and /auth/*
+ * through worker.js to keep the Discord OAuth and dashboard session first-party.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "quicksbot",
+  "main": "./worker.js",
+  "compatibility_date": "2026-05-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
