@@ -1563,3 +1563,35 @@
     }, 4400);
   }
 })();
+
+/* ============================================================
+   v12 — 3D pointer tilt on feature cards (phase 3)
+   Composes with the v9 cursor-light + lift. Subtle (≤6°),
+   fine-pointer + non-reduced-motion only; clears on leave so
+   the CSS spring-back takes over.
+   ============================================================ */
+(function () {
+  "use strict";
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fine = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  if (reduced || !fine) return;
+
+  document.querySelectorAll(".ark-suite-card, .demo-mini, .highlight-card").forEach((card) => {
+    card.addEventListener("pointerenter", () => {
+      card.style.transition = "transform 0.14s var(--ease-platform)";
+      card.style.willChange = "transform";
+    });
+    card.addEventListener("pointermove", (e) => {
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      card.style.transform =
+        `perspective(900px) rotateX(${(-py * 5).toFixed(2)}deg) rotateY(${(px * 6).toFixed(2)}deg) translateY(-6px)`;
+    }, { passive: true });
+    card.addEventListener("pointerleave", () => {
+      card.style.transition = "";
+      card.style.transform = "";
+      card.style.willChange = "";
+    });
+  });
+})();
