@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="assets/logo.png?v=2" />
-    <link rel="stylesheet" href="styles.css?v=48" />
+    <link rel="stylesheet" href="styles.css?v=50" />
   </head>
   <body>
     <!-- Navbar -->
@@ -76,7 +76,7 @@
 
         <!-- Hero showcase render -->
         <div class="hero-stage-wrap">
-          <div class="hero-shot">
+          <div class="hero-shot" data-depth="0.05">
             <span class="hero-shot-glow" aria-hidden="true"></span>
             <span class="hero-shot-shine" aria-hidden="true"></span>
             <img src="assets/hero.png" width="1600" height="900"
@@ -141,7 +141,7 @@
     </section>
 
     <!-- Dashboard showcase -->
-    <section class="short">
+    <section class="short stage-reveal">
       <div class="container">
         <div class="section-head" data-animate>
           <span class="eyebrow">Web Dashboard</span>
@@ -154,6 +154,27 @@
         </div>
         <div style="text-align:center;margin-top:20px">
           <a class="btn btn-primary" data-link="dashboardLogin" href="#">Open the Dashboard →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- See it in action — featured video -->
+    <section class="short video-showcase">
+      <div class="container">
+        <div class="section-head" data-animate>
+          <span class="eyebrow">See it in action</span>
+          <h2>Watch Arkoris run a server</h2>
+          <p>A quick look at the dashboard, the ARK command suite, live population and the anti-cheat review — the whole platform in motion.</p>
+        </div>
+        <div class="video-frame" data-animate data-video-open role="button" tabindex="0"
+             aria-label="Play the Arkoris product video">
+          <img src="assets/dashboard-preview.png" width="1600" height="900" loading="lazy"
+               alt="Arkoris product video — dashboard, ARK suite and live analytics" />
+          <span class="video-veil" aria-hidden="true"></span>
+          <button class="play-btn" type="button" data-video-open aria-label="Play video">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <span class="video-tag">▶ Product overview</span>
         </div>
       </div>
     </section>
@@ -451,7 +472,19 @@
       </div>
     </footer>
 
+    <!-- Cinematic video modal — opened from the "See it in action" section -->
+    <dialog class="video-modal" aria-label="Arkoris product video">
+      <div class="vm-inner">
+        <button class="vm-close" type="button" data-video-close aria-label="Close video">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+        <video controls playsinline preload="none" poster="assets/dashboard-preview.png">
+          <source src="assets/arkoris.mp4" type="video/mp4" />
+        </video>
+      </div>
+    </dialog>
+
     <script src="config.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=50"></script>
   </body>
 </html>

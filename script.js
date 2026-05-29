@@ -1316,3 +1316,200 @@
   const tutorialRoot = document.querySelector("[data-tut-root]");
   if (tutorialRoot) initTutorialPlayer(tutorialRoot);
 })();
+
+/* ============================================================
+   v9 — Premium motion layer (additive, self-contained)
+   Marks the doc as motion-capable, then layers alive hover light,
+   a scroll-aware navbar, a pointer-reactive hero glow, and a
+   subtly magnetic primary CTA. Everything degrades under
+   prefers-reduced-motion and is gated to fine-pointer devices.
+   ============================================================ */
+(function () {
+  "use strict";
+
+  // Hide-on-reveal logic in CSS is gated behind this class, so content
+  // stays visible if JS never runs. Added before first paint here.
+  document.documentElement.classList.add("js-motion");
+
+  const reduced =
+    window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const finePointer =
+    window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+  /* ---- Navbar scroll state ---- */
+  const navbar = document.querySelector(".navbar");
+  if (navbar) {
+    let navTicking = false;
+    const syncNav = () => {
+      navbar.classList.toggle("scrolled", (window.scrollY || 0) > 40);
+      navTicking = false;
+    };
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (!navTicking) {
+          requestAnimationFrame(syncNav);
+          navTicking = true;
+        }
+      },
+      { passive: true }
+    );
+    syncNav();
+  }
+
+  /* ---- Alive cards: lift + cursor-tracked light ---- */
+  const CARD_SELECTOR =
+    ".fvp-col, .eco-col, .demo-mini, .ark-suite-card, .highlight-card, .soon-card";
+  document.querySelectorAll(CARD_SELECTOR).forEach((card) => {
+    if (card.classList.contains("lift")) return;
+    card.classList.add("lift");
+    // Inject the light layer once (kept first so it sits beneath content).
+    const sheen = document.createElement("span");
+    sheen.className = "card-sheen";
+    sheen.setAttribute("aria-hidden", "true");
+    card.prepend(sheen);
+  });
+
+  if (!reduced && finePointer) {
+    document.querySelectorAll(".lift").forEach((card) => {
+      card.addEventListener(
+        "pointermove",
+        (e) => {
+          const r = card.getBoundingClientRect();
+          card.style.setProperty("--mx", ((e.clientX - r.left) / r.width) * 100 + "%");
+          card.style.setProperty("--my", ((e.clientY - r.top) / r.height) * 100 + "%");
+        },
+        { passive: true }
+      );
+    });
+
+    /* ---- Pointer-reactive hero glow ---- */
+    const hero = document.querySelector(".hero-cinematic");
+    const glow = hero && hero.querySelector(".hero-bg-glow");
+    if (hero && glow) {
+      let glowTicking = false;
+      let nx = 0,
+        ny = 0;
+      const applyGlow = () => {
+        glow.style.setProperty("--gx", nx.toFixed(3));
+        glow.style.setProperty("--gy", ny.toFixed(3));
+        glowTicking = false;
+      };
+      hero.addEventListener("pointerenter", () => hero.classList.add("pointer-active"));
+      hero.addEventListener(
+        "pointermove",
+        (e) => {
+          const r = hero.getBoundingClientRect();
+          nx = (e.clientX - r.left) / r.width - 0.5; // -0.5..0.5
+          ny = (e.clientY - r.top) / r.height - 0.5;
+          if (!glowTicking) {
+            requestAnimationFrame(applyGlow);
+            glowTicking = true;
+          }
+        },
+        { passive: true }
+      );
+      hero.addEventListener("pointerleave", () => {
+        nx = 0;
+        ny = 0;
+        applyGlow();
+        hero.classList.remove("pointer-active");
+      });
+    }
+
+    /* ---- Magnetic primary CTA (hero only, subtle) ---- */
+    const MAG_MAX = 6; // px
+    document.querySelectorAll(".hero-ctas .btn-primary").forEach((btn) => {
+      btn.classList.add("magnetic");
+      const pad = 60;
+      btn.addEventListener(
+        "pointermove",
+        (e) => {
+          const r = btn.getBoundingClientRect();
+          const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2 + pad);
+          const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2 + pad);
+          btn.style.setProperty("--tx", (dx * MAG_MAX).toFixed(2) + "px");
+          btn.style.setProperty("--ty", (dy * MAG_MAX).toFixed(2) + "px");
+        },
+        { passive: true }
+      );
+      btn.addEventListener("pointerleave", () => {
+        btn.style.setProperty("--tx", "0px");
+        btn.style.setProperty("--ty", "0px");
+      });
+    });
+  }
+})();
+
+/* ============================================================
+   v10 — Platform layer (additive, self-contained)
+   Ambient animated background, scroll-linked depth + a sticky
+   dashboard reveal, and the cinematic video modal. CSP-safe
+   (no inline, no CDN). Everything heavy is gated to non-reduced
+   motion and torn down off-screen.
+   ============================================================ */
+(function () {
+  "use strict";
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---- Ambient background field (every page) ---- */
+  if (!document.querySelector(".bg-field")) {
+    const field = document.createElement("div");
+    field.className = "bg-field";
+    field.setAttribute("aria-hidden", "true");
+    field.innerHTML = '<div class="bg-mesh"></div><div class="bg-grid"></div><div class="bg-orb"></div>';
+    document.body.prepend(field);
+  }
+  const bgGrid = document.querySelector(".bg-field .bg-grid");
+
+  /* ---- Scroll-linked depth + sticky dashboard reveal ---- */
+  const depthEls = Array.from(document.querySelectorAll("[data-depth]"));
+  const stages = Array.from(document.querySelectorAll(".stage-reveal"));
+  const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+
+  if (!reduced && (depthEls.length || stages.length || bgGrid)) {
+    let ticking = false;
+    const onScroll = () => {
+      const y = window.scrollY || 0;
+      const winH = window.innerHeight || 800;
+      if (bgGrid) bgGrid.style.transform = `translate3d(0, ${y * 0.04}px, 0)`;
+      for (const el of depthEls) {
+        const d = parseFloat(el.dataset.depth) || 0;
+        el.style.transform = `translate3d(0, ${y * d}px, 0)`;
+      }
+      for (const st of stages) {
+        const r = st.getBoundingClientRect();
+        // 0 as the section enters from the bottom → 1 once it settles near the top third.
+        const p = clamp(1 - (r.top - winH * 0.18) / (winH * 0.62), 0, 1);
+        st.style.setProperty("--p", p.toFixed(3));
+      }
+      ticking = false;
+    };
+    const requestTick = () => { if (!ticking) { requestAnimationFrame(onScroll); ticking = true; } };
+    window.addEventListener("scroll", requestTick, { passive: true });
+    window.addEventListener("resize", requestTick, { passive: true });
+    onScroll();
+  } else {
+    // Reduced motion → show the dashboard reveal in its final state immediately.
+    for (const st of stages) st.style.setProperty("--p", "1");
+  }
+
+  /* ---- Video modal ("See it in action") ---- */
+  const modal = document.querySelector("dialog.video-modal");
+  const video = modal && modal.querySelector("video");
+  if (modal && video && typeof modal.showModal === "function") {
+    const open = () => {
+      try { modal.showModal(); } catch { return; }
+      try { video.currentTime = 0; const pr = video.play(); if (pr && pr.catch) pr.catch(() => {}); } catch {}
+    };
+    const close = () => { try { modal.close(); } catch {} };
+    document.querySelectorAll("[data-video-open]").forEach((t) => {
+      t.addEventListener("click", (e) => { e.preventDefault(); open(); });
+    });
+    modal.querySelectorAll("[data-video-close]").forEach((c) => c.addEventListener("click", close));
+    // Click on the backdrop (the dialog element itself, outside the inner card) closes.
+    modal.addEventListener("click", (e) => { if (e.target === modal) close(); });
+    // Pause + reset whenever the dialog closes (button, Esc, or backdrop).
+    modal.addEventListener("close", () => { try { video.pause(); video.removeAttribute("autoplay"); } catch {} });
+  }
+})();

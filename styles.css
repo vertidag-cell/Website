@@ -10609,3 +10609,323 @@ body.menu-open { overflow: hidden; }
 .soon-card.live .soon-tag { background: rgba(43, 255, 158, 0.14) !important; color: var(--accent) !important; border: 1px solid rgba(43, 255, 158, 0.35) !important; font-weight: 700; letter-spacing: 0.04em; }
 .soon-card.live h3 { color: var(--text); }
 .soon-card.live::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 80% 0%, rgba(43, 255, 158, 0.08), transparent 60%); opacity: 0.7; }
+
+/* ============================================================
+   v9 — Premium motion layer
+   A motion-token system, alive hover states, pointer-reactive
+   light, and a robust reveal that never ships blank. Appended
+   last so it wins the cascade. Every effect has a
+   prefers-reduced-motion fallback at the bottom of this block.
+   ============================================================ */
+
+:root {
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);    /* confident, decisive */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);   /* snappy entrances */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);    /* smooth state changes */
+  --dur-press: 0.12s;
+  --dur-state: 0.22s;
+  --dur-layout: 0.4s;
+  --dur-reveal: 0.7s;
+}
+
+/* ---- Robust scroll reveal ----------------------------------
+   Content is visible by default (no-JS / pre-hydration / headless
+   safe). It is only hidden once script.js adds `.js-motion` to
+   <html>, so a stalled observer can never leave a section blank.
+   Easing upgraded to ease-out-expo for a more deliberate rise. */
+[data-animate] { opacity: 1; transform: none; }
+html.js-motion [data-animate] {
+  transition:
+    opacity var(--dur-reveal) var(--ease-out-expo),
+    transform var(--dur-reveal) var(--ease-out-expo);
+}
+html.js-motion [data-animate]:not(.in-view) { opacity: 0; transform: translateY(16px); }
+html.js-motion [data-animate].in-view { will-change: auto; }
+html.js-motion [data-animate="fade"]:not(.in-view) { transform: none; }
+
+html.js-motion [data-stagger] > * {
+  transition:
+    opacity var(--dur-layout) var(--ease-out-expo),
+    transform var(--dur-layout) var(--ease-out-expo);
+}
+[data-stagger] > * { opacity: 1; transform: none; }
+html.js-motion [data-stagger]:not(.in-view) > * { opacity: 0; transform: translateY(16px); }
+
+/* ---- Buttons: press feedback, accent glow, readable primary --- */
+.btn {
+  transition:
+    transform var(--dur-press) var(--ease-out-quart),
+    box-shadow var(--dur-state) var(--ease-out-quart),
+    background var(--dur-state) var(--ease-out-quart),
+    border-color var(--dur-state) var(--ease-out-quart),
+    color var(--dur-state) var(--ease-out-quart);
+}
+.btn:active { transform: translateY(0) scale(0.97); transition-duration: 0.06s; }
+/* Dark ink on the neon-green fill — white was ~1.3:1 (unreadable);
+   near-black green reads as premium and clears AA. Matches the
+   specificity of the global `.btn.btn-primary { color:#fff }` rule
+   (defined earlier) so it actually wins. */
+.btn.btn-primary, .btn-primary { color: #042016; }
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 44px var(--red-glow), 0 0 0 1px rgba(43,255,158,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.btn-ghost:hover, .btn-outline:hover { box-shadow: 0 0 0 1px var(--border-strong), 0 10px 30px -18px var(--glow); }
+
+/* Sheen sweep across the primary button on hover */
+.btn-primary { position: relative; overflow: hidden; isolation: isolate; }
+.btn-primary::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.55) 50%, transparent 70%);
+  transform: translateX(-120%); opacity: 0;
+}
+.btn-primary:hover::after {
+  animation: btnSheen 0.7s var(--ease-out-quart);
+}
+@keyframes btnSheen {
+  0%   { transform: translateX(-120%); opacity: 0.0; }
+  35%  { opacity: 0.8; }
+  100% { transform: translateX(120%); opacity: 0.0; }
+}
+
+/* ---- Alive cards: lift + border glow + pointer-tracked light ---
+   `.lift` is added by script.js to the marketing card families.
+   The light follows the cursor via --mx/--my (set in JS). */
+.lift {
+  position: relative;
+  transition:
+    transform var(--dur-layout) var(--ease-out-expo),
+    box-shadow var(--dur-layout) var(--ease-out-expo),
+    border-color var(--dur-state) var(--ease-out-quart);
+  transform: translateZ(0);
+}
+.lift:hover {
+  transform: translateY(-5px);
+  border-color: var(--border-strong);
+  box-shadow: 0 26px 60px -28px rgba(0,0,0,0.85), 0 0 0 1px rgba(43,255,158,0.18),
+    0 18px 50px -30px var(--glow);
+}
+.card-sheen {
+  position: absolute; inset: 0; z-index: 0;
+  border-radius: inherit; pointer-events: none;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%),
+    rgba(43,255,158,0.16), transparent 55%);
+  opacity: 0; transition: opacity var(--dur-state) var(--ease-out-quart);
+}
+.lift:hover .card-sheen { opacity: 1; }
+/* Keep real card content above the sheen layer. */
+.lift > *:not(.card-sheen) { position: relative; z-index: 1; }
+
+/* ---- Navbar: condense + intensify once the page is scrolled --- */
+.navbar { transition: padding var(--dur-layout) var(--ease-out-quart),
+  background var(--dur-layout) var(--ease-out-quart),
+  box-shadow var(--dur-layout) var(--ease-out-quart); }
+.navbar.scrolled {
+  background: rgba(4, 5, 7, 0.86);
+  box-shadow: 0 1px 0 rgba(43,255,158,0.18), 0 22px 50px -30px rgba(0,0,0,0.95);
+}
+.navbar.scrolled .nav-inner { padding-top: 6px; padding-bottom: 6px; }
+.nav-inner { transition: padding var(--dur-layout) var(--ease-out-quart); }
+
+/* Nav links get an underline that wipes in from the left */
+.nav-links a { position: relative; transition: color var(--dur-state) var(--ease-out-quart); }
+.nav-links a::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 2px; transform: scaleX(0); transform-origin: left;
+  transition: transform var(--dur-state) var(--ease-out-quart); opacity: 0.9;
+}
+.nav-links a:hover::after, .nav-links a.active::after { transform: scaleX(1); }
+
+/* ---- Pointer-reactive hero glow + slow idle drift ------------- */
+.hero-bg-glow {
+  transition: transform 0.5s var(--ease-out-quart);
+  will-change: transform;
+}
+html.js-motion .hero-bg-glow {
+  transform: translate3d(calc(var(--gx, 0) * 28px), calc(var(--gy, 0) * 22px), 0);
+}
+@media (hover: hover) and (pointer: fine) {
+  html.js-motion .hero-cinematic:not(.pointer-active) .hero-bg-glow { animation: heroGlowDrift 14s ease-in-out infinite; }
+}
+@keyframes heroGlowDrift {
+  0%, 100% { transform: translate3d(-10px, -6px, 0); }
+  50%      { transform: translate3d(14px, 10px, 0); }
+}
+
+/* Magnetic hero CTA — eased toward the cursor by JS via --tx/--ty */
+.magnetic { transition: transform 0.25s var(--ease-out-quart); }
+html.js-motion .magnetic { transform: translate(var(--tx, 0px), var(--ty, 0px)); }
+html.js-motion .magnetic:active { transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(0.97); }
+
+/* ---- Image showcases: clip-path wipe reveal ------------------- */
+html.js-motion .showcase[data-animate]:not(.in-view) { clip-path: inset(0 0 14% 0); }
+html.js-motion .showcase[data-animate] {
+  clip-path: inset(0 0 0 0);
+  transition:
+    opacity var(--dur-reveal) var(--ease-out-expo),
+    transform var(--dur-reveal) var(--ease-out-expo),
+    clip-path 0.9s var(--ease-out-expo);
+}
+
+/* ---- Reduced motion: strip every enhancement above ------------ */
+@media (prefers-reduced-motion: reduce) {
+  html.js-motion [data-animate],
+  html.js-motion [data-animate]:not(.in-view),
+  html.js-motion [data-stagger] > *,
+  html.js-motion [data-stagger]:not(.in-view) > * {
+    opacity: 1 !important; transform: none !important; clip-path: none !important;
+  }
+  .btn-primary::after { display: none !important; }
+  .lift:hover { transform: none; }
+  .card-sheen { display: none !important; }
+  html.js-motion .hero-bg-glow { transform: none !important; animation: none !important; }
+  html.js-motion .magnetic { transform: none !important; }
+  .nav-links a::after { transition: none !important; }
+}
+
+/* ============================================================
+   v10 — Platform layer
+   Ambient animated background, scroll-linked depth, a sticky
+   dashboard reveal, the video showcase + modal, and deeper
+   surface treatment. Pushes the whole site toward premium SaaS.
+   JS (script.js v10 module) injects .bg-field and drives the
+   scroll-linked vars. Reduced-motion block lives at the end.
+   ============================================================ */
+:root {
+  --z-bg: -2; --z-bgfx: -1; --z-nav: 50; --z-overlay: 200; --z-modal: 300;
+  --ease-platform: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---- Ambient background field (injected into <body> by JS) ---- */
+.bg-field { position: fixed; inset: 0; z-index: var(--z-bg); pointer-events: none; overflow: hidden; contain: strict; }
+.bg-field > * { position: absolute; inset: -10%; }
+.bg-field .bg-mesh {
+  background:
+    radial-gradient(38vw 38vw at 18% 10%, rgba(43, 255, 158, 0.16), transparent 60%),
+    radial-gradient(30vw 30vw at 86% 6%, rgba(34, 211, 238, 0.10), transparent 60%),
+    radial-gradient(42vw 42vw at 72% 96%, rgba(43, 255, 158, 0.09), transparent 62%);
+  filter: blur(10px); will-change: transform; animation: bgMeshDrift 28s ease-in-out infinite alternate;
+}
+@keyframes bgMeshDrift {
+  0%   { transform: translate3d(-2%, -1%, 0) scale(1.05); }
+  50%  { transform: translate3d(2%, 3%, 0) scale(1.12); }
+  100% { transform: translate3d(4%, -1%, 0) scale(1.06); }
+}
+.bg-field .bg-grid {
+  background-image:
+    linear-gradient(rgba(43, 255, 158, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43, 255, 158, 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 92% 70% at 50% -5%, #000, transparent 78%);
+  mask-image: radial-gradient(ellipse 92% 70% at 50% -5%, #000, transparent 78%);
+  opacity: 0.55; will-change: transform;
+}
+.bg-field .bg-orb {
+  background: radial-gradient(26vw 26vw at 50% 38%, rgba(43, 255, 158, 0.10), transparent 60%);
+  filter: blur(40px); will-change: transform; animation: bgOrbFloat 20s ease-in-out infinite alternate;
+}
+@keyframes bgOrbFloat { 0% { transform: translate3d(-8%, 5%, 0); } 100% { transform: translate3d(10%, -7%, 0); } }
+/* Top-light + bottom vignette for richness, above the field but behind content. */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: var(--z-bgfx); pointer-events: none;
+  background: radial-gradient(120% 75% at 50% -12%, rgba(43, 255, 158, 0.05), transparent 55%),
+    radial-gradient(130% 90% at 50% 112%, rgba(0, 0, 0, 0.55), transparent 60%);
+}
+
+/* ---- Scroll-linked reveal: smooth, GPU, CSS-only where supported ----
+   Enhances [data-animate] on browsers with scroll-driven animations; the
+   JS IntersectionObserver fallback already handles the rest. */
+@supports (animation-timeline: view()) {
+  html.js-motion [data-animate]:not(.in-view) { opacity: 1; transform: none; }
+  html.js-motion [data-animate] {
+    animation: riseIn linear both; animation-timeline: view(); animation-range: entry 0% entry 38%;
+  }
+  @keyframes riseIn { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+}
+
+/* ---- Hero depth: parallax layers driven by JS (--depth via data-depth) ---- */
+.hero-cinematic { position: relative; }
+[data-depth] { will-change: transform; }
+
+/* ---- Sticky dashboard "assemble" reveal ----
+   The showcase pins briefly and scales/brightens as --p (0..1, set by JS)
+   advances, so the dashboard feels like it powers on as you arrive. */
+.stage-reveal { position: relative; }
+html.js-motion .stage-reveal .showcase {
+  transform: perspective(1600px) rotateX(calc((1 - var(--p, 1)) * 6deg)) scale(calc(0.93 + var(--p, 1) * 0.07));
+  transform-origin: 50% 100%;
+  opacity: calc(0.55 + var(--p, 1) * 0.45);
+  filter: saturate(calc(0.7 + var(--p, 1) * 0.3));
+  will-change: transform, opacity;
+}
+.showcase {
+  border-radius: var(--radius-lg);
+  box-shadow: 0 50px 130px -50px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(43, 255, 158, 0.12),
+    0 30px 80px -60px var(--glow);
+}
+
+/* ---- Video showcase ("See it in action") ---- */
+.video-showcase { position: relative; }
+.video-frame {
+  position: relative; display: block; width: 100%; border-radius: var(--radius-lg); overflow: hidden;
+  border: 1px solid var(--border-strong); cursor: pointer; background: #05080a;
+  box-shadow: 0 50px 130px -50px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(43, 255, 158, 0.14);
+  transition: transform var(--dur-layout, 0.4s) var(--ease-platform), box-shadow var(--dur-layout, 0.4s) var(--ease-platform);
+}
+.video-frame:hover { transform: translateY(-4px); box-shadow: 0 60px 150px -50px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(43, 255, 158, 0.3), 0 30px 90px -50px var(--glow); }
+.video-frame > img { width: 100%; display: block; aspect-ratio: 16 / 9; object-fit: cover; transition: transform 0.7s var(--ease-platform); }
+.video-frame:hover > img { transform: scale(1.045); }
+.video-frame .video-veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(3, 5, 4, 0.15), rgba(3, 5, 4, 0.55)); }
+.video-frame .play-btn {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+  width: 88px; height: 88px; border-radius: 50%; border: 0; cursor: pointer;
+  display: grid; place-items: center; color: #042016;
+  background: linear-gradient(180deg, var(--accent-soft), var(--accent));
+  box-shadow: 0 16px 50px -10px var(--glow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.video-frame .play-btn::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  box-shadow: 0 0 0 0 var(--glow); animation: playPulse 2.6s var(--ease-platform) infinite;
+}
+@keyframes playPulse { 0% { box-shadow: 0 0 0 0 rgba(43, 255, 158, 0.5); } 70%, 100% { box-shadow: 0 0 0 26px rgba(43, 255, 158, 0); } }
+.video-frame .play-btn svg { width: 30px; height: 30px; margin-left: 4px; }
+.video-frame .video-tag {
+  position: absolute; left: 16px; bottom: 16px; font-size: 0.82rem; font-weight: 600; color: var(--text);
+  background: rgba(8, 12, 10, 0.6); border: 1px solid var(--border); padding: 6px 12px; border-radius: 999px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+
+/* Native dialog modal — CSP-safe, Esc-closable, focus-trapped by the platform. */
+dialog.video-modal {
+  border: 0; background: transparent; padding: 0; max-width: min(1100px, 92vw); width: 100%;
+  color: var(--text);
+}
+dialog.video-modal::backdrop { background: rgba(2, 4, 3, 0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+dialog.video-modal .vm-inner { position: relative; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-strong); box-shadow: 0 60px 160px -40px #000; background: #000; }
+dialog.video-modal video { width: 100%; display: block; aspect-ratio: 16 / 9; background: #000; }
+dialog.video-modal .vm-close {
+  position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--border-strong); background: rgba(8, 12, 10, 0.7); color: var(--text); cursor: pointer;
+  display: grid; place-items: center; backdrop-filter: blur(8px); z-index: 1;
+}
+dialog.video-modal .vm-close:hover { border-color: var(--accent); color: var(--accent); }
+dialog.video-modal[open] { animation: vmIn 0.4s var(--ease-platform); }
+@keyframes vmIn { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+/* ---- Section heads: tighten orphans, premium balance ---- */
+.section-head h2, .hero h1 { text-wrap: balance; }
+
+/* ---- Reduced motion: freeze the ambient + scroll-linked layers ---- */
+@media (prefers-reduced-motion: reduce) {
+  .bg-field .bg-mesh, .bg-field .bg-orb { animation: none !important; }
+  .video-frame .play-btn::before { animation: none !important; }
+  .video-frame:hover { transform: none; }
+  .video-frame:hover > img { transform: none; }
+  html.js-motion .stage-reveal .showcase { transform: none !important; opacity: 1 !important; filter: none !important; }
+  dialog.video-modal[open] { animation: none !important; }
+  @supports (animation-timeline: view()) {
+    html.js-motion [data-animate] { animation: none !important; opacity: 1 !important; transform: none !important; }
+  }
+}
