@@ -11025,3 +11025,67 @@ dialog.video-modal[open] { animation: vmIn 0.4s var(--ease-platform); }
   box-shadow: 0 32px 84px -40px rgba(43, 255, 158, 0.22), 0 0 0 1px rgba(43, 255, 158, 0.15);
 }
 .highlight-card.premium .highlight-tier { color: var(--accent); }
+
+/* ============================================================
+   v13 — Pricing + comparison elevation (phase 4)
+   Lifts premium.html AND pricing.html (shared classes).
+   ============================================================ */
+
+/* ---- Plan cards: interactive depth, featured = clearly premium ---- */
+.price-card {
+  transition: transform 0.4s var(--ease-platform), box-shadow 0.4s var(--ease-platform), border-color 0.25s var(--ease-platform);
+}
+.price-card:hover {
+  transform: translateY(-5px); border-color: var(--border-strong);
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(43, 255, 158, 0.14);
+}
+.price-card.featured {
+  overflow: hidden;
+  box-shadow: 0 30px 90px -38px rgba(43, 255, 158, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.price-card.featured::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(130% 58% at 50% -16%, rgba(43, 255, 158, 0.15), transparent 60%);
+}
+.price-card > * { position: relative; z-index: 1; }
+/* keep the corner badge pinned (the rule above would otherwise make it relative) */
+.price-card .price-badge { position: absolute; z-index: 2; }
+.price-card.featured:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 42px 110px -40px rgba(43, 255, 158, 0.3), 0 0 0 1px rgba(43, 255, 158, 0.28);
+}
+.price-badge { box-shadow: 0 0 0 1px rgba(43, 255, 158, 0.3), 0 8px 24px -10px var(--glow); }
+
+/* ---- Comparison table: a lit "unlocked" Premium lane ---- */
+.compare-table th:last-child,
+.compare-table td:last-child {
+  background: linear-gradient(180deg, rgba(43, 255, 158, 0.085), rgba(43, 255, 158, 0.028));
+}
+.compare-table thead th:last-child { color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); }
+.compare-table td.col-c.yes,
+.compare-table td.col-c.prem-tag { color: var(--accent); font-weight: 700; }
+.compare-table td.col-c.no { color: var(--text-dim); }       /* locked / not included reads quieter */
+.compare-table td.col-c.tag { color: var(--text-muted); }
+
+/* Row-by-row reveal as the table scrolls in (CSS-only; visible without JS). */
+html.js-motion .compare-wrap[data-animate] tbody tr { opacity: 0; transform: translateY(10px); }
+html.js-motion .compare-wrap[data-animate].in-view tbody tr { animation: cmpRowIn 0.5s var(--ease-platform) forwards; }
+@keyframes cmpRowIn { to { opacity: 1; transform: none; } }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(1)  { animation-delay: 0.02s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(2)  { animation-delay: 0.05s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(3)  { animation-delay: 0.08s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(4)  { animation-delay: 0.11s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(5)  { animation-delay: 0.14s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(6)  { animation-delay: 0.17s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(7)  { animation-delay: 0.20s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(8)  { animation-delay: 0.23s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(9)  { animation-delay: 0.26s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(10) { animation-delay: 0.29s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(11) { animation-delay: 0.32s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(12) { animation-delay: 0.35s; }
+html.js-motion .compare-wrap.in-view tbody tr:nth-child(n+13) { animation-delay: 0.38s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .price-card:hover, .price-card.featured:hover { transform: none; }
+  html.js-motion .compare-wrap[data-animate] tbody tr { opacity: 1 !important; transform: none !important; animation: none !important; }
+}
