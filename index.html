@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="assets/logo.png?v=2" />
-    <link rel="stylesheet" href="styles.css?v=50" />
+    <link rel="stylesheet" href="styles.css?v=51" />
   </head>
   <body>
     <!-- Navbar -->
@@ -84,9 +84,9 @@
           </div>
 
           <!-- Floating feature cards drift around the render -->
-          <div class="float-card float-1 green" aria-hidden="true"><span class="float-dot"></span> ARK Guard · Anti-cheat</div>
+          <div class="float-card float-1 green live" aria-hidden="true"><span class="float-dot"></span> ARK Guard · <span class="fc-live" data-fc="flags">0 flags</span></div>
           <div class="float-card float-2" aria-hidden="true"><span class="float-dot"></span> PayPal · Stripe</div>
-          <div class="float-card float-3 green" aria-hidden="true"><span class="float-dot"></span> /pop · Live Logs</div>
+          <div class="float-card float-3 green live" aria-hidden="true"><span class="float-dot"></span> /pop · <span class="fc-live" data-fc="online">248 online</span></div>
           <div class="float-card float-4" aria-hidden="true"><span class="float-dot"></span> Nitrado · Rollback</div>
         </div>
       </div>
@@ -266,20 +266,40 @@
       </div>
     </section>
 
-    <!-- /pop short highlight card -->
+    <!-- Live /pop showcase -->
     <section class="short">
       <div class="container">
-        <a class="highlight-card free" href="pop.html" data-animate>
-          <div class="highlight-icon">
-            <img src="assets/icon-pop.png?v=2" width="76" height="76" alt="" loading="lazy" />
-          </div>
-          <div>
+        <div class="livepop" data-animate>
+          <div class="livepop-copy">
             <div class="highlight-tier">Free · Included</div>
-            <h3>Full Cluster Population, Included Free</h3>
-            <p>Track your whole ARK cluster with live population embeds and animated charts. <code>/pop</code> is one of the free tools included with Arkoris.</p>
+            <h3>Your whole cluster, live</h3>
+            <p>Track every map with live population embeds and auto-drawn charts. <code>/pop</code> is free with Arkoris, on every server.</p>
+            <a class="btn btn-ghost" href="pop.html">Explore /pop →</a>
           </div>
-          <span class="btn btn-ghost">Explore /pop →</span>
-        </a>
+
+          <div class="livepop-chart" aria-hidden="true">
+            <div class="lp-head">
+              <span class="lp-live"><span class="lp-live-dot"></span> Live</span>
+              <span class="lp-title">Cluster population · last 24h</span>
+            </div>
+            <svg class="lp-svg" viewBox="0 0 560 230" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="lpGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="rgba(43,255,158,0.34)" />
+                  <stop offset="1" stop-color="rgba(43,255,158,0)" />
+                </linearGradient>
+              </defs>
+              <path class="lp-area" d="M12,170 C80,168 110,150 160,152 S250,176 300,120 S380,58 430,74 S520,44 548,60 L548,230 L12,230 Z" />
+              <path class="lp-line" d="M12,170 C80,168 110,150 160,152 S250,176 300,120 S380,58 430,74 S520,44 548,60" />
+              <circle class="lp-dot" cx="548" cy="60" r="4.5" />
+            </svg>
+            <div class="lp-readout">
+              <span class="lp-online"><b data-count-to="248">0</b> online</span>
+              <span>11/12 maps</span>
+              <span>peak <b data-count-to="312">0</b></span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -485,6 +505,6 @@
     </dialog>
 
     <script src="config.js"></script>
-    <script src="script.js?v=50"></script>
+    <script src="script.js?v=51"></script>
   </body>
 </html>

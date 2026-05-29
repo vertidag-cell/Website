@@ -1513,3 +1513,53 @@
     modal.addEventListener("close", () => { try { video.pause(); video.removeAttribute("autoplay"); } catch {} });
   }
 })();
+
+/* ============================================================
+   v11 — Live data feel: count-up on reveal + gentle live ticks
+   for the /pop readout and the hero status chips. (phase 2)
+   ============================================================ */
+(function () {
+  "use strict";
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Count up [data-count-to] when it scrolls into view.
+  const counters = document.querySelectorAll("[data-count-to]");
+  if (counters.length && "IntersectionObserver" in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        const el = e.target;
+        io.unobserve(el);
+        const to = parseInt(el.dataset.countTo, 10) || 0;
+        if (reduced) { el.textContent = to.toLocaleString(); return; }
+        const dur = 1100, t0 = performance.now();
+        const step = (now) => {
+          const p = Math.min(1, (now - t0) / dur);
+          el.textContent = Math.round((1 - Math.pow(1 - p, 3)) * to).toLocaleString();
+          if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+    }, { threshold: 0.4 });
+    counters.forEach((el) => io.observe(el));
+  }
+
+  if (reduced) return; // no live ticking under reduced motion
+
+  // Gentle live nudges so the platform feels alive (decorative, bounded).
+  const onlineEls = Array.from(document.querySelectorAll('[data-fc="online"], .lp-online b'));
+  const flagsEl = document.querySelector('[data-fc="flags"]');
+  if (onlineEls.length) {
+    let online = 248;
+    setInterval(() => {
+      online = Math.max(184, Math.min(352, online + Math.round((Math.random() - 0.46) * 9)));
+      onlineEls.forEach((el) => { el.textContent = el.matches("[data-fc]") ? online + " online" : online.toLocaleString(); });
+    }, 2600);
+  }
+  if (flagsEl) {
+    setInterval(() => {
+      const f = Math.random() < 0.22 ? 1 + Math.floor(Math.random() * 2) : 0;
+      flagsEl.textContent = f + (f === 1 ? " flag" : " flags");
+    }, 4400);
+  }
+})();
