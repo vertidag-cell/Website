@@ -42,7 +42,7 @@ window.SITE_CONFIG = {
     // (not a user install); integration_type=0 makes that explicit.
     // permissions=8 = Administrator.
     inviteBot:
-      "https://discord.com/oauth2/authorize?client_id=1487468686150336614&permissions=8&scope=bot+applications.commands&integration_type=0",
+      "https://discord.com/oauth2/authorize?client_id=1487468686150336614&permissions=1495454182518&scope=bot+applications.commands&integration_type=0",
     supportDiscord: "https://discord.gg/MXS3ZcsCSH",
 
     // Internal — same tab, points to pages that explain the flow
