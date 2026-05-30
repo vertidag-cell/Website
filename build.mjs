@@ -72,7 +72,9 @@ for (const f of htmlFiles) {
 }
 
 // --- Static assets that aren't .html/.css/.js ---
-const STATIC = ["robots.txt", "_headers", "vercel.json", ".env.example"];
+// NOTE: .env.example is intentionally NOT shipped — it's a dev-only template and
+// publishing it leaks the env-var structure. Keep deploy artifacts here only.
+const STATIC = ["robots.txt", "_headers", "vercel.json"];
 for (const f of STATIC) {
   try {
     await fs.copyFile(f, path.join(DIST, f));
@@ -83,7 +85,7 @@ for (const f of STATIC) {
 }
 
 // --- Static asset directories (images, fonts, etc.) — copied verbatim ---
-const STATIC_DIRS = ["assets"];
+const STATIC_DIRS = ["assets", ".well-known"];
 for (const d of STATIC_DIRS) {
   try {
     await fs.cp(d, path.join(DIST, d), { recursive: true });
