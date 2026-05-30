@@ -1,0 +1,11 @@
+# Hard-404 sensitive paths so they can never be served, regardless of which
+# build path Cloudflare Pages uses (dist deploy vs git-connected root build).
+# 404! = force the status, don't fall through to the SPA 200 fallback.
+/.env*                404
+/backend/*            404
+/build.mjs            404
+/worker.js            404
+/wrangler.jsonc       404
+/package.json         404
+/package-lock.json    404
+/functions/*          404
