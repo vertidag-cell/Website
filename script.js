@@ -1359,7 +1359,7 @@
 
   /* ---- Alive cards: lift + cursor-tracked light ---- */
   const CARD_SELECTOR =
-    ".fvp-col, .eco-col, .demo-mini, .ark-suite-card, .highlight-card, .soon-card";
+    ".fvp-col, .eco-col, .demo-mini, .ark-suite-card, .highlight-card, .soon-card, .feature-card";
   document.querySelectorAll(CARD_SELECTOR).forEach((card) => {
     if (card.classList.contains("lift")) return;
     card.classList.add("lift");
@@ -1576,7 +1576,7 @@
   const fine = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   if (reduced || !fine) return;
 
-  document.querySelectorAll(".ark-suite-card, .demo-mini, .highlight-card").forEach((card) => {
+  document.querySelectorAll(".ark-suite-card, .demo-mini, .highlight-card, .feature-card").forEach((card) => {
     card.addEventListener("pointerenter", () => {
       card.style.transition = "transform 0.14s var(--ease-platform)";
       card.style.willChange = "transform";
