@@ -11089,3 +11089,31 @@ html.js-motion .compare-wrap.in-view tbody tr:nth-child(n+13) { animation-delay:
   .price-card:hover, .price-card.featured:hover { transform: none; }
   html.js-motion .compare-wrap[data-animate] tbody tr { opacity: 1 !important; transform: none !important; animation: none !important; }
 }
+
+/* ============================================================
+   v14 — /pop page elevation (phase 5)
+   ============================================================ */
+/* Brand-correct chart glow (was leftover red #ef4444). */
+.chart-line { filter: drop-shadow(0 0 7px rgba(43, 255, 158, 0.45)); }
+.pop-chart-label { display: flex; align-items: center; gap: 8px; }
+
+/* Pulsing "live" point at the end of the drawn 24h line. */
+.pop-live-dot { fill: #eafff5; filter: drop-shadow(0 0 6px var(--glow)); opacity: 0; }
+.pop-card.in-view .pop-live-dot {
+  opacity: 1; transition: opacity 0.4s ease 1.6s;
+  animation: lpDotPulse 2.4s var(--ease-platform) 1.8s infinite;
+}
+
+/* Cluster tiles: interactive depth + glow on hover. */
+.cluster-tile {
+  transition: transform 0.35s var(--ease-platform), box-shadow 0.35s var(--ease-platform), border-color 0.25s var(--ease-platform);
+}
+.cluster-tile:hover {
+  transform: translateY(-4px); border-color: var(--border-strong);
+  box-shadow: 0 26px 64px -34px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(43, 255, 158, 0.16), 0 16px 46px -34px var(--glow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cluster-tile:hover { transform: none; }
+  .pop-card.in-view .pop-live-dot { animation: none !important; }
+}

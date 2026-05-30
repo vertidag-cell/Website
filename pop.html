@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="assets/logo.png?v=2" />
-    <link rel="stylesheet" href="styles.css?v=53" />
+    <link rel="stylesheet" href="styles.css?v=54" />
   </head>
   <body>
     <header class="navbar">
@@ -111,11 +111,12 @@
               <div class="pop-map"><span class="pop-map-name"><span class="pulse-dot"></span> Scorched Earth</span><span class="pop-map-bar" style="--w:6%"><span></span></span><span class="pop-map-count">3 / 50</span></div>
             </div>
             <div class="pop-chart">
-              <div class="pop-chart-label">24h Cluster Population</div>
+              <div class="pop-chart-label"><span class="lp-live"><span class="lp-live-dot"></span> Live</span> 24h cluster population</div>
               <svg viewBox="0 0 600 100" preserveAspectRatio="none" aria-hidden="true">
-                <defs><linearGradient id="chartGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ef4444" stop-opacity=".45"/><stop offset="1" stop-color="#ef4444" stop-opacity="0"/></linearGradient></defs>
+                <defs><linearGradient id="chartGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#2bff9e" stop-opacity=".4"/><stop offset="1" stop-color="#2bff9e" stop-opacity="0"/></linearGradient></defs>
                 <path class="chart-fill" d="M0,75 L50,68 L100,60 L150,52 L200,40 L250,46 L300,32 L350,38 L400,24 L450,30 L500,42 L550,28 L600,36 L600,100 L0,100 Z"/>
                 <path class="chart-line" d="M0,75 L50,68 L100,60 L150,52 L200,40 L250,46 L300,32 L350,38 L400,24 L450,30 L500,42 L550,28 L600,36"/>
+                <circle class="pop-live-dot" cx="594" cy="36" r="4" />
               </svg>
             </div>
             <div class="pop-actions">
@@ -231,6 +232,6 @@
     </footer>
 
     <script src="config.js"></script>
-    <script src="script.js?v=53"></script>
+    <script src="script.js?v=54"></script>
   </body>
 </html>

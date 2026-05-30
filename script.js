@@ -1595,3 +1595,35 @@
     });
   });
 })();
+
+/* ============================================================
+   v14 — /pop cluster-tile counts count up on reveal (phase 5)
+   Animates only the leading number text node, leaving the
+   "/ 70" max suffix span intact. (reduced-motion → instant)
+   ============================================================ */
+(function () {
+  "use strict";
+  const counts = document.querySelectorAll(".cluster-tile-count");
+  if (!counts.length || !("IntersectionObserver" in window)) return;
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      io.unobserve(el);
+      const tn = el.firstChild; // leading "42" text node, before the .max span
+      if (!tn || tn.nodeType !== 3) return;
+      const to = parseInt(tn.textContent, 10);
+      if (!Number.isFinite(to)) return;
+      if (reduced) { tn.textContent = String(to); return; }
+      const dur = 900, t0 = performance.now();
+      const step = (now) => {
+        const p = Math.min(1, (now - t0) / dur);
+        tn.textContent = String(Math.round((1 - Math.pow(1 - p, 3)) * to));
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }, { threshold: 0.5 });
+  counts.forEach((el) => io.observe(el));
+})();
