@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="assets/logo.png?v=2" />
-    <link rel="stylesheet" href="styles.css?v=54" />
+    <link rel="stylesheet" href="styles.css?v=55" />
   </head>
   <body>
     <header class="navbar">
@@ -41,13 +41,40 @@
     <section class="dash-shell">
       <div class="container">
         <div id="dashboard-root">
-          <div class="dash-loading">
-            <div class="dash-spinner"></div>
-            <div style="margin-top:4px">Initializing dashboard…</div>
-            <div style="font-size:0.78rem;color:var(--text-dim);margin-top:10px;max-width:380px;text-align:center;line-height:1.5">
-              If this stays for more than 3 seconds, hard-refresh
-              (<kbd style="background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:4px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.9em">Ctrl + Shift + R</kbd>)
-              or open in an incognito window. Browser cache may be holding an older build.
+          <!-- Premium loading skeleton — mirrors the dashboard layout so the
+               panel feels alive the instant it opens. Replaced by dashboard-app.js
+               once it boots. -->
+          <div class="dash-skeleton" role="status" aria-label="Loading your dashboard">
+            <div class="dsk-topbar">
+              <span class="dsk sk-pill"></span>
+              <span class="dsk sk-line" style="width:140px"></span>
+              <span class="dsk-spacer"></span>
+              <span class="dsk sk-chip"></span>
+              <span class="dsk sk-chip"></span>
+            </div>
+            <div class="dsk-body">
+              <aside class="dsk-side">
+                <span class="dsk sk-srow on"></span>
+                <span class="dsk sk-srow"></span>
+                <span class="dsk sk-srow"></span>
+                <span class="dsk sk-srow"></span>
+                <span class="dsk sk-srow"></span>
+                <span class="dsk sk-srow"></span>
+              </aside>
+              <main class="dsk-main">
+                <div class="dsk-cards">
+                  <div class="dsk-card"><span class="dsk sk-ico"></span><span class="dsk sk-line" style="width:60%"></span><span class="dsk sk-line sm" style="width:85%"></span><span class="dsk sk-line sm" style="width:45%"></span></div>
+                  <div class="dsk-card"><span class="dsk sk-ico"></span><span class="dsk sk-line" style="width:50%"></span><span class="dsk sk-line sm" style="width:80%"></span><span class="dsk sk-line sm" style="width:55%"></span></div>
+                  <div class="dsk-card"><span class="dsk sk-ico"></span><span class="dsk sk-line" style="width:65%"></span><span class="dsk sk-line sm" style="width:70%"></span><span class="dsk sk-line sm" style="width:40%"></span></div>
+                  <div class="dsk-card"><span class="dsk sk-ico"></span><span class="dsk sk-line" style="width:55%"></span><span class="dsk sk-line sm" style="width:90%"></span><span class="dsk sk-line sm" style="width:50%"></span></div>
+                  <div class="dsk-card"><span class="dsk sk-ico"></span><span class="dsk sk-line" style="width:58%"></span><span class="dsk sk-line sm" style="width:75%"></span><span class="dsk sk-line sm" style="width:48%"></span></div>
+                  <div class="dsk-card"><span class="dsk sk-ico"></span><span class="dsk sk-line" style="width:62%"></span><span class="dsk sk-line sm" style="width:82%"></span><span class="dsk sk-line sm" style="width:52%"></span></div>
+                </div>
+              </main>
+            </div>
+            <div class="dsk-hint">
+              Loading your dashboard…
+              <span>If this lingers, hard-refresh (<kbd>Ctrl + Shift + R</kbd>) or try an incognito window.</span>
             </div>
           </div>
         </div>

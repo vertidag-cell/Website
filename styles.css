@@ -11117,3 +11117,46 @@ html.js-motion .compare-wrap.in-view tbody tr:nth-child(n+13) { animation-delay:
   .cluster-tile:hover { transform: none; }
   .pop-card.in-view .pop-live-dot { animation: none !important; }
 }
+
+/* ============================================================
+   v15 — Dashboard premium loading skeleton (phase 6)
+   Mirrors the dashboard layout so the panel feels alive the
+   instant it opens; dashboard-app.js replaces it on boot.
+   ============================================================ */
+.dash-skeleton {
+  border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; overflow: hidden;
+  background: linear-gradient(180deg, rgba(43, 255, 158, 0.03), var(--surface));
+  box-shadow: 0 40px 110px -50px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.dsk { position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.05); border-radius: 8px; display: inline-block; }
+.dsk::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(43, 255, 158, 0.10), transparent);
+  animation: skShimmer 1.5s ease-in-out infinite;
+}
+@keyframes skShimmer { 100% { transform: translateX(100%); } }
+.dsk-topbar { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+.dsk-spacer { flex: 1; }
+.sk-pill { width: 140px; height: 34px; border-radius: 999px; }
+.sk-chip { width: 34px; height: 34px; border-radius: 9px; }
+.sk-line { height: 12px; border-radius: 6px; }
+.sk-line.sm { height: 9px; opacity: 0.8; }
+.dsk-body { display: grid; grid-template-columns: 200px 1fr; gap: 16px; }
+.dsk-side { display: flex; flex-direction: column; gap: 10px; }
+.sk-srow { height: 38px; border-radius: 10px; }
+.sk-srow.on { background: rgba(43, 255, 158, 0.13); }
+.dsk-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.dsk-card {
+  border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: rgba(255, 255, 255, 0.02);
+  display: flex; flex-direction: column; gap: 10px; min-height: 128px;
+}
+.sk-ico { width: 38px; height: 38px; border-radius: 10px; margin-bottom: 6px; }
+.dsk-hint { margin-top: 16px; text-align: center; font-size: 0.86rem; color: var(--text-muted); }
+.dsk-hint span { display: block; font-size: 0.76rem; color: var(--text-dim); margin-top: 6px; }
+.dsk-hint kbd { background: rgba(255, 255, 255, 0.08); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9em; }
+@media (max-width: 680px) {
+  .dsk-body { grid-template-columns: 1fr; }
+  .dsk-side { flex-direction: row; flex-wrap: wrap; }
+  .sk-srow { flex: 1 1 30%; }
+}
+@media (prefers-reduced-motion: reduce) { .dsk::after { animation: none; display: none; } }
