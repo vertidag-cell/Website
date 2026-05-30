@@ -1,4 +1,4 @@
-Contact: mailto:QuicksARKPP@gmail.com
+Contact: mailto:Quickknivess@gmail.com
 Preferred-Languages: en
 Canonical: https://arkoris.net/.well-known/security.txt
 Expires: 2027-01-01T00:00:00.000Z

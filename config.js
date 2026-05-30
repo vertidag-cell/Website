@@ -50,7 +50,7 @@ window.SITE_CONFIG = {
     dashboardLogin: "dashboard.html",
 
     // Email — auto-converted to mailto: with subject
-    contactEmail: "QuicksARKPP@gmail.com",
+    contactEmail: "Quickknivess@gmail.com",
   },
 
   // Three tiers. Edit price strings exactly as they should display.
