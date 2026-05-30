@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>How to Set Up Arkoris — Step-by-Step Guide</title>
+    <meta name="description" content="Connect your Discord server and ARK cluster to Arkoris in a few simple steps. Most features are optional and can be enabled later." />
+    <meta property="og:title" content="How to Set Up Arkoris" />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="assets/logo.png?v=2" />
+    <link rel="stylesheet" href="styles.css?v=57" />
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="container nav-inner">
+        <a class="brand" href="index.html">
+          <span class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/><path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/></svg></span>
+          <span class="brand-text"><span class="name">Arkoris</span><span class="sub">Discord Automation · ARK</span></span>
+        </a>
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="index.html">Home</a>
+          <a href="features.html">Features</a>
+          <a href="pop.html">/pop</a>
+          <a href="premium.html">Premium</a>
+          <a href="branding.html">Branding</a>
+          <a href="demos.html">Demos</a>
+          <a href="pricing.html">Pricing</a>
+          <a href="dashboard.html">Dashboard</a>
+          <a href="servers.html">Servers</a>
+          <a href="support.html">Support</a>
+        </nav>
+        <div class="nav-cta">
+          <a class="btn btn-ghost nav-hide-sm" data-link="inviteBot" href="#">Invite Bot</a>
+          <a class="btn btn-primary" data-link="dashboardLogin" href="#">Dashboard</a>
+          <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Getting started</span>
+        <h1 data-word-reveal>How to Set Up Arkoris</h1>
+        <p class="lead">Get your Discord server and ARK cluster connected in a few simple steps. Most features are optional and can be enabled later — start with the basics and grow from there.</p>
+        <div style="margin-top:20px;display:inline-flex;gap:10px;flex-wrap:wrap;justify-content:center">
+          <a class="btn btn-primary" data-link="inviteBot" href="#">Start Setup Wizard</a>
+          <a class="btn btn-ghost" data-link="dashboardLogin" href="#">Open Dashboard</a>
+          <a class="btn btn-outline" href="#step-9">Run Setup Check</a>
+        </div>
+        <p style="margin-top:14px;font-size:.92rem;color:var(--text-muted)">In Discord, run <code>/setup</code> → <strong>🚀 Setup Wizard</strong> to do all of this guided, in order.</p>
+      </div>
+    </section>
+
+    <!-- Steps -->
+    <section style="padding:8px 0 24px">
+      <div class="container">
+        <div class="section-head" data-animate>
+          <span class="eyebrow">The 9 steps</span>
+          <h2>From invite to live in minutes</h2>
+          <p>Each step explains what you're configuring and why. Required steps are marked; everything else is optional.</p>
+        </div>
+
+        <div class="steps" data-animate data-stagger style="max-width:1080px;margin:0 auto">
+          <div class="step" id="step-1">
+            <div class="step-num">1</div>
+            <h3>Invite Arkoris &amp; check permissions <span style="color:var(--danger)">· required</span></h3>
+            <p>Add the bot, then make sure its role sits <strong>above</strong> the roles it needs to manage, and that it can see and post in your channels.</p>
+            <ul class="pop-bullets">
+              <li>✅ Bot added to Discord</li>
+              <li>✅ Bot role positioned correctly (drag it high in Server Settings → Roles)</li>
+              <li>✅ Required permissions available · slash commands visible</li>
+            </ul>
+          </div>
+          <div class="step" id="step-2">
+            <div class="step-num">2</div>
+            <h3>Set owner, admin &amp; staff roles <span style="color:var(--danger)">· required</span></h3>
+            <p><strong>Owner</strong> roles control sensitive actions (wipes, resets, payments). <strong>Admin</strong> roles reach <code>/setup</code> and <code>/ark</code>. <strong>Staff</strong> roles handle tickets, moderation, polls, events, giveaways, grace timers and Cluster Alpha.</p>
+            <p>Configure in <code>/setup → 🎫 Tickets &amp; Staff → Staff Roles &amp; Permissions</code>.</p>
+          </div>
+          <div class="step" id="step-3">
+            <div class="step-num">3</div>
+            <h3>Connect Nitrado <span style="color:var(--text-muted)">· optional (ARK features)</span></h3>
+            <p>Paste your Nitrado token in <code>/setup → 🦖 ARK Integration → Nitrado Connection</code>, validate it, then link each ARK map. RCON, game-chat relay and population tracking are <strong>auto-detected</strong> where supported — no manual setup.</p>
+            <p style="font-size:.92rem;color:var(--text-muted)">Your token is encrypted at rest and never shown again after you save it.</p>
+          </div>
+          <div class="step" id="step-4">
+            <div class="step-num">4</div>
+            <h3>Generate recommended channels <span style="color:var(--text-muted)">· optional</span></h3>
+            <p>Preview, then one-click create: Discord audit logs, ARK forum logs, ticket categories, staff earnings forum, population board and announcements. Arkoris detects what already exists, so it never makes duplicates.</p>
+            <p><code>/setup → 📋 Logs &amp; Monitoring → Generate Logs</code> (preview first).</p>
+          </div>
+          <div class="step" id="step-5">
+            <div class="step-num">5</div>
+            <h3>Configure tickets <span style="color:var(--text-muted)">· optional</span></h3>
+            <p>Set the panel channel, staff roles, ticket categories, questions and transcripts in <code>/setup → 🎫 Tickets &amp; Staff → Ticket System</code>, then publish the panel. Every ticket gets a control row:</p>
+            <p style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem;color:var(--text-muted)">[ Add Member ] [ Rename Ticket ] [ Close Ticket ]<br>[ Log Work ] [ Create Payment Link ] [ Export Transcript ]</p>
+            <p style="font-size:.88rem;color:var(--text-muted)">Staff rename; staff or the ticket owner close. Add Member, Log Work and Payment are staff-only.</p>
+          </div>
+          <div class="step" id="step-6">
+            <div class="step-num">6</div>
+            <h3>Publish the Player Hub <span style="color:var(--text-muted)">· optional</span></h3>
+            <p>A one-click panel your members use without learning commands: Population · My Rank · My Credits · Leaderboard · Submit Suggestion · Open Ticket.</p>
+          </div>
+          <div class="step" id="step-7">
+            <div class="step-num">7</div>
+            <h3>Optional community features</h3>
+            <p>Enable any of: welcome messages, auto-roles, levels &amp; XP, credits, hype rewards, suggestions, polls, events, giveaways, sticky messages, role menus and Cluster Alpha — all under <code>/setup → 🏠 Discord Server</code>.</p>
+          </div>
+          <div class="step" id="step-8">
+            <div class="step-num">8</div>
+            <h3>Optional payments &amp; branding <span style="color:var(--text-muted)">· premium</span></h3>
+            <p>Subscription, premium branding, PayPal/Stripe and the public directory live under <code>/setup → 💳 Payments &amp; Branding</code>. Enter payment secrets on the <a data-link="dashboardLogin" href="#">web dashboard</a> — never in a public Discord channel.</p>
+          </div>
+          <div class="step" id="step-9">
+            <div class="step-num">9</div>
+            <h3>Run the final setup check <span style="color:var(--danger)">· recommended</span></h3>
+            <p><code>/setup → ✅ Review Configuration</code> validates permissions, roles, channels, ticket panel, Nitrado token, linked maps, RCON, chat relay, population tracking, ARK logs, webhooks, background jobs and published panels.</p>
+            <p style="font-size:.92rem;color:var(--text-muted)">Results show ✅ working · ⚠ recommended · ❌ must fix · ⚪ optional.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Troubleshooting -->
+    <section style="padding-top:0">
+      <div class="container">
+        <div class="section-head" data-animate>
+          <span class="eyebrow">Troubleshooting</span>
+          <h2>Common issues &amp; quick fixes</h2>
+        </div>
+        <div class="why-grid">
+          <div class="why-card"><h3>Bot commands are missing</h3><p>The bot was invited without the <code>applications.commands</code> scope, or commands haven't synced yet. Re-invite with the link on this site and wait a minute.</p></div>
+          <div class="why-card"><h3>Bot cannot create channels</h3><p>Its role is too low or lacks Manage Channels. Drag the Arkoris role higher in Server Settings → Roles.</p></div>
+          <div class="why-card"><h3>Tickets do not work</h3><p>Publish the ticket panel and set staff roles in Tickets &amp; Staff. Use Permission Repair if access looks wrong.</p></div>
+          <div class="why-card"><h3>Nitrado connection failed</h3><p>Re-paste the token in ARK Integration → Nitrado Connection and click Validate. Tokens expire — generate a fresh one if needed.</p></div>
+          <div class="why-card"><h3>RCON was not detected</h3><p>RCON auto-detects from Nitrado. If it stays off, the server may have RCON disabled — features still work over the Nitrado API.</p></div>
+          <div class="why-card"><h3>Chat relay is offline</h3><p>Check the relay channel in ARK Integration → Game-Chat Relay and that the linked map is online.</p></div>
+          <div class="why-card"><h3>Population board not updating</h3><p>Re-publish the board from ARK Integration → Population &amp; Live Boards; confirm the map is linked and online.</p></div>
+          <div class="why-card"><h3>Payment provider incomplete</h3><p>Finish PayPal/Stripe config on the dashboard (client id, secret, webhook). The Review check flags exactly what's missing.</p></div>
+          <div class="why-card"><h3>Webhook is failing</h3><p>Confirm the webhook URL is set in your PayPal/Stripe dashboard and matches the one shown in Payment Providers.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section style="padding-top:0">
+      <div class="container">
+        <div class="section-head" data-animate>
+          <span class="eyebrow">FAQ</span>
+          <h2>Quick answers</h2>
+        </div>
+        <div class="why-grid">
+          <div class="why-card"><h3>What's required to start?</h3><p>Just invite the bot and set your roles. Everything else is optional.</p></div>
+          <div class="why-card"><h3>Is Nitrado required?</h3><p>Only for ARK features (player tracking, logs, wipes, ARK Guard). The community tools work without it.</p></div>
+          <div class="why-card"><h3>Are PayPal &amp; Stripe optional?</h3><p>Yes — only needed if you take payments. Enter secrets on the dashboard.</p></div>
+          <div class="why-card"><h3>Can I configure features later?</h3><p>Yes. Enable modules any time from <code>/setup</code>; nothing has to be done up front.</p></div>
+          <div class="why-card"><h3>Who can use <code>/setup</code>?</h3><p>Guild owner and configured admin roles only.</p></div>
+          <div class="why-card"><h3>Who can use <code>/ark</code>?</h3><p>Admins; sensitive actions (wipes, password, cluster id, resets) are owner-only.</p></div>
+          <div class="why-card"><h3>Can regular players view credits?</h3><p>Yes — their own balance and history via <code>/credit balance</code> and <code>/credit history</code>. Only staff can give or remove.</p></div>
+          <div class="why-card"><h3>Who can rename a ticket?</h3><p>Staff only. Ticket owners can close their ticket but not rename it.</p></div>
+          <div class="why-card"><h3>How do I reset a season?</h3><p><code>/ark → ♻ Season &amp; Data</code> — owner-only, with typed confirmation and an audit log.</p></div>
+          <div class="why-card"><h3>How do I wipe ARK maps safely?</h3><p><code>/ark → 🎛 Server Operations → Wipe Management</code>. Use <strong>Dry run</strong> first — it shows exactly what would change (one shared cluster id across selected maps) with no changes made.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section">
+      <div class="container">
+        <div class="cta-panel" data-animate>
+          <span class="eyebrow">Ready?</span>
+          <h2>Set up your server now</h2>
+          <p>Invite Arkoris, run <code>/setup</code>, and follow the Setup Wizard. You can do everything from Discord or the web dashboard.</p>
+          <div class="cta-actions">
+            <a class="btn btn-primary btn-lg" data-link="inviteBot" href="#">Invite the Bot</a>
+            <a class="btn btn-ghost btn-lg" data-link="dashboardLogin" href="#">Open Dashboard</a>
+            <a class="btn btn-outline btn-lg" data-link="supportDiscord" href="#">Join Support</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <div class="brand" style="margin-bottom:14px">
+              <span class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/><path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/></svg></span>
+              <span class="brand-text"><span class="name">Arkoris</span><span class="sub">Discord Automation · ARK</span></span>
+            </div>
+            <p>Advanced Discord automation for ARK and gaming communities.</p>
+          </div>
+          <div><h4>Product</h4><ul><li><a href="features.html">Features</a></li><li><a href="pop.html">/pop Cluster</a></li><li><a href="premium.html">Premium</a></li><li><a href="branding.html">Branding</a></li><li><a href="demos.html">Demos</a></li><li><a href="pricing.html">Pricing</a></li><li><a href="dashboard.html">Dashboard</a>
+          <a href="servers.html">Servers</a></li></ul></div>
+          <div><h4>Resources</h4><ul><li><a href="setup-guide.html">How to Set Up</a></li><li><a href="faq.html">FAQ</a></li><li><a href="support.html">Support</a></li><li><a href="terms.html">Terms</a></li><li><a href="privacy.html">Privacy</a></li></ul></div>
+          <div><h4>Connect</h4><ul><li><a data-link="supportDiscord" href="#">Discord Server</a></li><li><a data-link="contactEmail" href="#">Email Support</a></li><li><a data-link="inviteBot" href="#">Invite Bot</a></li><li><a data-link="dashboardLogin" href="#">Dashboard Login</a></li></ul></div>
+        </div>
+        <div class="footer-bottom"><div>© <span data-year>2026</span> Arkoris. All rights reserved.</div><div>Not affiliated with Studio Wildcard or Discord Inc.</div></div>
+      </div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="script.js?v=57"></script>
+  </body>
+</html>
