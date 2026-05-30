@@ -11160,3 +11160,23 @@ html.js-motion .compare-wrap.in-view tbody tr:nth-child(n+13) { animation-delay:
   .sk-srow { flex: 1 1 30%; }
 }
 @media (prefers-reduced-motion: reduce) { .dsk::after { animation: none; display: none; } }
+
+/* ============================================================
+   v16 — Page transitions + footer accent (phase 8, final polish)
+   Cross-document View Transitions make multi-page navigation feel
+   connected (Chrome/Edge; other browsers just navigate normally).
+   ============================================================ */
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) {
+  animation-duration: 0.32s; animation-timing-function: var(--ease-platform, cubic-bezier(0.16, 1, 0.3, 1));
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+}
+
+/* Footer: a hairline of brand light along the top edge. */
+footer { position: relative; }
+footer::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(43, 255, 158, 0.35), transparent);
+}
