@@ -21,9 +21,15 @@ const ALLOWED_AUTH_PATHS = new Set([
   "/auth/session",
 ]);
 
-function proxy(request, url) {
+function proxy(request, url, env) {
   const target = BACKEND + url.pathname + url.search;
-  return fetch(new Request(target, request), { redirect: "manual" });
+  const proxied = new Request(target, request);
+  // Shared secret so the Square Cloud backend can verify the request actually
+  // came through this Cloudflare proxy (arkoris.net) and reject direct hits to
+  // the squareweb.app origin. Set PROXY_SECRET on BOTH this Worker and the
+  // backend; until then the backend fails open and nothing changes.
+  if (env && env.PROXY_SECRET) proxied.headers.set("X-Arkoris-Proxy", env.PROXY_SECRET);
+  return fetch(proxied, { redirect: "manual" });
 }
 
 export default {
@@ -31,13 +37,19 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Canonical domain: bounce the *.pages.dev preview to arkoris.net so the
+    // site is only ever served (and indexed) on the real domain.
+    if (url.hostname.endsWith(".pages.dev")) {
+      return Response.redirect("https://arkoris.net" + path + url.search, 301);
+    }
+
     if (path.startsWith("/api/")) {
-      return proxy(request, url);
+      return proxy(request, url, env);
     }
 
     if (path.startsWith("/auth/")) {
       if (ALLOWED_AUTH_PATHS.has(path)) {
-        return proxy(request, url);
+        return proxy(request, url, env);
       }
       return new Response("Not found", { status: 404 });
     }

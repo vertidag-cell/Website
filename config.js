@@ -22,7 +22,7 @@ window.SITE_CONFIG = {
     tagline: "Advanced Discord automation for ARK and gaming communities.",
   },
 
-  websiteUrl: "https://website-1h0.pages.dev/",
+  websiteUrl: "https://arkoris.net/",
 
   /*
    * Backend API base URL for the customer dashboard.
