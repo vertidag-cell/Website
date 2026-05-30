@@ -19,6 +19,12 @@
     "binding": "ASSETS",
     "not_found_handling": "404-page"
   },
+  // arkoris.net is served by the Cloudflare PAGES project, not this Worker.
+  // Disable the public workers.dev + preview hostnames so this Worker can't be
+  // used as an un-WAF'd public mirror of the site (origin-bypass lockdown,
+  // same class as the *.pages.dev finding).
+  "workers_dev": false,
+  "preview_urls": false,
   "observability": {
     "enabled": true
   }
