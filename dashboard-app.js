@@ -842,9 +842,29 @@
       support:     "Support",
     };
 
+    if (!state.collapsedGroups) state.collapsedGroups = new Set();
     groups.forEach((g) => {
       if (!g.items.length) return;
-      side.append(h("div", { class: "dash-side-section" }, g.label));
+      const hasActive = g.items.includes(state.activeTab);
+      // The group holding the active tab is always rendered expanded so the
+      // user never loses sight of where they are.
+      const collapsed = !hasActive && state.collapsedGroups.has(g.label);
+
+      const group  = h("div", { class: `dash-side-group ${collapsed ? "collapsed" : ""}` });
+      const header = h("button", {
+        type: "button",
+        class: "dash-side-section",
+        "aria-expanded": collapsed ? "false" : "true",
+        onclick: () => {
+          const nowCollapsed = !group.classList.contains("collapsed");
+          group.classList.toggle("collapsed", nowCollapsed);
+          header.setAttribute("aria-expanded", nowCollapsed ? "false" : "true");
+          if (nowCollapsed) state.collapsedGroups.add(g.label);
+          else              state.collapsedGroups.delete(g.label);
+        },
+      }, g.label, h("span", { class: "dash-side-caret" }, iconSvg("arrowRight")));
+      group.append(header);
+
       g.items.forEach((id) => {
         const mod = state.modules.find((m) => m.name === id);
         const label = labels[id] || (mod?.label || id);
@@ -869,8 +889,9 @@
         tab.append(tabIcon(id), label);
         if (isPremTier) tab.append(h("span", { class: "dash-tab-tier" }, "PRO"));
         if (locked)     tab.append(h("span", { class: "dash-lock" }, iconSvg("lock")));
-        side.append(tab);
+        group.append(tab);
       });
+      side.append(group);
     });
 
     // Footer — quick support shortcut

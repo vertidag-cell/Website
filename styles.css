@@ -6219,14 +6219,33 @@ section a.highlight-card {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Now a clickable collapse toggle */
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
 }
+.dash-side-section:hover { color: var(--dash-muted); }
 .dash-side-section::after {
   content: "";
   flex: 1;
   height: 1px;
   background: linear-gradient(90deg, var(--dash-border), transparent);
 }
-.dash-side-section:first-of-type { padding-top: 4px; }
+.dash-side-group:first-of-type .dash-side-section { padding-top: 4px; }
+
+/* Collapse/expand: caret rotates, items hide when the group is collapsed. */
+.dash-side-caret {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.5;
+  transition: transform 0.18s ease;
+}
+.dash-side-caret svg { width: 13px; height: 13px; }
+.dash-side-group:not(.collapsed) .dash-side-caret { transform: rotate(90deg); }
+.dash-side-group.collapsed .dash-tab { display: none; }
 
 .dash-tab {
   display: flex;
