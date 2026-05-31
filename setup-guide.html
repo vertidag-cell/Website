@@ -85,7 +85,7 @@
           <div class="step" id="step-3">
             <div class="step-num">3</div>
             <h3>Connect Nitrado <span style="color:var(--text-muted)">· optional (ARK features)</span></h3>
-            <p>Paste your Nitrado token in <code>/setup → 🦖 ARK Integration → Nitrado Connection</code>, validate it, then link each ARK map. RCON, game-chat relay and population tracking are <strong>auto-detected</strong> where supported — no manual setup.</p>
+            <p>Paste your Nitrado token in <code>/setup → 🦖 ARK Integration → Nitrado Connection</code>, validate it, then link each ARK map. Game-chat relay and population tracking are <strong>configured automatically</strong> — no manual setup.</p>
             <p style="font-size:.92rem;color:var(--text-muted)">Your token is encrypted at rest and never shown again after you save it.</p>
           </div>
           <div class="step" id="step-4">
@@ -119,7 +119,7 @@
           <div class="step" id="step-9">
             <div class="step-num">9</div>
             <h3>Run the final setup check <span style="color:var(--danger)">· recommended</span></h3>
-            <p><code>/setup → ✅ Review Configuration</code> validates permissions, roles, channels, ticket panel, Nitrado token, linked maps, RCON, chat relay, population tracking, ARK logs, webhooks, background jobs and published panels.</p>
+            <p><code>/setup → ✅ Review Configuration</code> validates permissions, roles, channels, ticket panel, Nitrado token, linked maps, chat relay, population tracking, ARK logs, webhooks, background jobs and published panels.</p>
             <p style="font-size:.92rem;color:var(--text-muted)">Results show ✅ working · ⚠ recommended · ❌ must fix · ⚪ optional.</p>
           </div>
         </div>
@@ -138,7 +138,6 @@
           <div class="why-card"><h3>Bot cannot create channels</h3><p>Its role is too low or lacks Manage Channels. Drag the Arkoris role higher in Server Settings → Roles.</p></div>
           <div class="why-card"><h3>Tickets do not work</h3><p>Publish the ticket panel and set staff roles in Tickets &amp; Staff. Use Permission Repair if access looks wrong.</p></div>
           <div class="why-card"><h3>Nitrado connection failed</h3><p>Re-paste the token in ARK Integration → Nitrado Connection and click Validate. Tokens expire — generate a fresh one if needed.</p></div>
-          <div class="why-card"><h3>RCON was not detected</h3><p>RCON auto-detects from Nitrado. If it stays off, the server may have RCON disabled — features still work over the Nitrado API.</p></div>
           <div class="why-card"><h3>Chat relay is offline</h3><p>Check the relay channel in ARK Integration → Game-Chat Relay and that the linked map is online.</p></div>
           <div class="why-card"><h3>Population board not updating</h3><p>Re-publish the board from ARK Integration → Population &amp; Live Boards; confirm the map is linked and online.</p></div>
           <div class="why-card"><h3>Payment provider incomplete</h3><p>Finish PayPal/Stripe config on the dashboard (client id, secret, webhook). The Review check flags exactly what's missing.</p></div>
