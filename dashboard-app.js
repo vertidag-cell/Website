@@ -799,15 +799,37 @@
       )
     );
 
-    // Build groups dynamically from state.modules
-    const free = state.modules.filter((m) => m.tier !== "premium").map((m) => m.name);
-    const prem = state.modules.filter((m) => m.tier === "premium").map((m) => m.name);
+    // Group modules into the SAME five categories as the in-Discord /setup nav,
+    // so the dashboard sidebar and /setup mirror each other. Any module not
+    // explicitly mapped falls into "Discord Server" so nothing ever disappears.
+    const CATEGORY_OF = {
+      // Discord Server
+      welcome: "discord", autoRoles: "discord", roleMenus: "discord", xp: "discord",
+      hype: "discord", credits: "discord", polls: "discord", moderation: "discord",
+      pets: "discord", events: "discord", giveaways: "discord",
+      // Tickets & Staff
+      tickets: "tickets", staffPay: "tickets",
+      // ARK Integration
+      ark: "ark",
+      // Logs & Monitoring
+      logs: "logs",
+      // Payments & Branding
+      payments: "payments", branding: "payments",
+      // System / admin tools
+      serverTemplates: "system",
+    };
+    const inCat = (cat) => state.modules
+      .filter((m) => (CATEGORY_OF[m.name] || "discord") === cat)
+      .map((m) => m.name);
 
     const groups = [
-      { label: "Core",          items: ["setup-hub", "overview", "analytics", "embed-builder"] },
-      { label: "Free Tools",    items: free },
-      { label: "Premium Tools", items: prem },
-      { label: "System",        items: ["premium", "audit", "support"] },
+      { label: "Core",                items: ["setup-hub", "overview", "analytics", "embed-builder"] },
+      { label: "Discord Server",      items: inCat("discord") },
+      { label: "Tickets & Staff",     items: inCat("tickets") },
+      { label: "ARK Integration",     items: inCat("ark") },
+      { label: "Logs & Monitoring",   items: inCat("logs") },
+      { label: "Payments & Branding", items: inCat("payments") },
+      { label: "System",              items: [...inCat("system"), "premium", "audit", "support"] },
     ];
 
     const labels = {
