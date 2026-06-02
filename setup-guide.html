@@ -115,6 +115,9 @@
             <div class="step-num">8</div>
             <h3>Optional payments &amp; branding <span style="color:var(--text-muted)">· premium</span></h3>
             <p>Subscription, premium branding, PayPal/Stripe and the public directory live under <code>/setup → 💳 Payments &amp; Branding</code>. Enter payment secrets on the <a data-link="dashboardLogin" href="#">web dashboard</a> — never in a public Discord channel.</p>
+            <p style="font-size:.9rem;color:var(--text-muted)"><strong>Webhook endpoint (auto-confirms payments):</strong> the Payments panel shows your bot's <strong>Webhook URL</strong> for each provider. Copy it and add it as an endpoint:
+            <br>• <strong>Stripe</strong> → Developers → Webhooks → <em>Add endpoint</em> → paste <code>…/webhooks/stripe</code>, select event <code>checkout.session.completed</code>, then paste the <code>whsec_…</code> <em>Signing secret</em> back into <code>/setup</code>.
+            <br>• <strong>PayPal</strong> → Developer Dashboard → Webhooks → paste <code>…/webhooks/paypal</code>, subscribe to <code>PAYMENT.CAPTURE.COMPLETED</code>, then paste the Webhook ID back into <code>/setup</code>.</p>
           </div>
           <div class="step" id="step-9">
             <div class="step-num">9</div>
