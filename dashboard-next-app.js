@@ -1722,10 +1722,14 @@
 
     // ---- actions ----
     function ebReset() {
-      if (!confirm("Reset the builder and clear your draft?")) return;
-      eb.channelId = ""; eb.content = ""; eb.allowedMentions = "default"; eb.embeds = [ebBlankEmbed()]; eb.activeEmbed = 0; eb.components = []; eb.templateId = null;
-      data.embDraftSave(gid, serializeModel(eb)).catch(() => {});
-      renderAll(); toast("info", "Builder reset");
+      ebModal("Reset the builder?", h("p", { class: "eb-modal-text" }, "This clears the current message and your saved draft. Your saved templates are not affected."), [
+        { label: "Cancel", kind: "btn-ghost" },
+        { label: "Reset", kind: "btn-danger", onConfirm: (close) => {
+          eb.channelId = ""; eb.content = ""; eb.allowedMentions = "default"; eb.embeds = [ebBlankEmbed()]; eb.activeEmbed = 0; eb.components = []; eb.templateId = null; eb._openPop = null;
+          data.embDraftSave(gid, serializeModel(eb)).catch(() => {});
+          renderAll(); toast("info", "Builder reset"); close();
+        } },
+      ]);
     }
     function ebCopyJson() { navigator.clipboard.writeText(JSON.stringify(serializeModel(eb), null, 2)).then(() => toast("success", "JSON copied"), () => toast("error", "Copy failed")); }
     function ebExport() {
@@ -1767,15 +1771,28 @@
     function ebOpenTemplatesModal() {
       const body = h("div", { class: "eb-tpl-modal" });
       let closeModal = function () {};
+      let confirmId = null; // which template row is showing inline "Delete?" confirm
+      async function removeTemplate(t) {
+        try { await data.embTplDelete(gid, t.id); templates = templates.filter((x) => x.id !== t.id); toast("info", "Template deleted"); }
+        catch { toast("error", "Could not delete"); }
+      }
       function renderList() {
         clear(body);
         if (!templates.length) { body.append(h("div", { class: "eb-empty" }, "No templates yet. Build an embed and hit “Save template”.")); return; }
         templates.forEach((t) => {
-          body.append(h("div", { class: "eb-tpl-row" },
-            h("span", { class: "eb-tpl-row-name" }, t.name),
-            h("div", { class: "eb-tpl-row-acts" },
-              btn("Apply", { kind: "btn-secondary", onclick: () => { ebLoadTemplate(t); closeModal(); } }),
-              btn("Delete", { kind: "btn-ghost", onclick: async () => { await ebDeleteTemplate(t); renderList(); } }))));
+          if (confirmId === t.id) {
+            body.append(h("div", { class: "eb-tpl-row eb-tpl-row-confirm" },
+              h("span", { class: "eb-tpl-row-name" }, "Delete “" + t.name + "”?"),
+              h("div", { class: "eb-tpl-row-acts" },
+                btn("Delete", { kind: "btn-danger", onclick: async () => { await removeTemplate(t); confirmId = null; renderList(); } }),
+                btn("Cancel", { kind: "btn-ghost", onclick: () => { confirmId = null; renderList(); } }))));
+          } else {
+            body.append(h("div", { class: "eb-tpl-row" },
+              h("span", { class: "eb-tpl-row-name" }, t.name),
+              h("div", { class: "eb-tpl-row-acts" },
+                btn("Apply", { kind: "btn-secondary", onclick: () => { ebLoadTemplate(t); closeModal(); } }),
+                btn("Delete", { kind: "btn-ghost", onclick: () => { confirmId = t.id; renderList(); } }))));
+          }
         });
       }
       renderList();
@@ -5718,7 +5735,7 @@
     data.categories = async () => ({ categories: [{ id: "10", name: "INFORMATION" }, { id: "11", name: "COMMUNITY" }] });
     data.roles = async () => ({ roles: [{ id: "20", name: "Member" }, { id: "21", name: "Admin" }, { id: "22", name: "Staff" }] });
     // Embed Builder stubs (for ?mock=embed) — no backend in mock.
-    data.embTplList = async () => ({ templates: [] });
+    data.embTplList = async () => ({ templates: [{ id: 1, name: "Welcome banner", messageContent: "", allowedMentions: "default", embedJson: [], componentsJson: [] }, { id: 2, name: "Server rules", messageContent: "", allowedMentions: "default", embedJson: [], componentsJson: [] }] });
     data.embDraftGet = async () => ({ draft: null });
     data.embDraftSave = async () => ({ ok: true });
     data.embTplDelete = async () => ({ ok: true });

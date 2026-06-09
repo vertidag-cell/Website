@@ -952,6 +952,9 @@
 .dash-next-preview .eb-tpl-save-lbl { font-size: 0.74rem; font-weight: 600; color: var(--dsc-text-muted); margin: 6px 0 5px; }
 .dash-next-preview .eb-tpl-name { width: 100%; }
 .dash-next-preview .eb-input-bad { border-color: #da373c !important; box-shadow: 0 0 0 1px rgba(218, 55, 60, 0.5) !important; }
+.dash-next-preview .eb-modal .btn-danger { background: #da373c !important; color: #fff !important; }
+.dash-next-preview .eb-modal .btn-danger:hover { background: #b92d32 !important; }
+.dash-next-preview .eb-tpl-row.eb-tpl-row-confirm { border-color: rgba(218, 55, 60, 0.4); background: rgba(218, 55, 60, 0.08); }
 
 /* ---- Welcome module: live-preview canvas (edit the message in place) ---- */
 .dash-next-preview .w-canvas { max-width: 680px; }
