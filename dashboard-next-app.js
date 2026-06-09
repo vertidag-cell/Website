@@ -3529,6 +3529,7 @@
       if (mod.name === "autoRoles") return renderAutoRolesCanvas(content, mod, m.values);
       if (mod.name === "xp") return renderXpCanvas(content, mod, m.values);
       if (mod.name === "polls") return renderPollsCanvas(content, mod, m.values);
+      if (mod.name === "moderation") return renderModerationCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4197,6 +4198,98 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "A poll members see in chat")),
       poll, topbar, roleSection, tip, statusBox, mcSaveBar(mod, content, () => pv, saveBtn, statusBox)));
+  }
+
+  // Reusable tag/keyword input (chips + free-text add) for module canvases.
+  function mcKeywords(getList, setList, markDirty, opts) {
+    opts = opts || {};
+    const host = h("div", { class: "mc-kw" });
+    const inp = h("input", { type: "text", class: "mc-kw-input", placeholder: opts.placeholder || "Type and press Enter…" });
+    function drawChips() {
+      host.querySelectorAll(".mc-kw-chip").forEach((n) => n.remove());
+      getList().forEach((kw) => {
+        const chip = h("span", { class: "ar-chip mc-kw-chip" },
+          h("span", { class: "ar-chip-name" }, kw),
+          h("button", { type: "button", class: "ar-chip-x", title: "Remove", onclick: () => { setList(getList().filter((x) => x !== kw)); markDirty(); drawChips(); } }, "✕"));
+        host.insertBefore(chip, inp);
+      });
+    }
+    const add = () => {
+      let v = (inp.value || "").trim().toLowerCase();
+      if (opts.stripUrl) v = v.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+      if (v && !getList().includes(v)) { setList(getList().concat([v])); markDirty(); drawChips(); }
+      inp.value = "";
+    };
+    inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === ",") { ev.preventDefault(); add(); } });
+    inp.addEventListener("blur", add);
+    host.append(inp);
+    drawChips();
+    return host;
+  }
+
+  // Moderation as a live-preview canvas: a mod-log entry + (optional) URL-filter
+  // notice, with mod-roles, link-filter, and warning controls below.
+  function renderModerationCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, modLogChannelId: "", modRoleIds: [], urlFilterEnabled: false, whitelistDomains: [], maxWarnings: 3 }, values || {});
+    mv.modRoleIds = Array.isArray(mv.modRoleIds) ? mv.modRoleIds.slice() : [];
+    mv.whitelistDomains = Array.isArray(mv.whitelistDomains) ? mv.whitelistDomains.slice() : [];
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const modField = (label, val) => h("div", { class: "mod-field" }, h("span", { class: "mod-field-l" }, label), h("span", { class: "mod-field-v" }, val));
+
+    // ---- Live preview: a mod-log entry + (optional) URL-filter notice ----
+    const device = h("div", { class: "eb-discord mod-preview" });
+    function drawPreview() {
+      clear(device);
+      device.append(h("div", { class: "eb-embed mod-log", style: { borderColor: "#f0b232" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "mod-log-title" }, "⚠️ Warning issued"),
+          h("div", { class: "mod-log-grid" },
+            modField("Member", "@toxicraptor"),
+            modField("Moderator", "@" + (state.user?.username || "staff")),
+            modField("Reason", "Spamming in chat"),
+            modField("Warnings", "2 / " + (mv.maxWarnings != null ? mv.maxWarnings : 3))),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Logged to #" + (chName(mv.modLogChannelId) || "mod-log"))))));
+      if (mv.urlFilterEnabled) {
+        device.append(h("div", { class: "mod-urlnotice" },
+          h("span", { class: "mod-urlnotice-ico", "aria-hidden": "true" }, "🔗"),
+          h("span", null, "Deleted a link from ", h("strong", null, "@newbie"), " — domain not on the allow-list.")));
+      }
+    }
+    drawPreview();
+
+    // ---- Top bar: mod-log channel + enabled ----
+    const logCh = renderChannelSelect("mod-logch", "modLogChannelId", state.channels || [], mv.modLogChannelId);
+    logCh.classList.add("w-select");
+    logCh.addEventListener("change", () => { mv.modLogChannelId = logCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), logCh),
+      mcSwitch("Moderation enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const modRoleSection = mcSection("Who can moderate",
+      mcChips("role", () => mv.modRoleIds, (a) => { mv.modRoleIds = a; }, markDirty, { empty: "Uses Discord's built-in permissions", add: "+ Add a mod role" }));
+
+    const filterSection = mcSection("Link filter",
+      h("div", { class: "mc-switch-row" }, mcSwitch("Delete links from non-whitelisted domains", () => mv.urlFilterEnabled === true, (v) => { mv.urlFilterEnabled = v; drawPreview(); markDirty(); })),
+      mcField("Allowed domains", mcKeywords(() => mv.whitelistDomains, (a) => { mv.whitelistDomains = a; }, markDirty, { placeholder: "e.g. youtube.com — Enter to add", stripUrl: true }), "Links to these domains are never deleted"));
+
+    const warnSection = mcSection("Warnings",
+      h("div", { class: "mc-grid" },
+        mcField("Warnings before auto-action", mcNumber(() => mv.maxWarnings, (v) => { mv.maxWarnings = v; drawPreview(); markDirty(); }, { min: 0, max: 20 }), "0 turns the warning cap off")));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Mods use ", h("code", null, "/warn"), ", ", h("code", null, "/timeout"), ", ", h("code", null, "/kick"), " and ", h("code", null, "/ban"), ". Every action is posted to the mod-log channel above."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What lands in your mod-log")),
+      device, topbar, modRoleSection, filterSection, warnSection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
   /** Mark the form as dirty/clean by comparing live values to baseline. */
@@ -6114,10 +6207,24 @@
         },
         values: { enabled: true, allowedRoleIds: ["22"] },
       },
+      moderation: {
+        module: {
+          name: "moderation", label: "Moderation", tier: "free", description: "Ban, kick, timeout, URL filter, whitelist.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "modLogChannelId", type: "channel", label: "Mod log channel" },
+            { key: "modRoleIds", type: "roles", label: "Mod roles" },
+            { key: "urlFilterEnabled", type: "boolean", label: "URL filter enabled" },
+            { key: "whitelistDomains", type: "keywords", label: "Whitelisted domains" },
+            { key: "maxWarnings", type: "integer", label: "Warning cap before auto-action" },
+          ],
+        },
+        values: { enabled: true, modLogChannelId: "4", modRoleIds: ["22"], urlFilterEnabled: true, whitelistDomains: ["youtube.com", "twitch.tv", "arkoris.net"], maxWarnings: 3 },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
