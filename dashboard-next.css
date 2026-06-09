@@ -933,6 +933,12 @@
 .dash-next-preview .eb-emoji-custom:focus { outline: none; border-color: #5865f2; }
 .dash-next-preview .eb-emoji-clear { font: inherit; font-size: 0.76rem; color: #b5bac1; background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
 .dash-next-preview .eb-emoji-clear:hover { color: #fff; border-color: #5865f2; }
+/* Custom Discord emoji images (in picker cells, triggers, buttons, text). */
+.dash-next-preview .eb-emoji-cimg { width: 24px; height: 24px; object-fit: contain; }
+.dash-next-preview .eb-emoji-trig-img { width: 20px; height: 20px; object-fit: contain; }
+.dash-next-preview .eb-cemoji { width: 1.25em; height: 1.25em; vertical-align: -0.25em; object-fit: contain; }
+.dash-next-preview .eb-cemoji-text { width: 1.35em; height: 1.35em; vertical-align: -0.3em; object-fit: contain; margin: 0 1px; }
+.dash-next-preview .eb-d-btn-emoji { margin-right: 5px; display: inline-flex; align-items: center; }
 
 /* Canvas allowed-mentions control + Templates modal (Advanced panel removed) */
 .dash-next-preview .eb-cv-mentions { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; }

@@ -232,6 +232,14 @@
     function renderGrid(filter) {
       clear(grid);
       const f = (filter || "").trim().toLowerCase();
+      // This server's custom emojis first (rendered as images).
+      const custom = (_ebGuildEmojis || []).filter((ce) => !f || ce.name.toLowerCase().indexOf(f) !== -1);
+      if (custom.length) {
+        grid.append(h("div", { class: "eb-emoji-cat-h", "data-cat": "server" }, "Server"));
+        const crow = h("div", { class: "eb-emoji-cat-grid" });
+        custom.forEach((ce) => { const tok = ebEmojiToken(ce); crow.append(h("button", { type: "button", class: "eb-emoji-cell" + (tok === current ? " sel" : ""), title: ":" + ce.name + ":", onclick: () => { onPick(tok); ebEmojiPickerClose(); } }, h("img", { class: "eb-emoji-cimg", src: ebCustomEmojiSrc(ce), alt: ce.name, onerror: "this.replaceWith(document.createTextNode(':'+this.alt+':'))" }))); });
+        grid.append(crow);
+      }
       EMOJI_CATS.forEach((c) => {
         const matches = c.emojis.filter(([e, kw]) => !f || (kw + " " + e).toLowerCase().indexOf(f) !== -1);
         if (!matches.length) return;
@@ -244,7 +252,10 @@
     }
     const search = h("input", { class: "eb-emoji-search", type: "text", placeholder: "Search emoji…", spellcheck: "false" });
     search.addEventListener("input", () => renderGrid(search.value));
-    const cats = h("div", { class: "eb-emoji-cats" }, ...EMOJI_CATS.map((c) => h("button", { type: "button", class: "eb-emoji-cat-btn", title: c.name, onclick: () => { const head = grid.querySelector('[data-cat="' + c.key + '"]'); if (head) head.scrollIntoView({ block: "start" }); } }, c.icon)));
+    const jumpTo = (key) => { const head = grid.querySelector('[data-cat="' + key + '"]'); if (head) head.scrollIntoView({ block: "start" }); };
+    const cats = h("div", { class: "eb-emoji-cats" },
+      (_ebGuildEmojis && _ebGuildEmojis.length) ? h("button", { type: "button", class: "eb-emoji-cat-btn", title: "Server", onclick: () => jumpTo("server") }, "🏠") : null,
+      ...EMOJI_CATS.map((c) => h("button", { type: "button", class: "eb-emoji-cat-btn", title: c.name, onclick: () => jumpTo(c.key) }, c.icon)));
     const foot = h("div", { class: "eb-emoji-foot" },
       h("input", { class: "eb-emoji-custom", type: "text", placeholder: "Custom: <:name:id>", value: /^<a?:/.test(current || "") ? current : "", onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); onPick(e.target.value.trim()); ebEmojiPickerClose(); } } }),
       h("button", { type: "button", class: "eb-emoji-clear", onclick: () => { onPick(""); ebEmojiPickerClose(); } }, "Clear"));
@@ -265,16 +276,23 @@
       window.addEventListener("scroll", _ebEmojiScroll, true);
     }, 0);
   }
+  // Custom Discord emoji helpers. A custom emoji is "<:name:id>" / "<a:name:id>".
+  let _ebGuildEmojis = []; // [{id,name,animated}] for the current guild
+  function ebParseEmoji(v) { const m = /^<(a)?:([^:]+):(\d+)>$/.exec(v || ""); return m ? { animated: !!m[1], name: m[2], id: m[3] } : null; }
+  function ebCustomEmojiSrc(p) { return "https://cdn.discordapp.com/emojis/" + p.id + (p.animated ? ".gif" : ".png") + "?size=48"; }
+  function ebEmojiToken(ce) { return (ce.animated ? "<a:" : "<:") + ce.name + ":" + ce.id + ">"; }
+  // Render an emoji value as a node: an <img> for custom emojis, else text.
+  function ebEmojiNode(v, cls) { const p = ebParseEmoji(v); if (p) return h("img", { class: cls || "eb-cemoji", src: ebCustomEmojiSrc(p), alt: ":" + p.name + ":", title: ":" + p.name + ":", onerror: "this.replaceWith(document.createTextNode(this.alt))" }); return document.createTextNode(v || ""); }
   // An emoji-input control: a trigger button that opens the picker. get/set bind
   // the model; onChange runs after a pick (re-render). Works in canvas + form.
   function ebEmojiField(get, set, onChange) {
-    const disp = (v) => /^<a?:/.test(v || "") ? "🔣" : (v || "🙂");
-    const cur = get() || "";
-    const trigger = h("button", { type: "button", class: "eb-emoji-trigger" + (cur ? "" : " empty"), title: "Pick an emoji", "aria-label": "Pick an emoji" }, disp(cur));
+    const trigger = h("button", { type: "button", class: "eb-emoji-trigger", title: "Pick an emoji", "aria-label": "Pick an emoji" });
+    function setTrig(v) { clear(trigger); const p = ebParseEmoji(v); if (p) trigger.append(h("img", { class: "eb-emoji-trig-img", src: ebCustomEmojiSrc(p), alt: ":" + p.name + ":", onerror: "this.replaceWith(document.createTextNode('🔣'))" })); else trigger.textContent = v || "🙂"; trigger.classList.toggle("empty", !v); }
+    setTrig(get() || "");
     trigger.onclick = (ev) => {
       ev.stopPropagation();
       if (_ebEmojiPanel && _ebEmojiAnchor === trigger) { ebEmojiPickerClose(); return; }
-      ebEmojiPickerOpen(trigger, get() || "", (v) => { set(v); trigger.textContent = disp(v); trigger.classList.toggle("empty", !v); if (onChange) onChange(); });
+      ebEmojiPickerOpen(trigger, get() || "", (v) => { set(v); setTrig(v); if (onChange) onChange(); });
     };
     return h("span", { class: "eb-emoji-field" }, trigger);
   }
@@ -355,6 +373,7 @@
     channels: (gid) => api(`/api/dashboard/guilds/${gid}/discord/channels`),
     categories: (gid) => api(`/api/dashboard/guilds/${gid}/discord/categories`),
     roles: (gid) => api(`/api/dashboard/guilds/${gid}/discord/roles`),
+    emojis: (gid) => api(`/api/dashboard/guilds/${gid}/discord/emojis`),
     // Role menu CRUD
     rmList: (gid) => api(`/api/dashboard/guilds/${gid}/role-menus`),
     rmGet: (gid, id) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}`),
@@ -985,15 +1004,17 @@
     };
     let channels = [], templates = [], roles = [];
     try {
-      const [chRes, tplRes, draftRes, rolesRes] = await Promise.all([
+      const [chRes, tplRes, draftRes, rolesRes, emoRes] = await Promise.all([
         data.channels(gid).catch(() => ({ channels: [] })),
         data.embTplList(gid).catch(() => ({ templates: [] })),
         data.embDraftGet(gid).catch(() => ({ draft: null })),
         data.roles(gid).catch(() => ({ roles: [] })),
+        (data.emojis ? data.emojis(gid).catch(() => ({ emojis: [] })) : Promise.resolve({ emojis: [] })),
       ]);
       channels = chRes.channels || [];
       templates = tplRes.templates || [];
       roles = rolesRes.roles || [];
+      _ebGuildEmojis = (emoRes && emoRes.emojis) || [];
       if (draftRes && draftRes.draft && draftRes.draft.draft) {
         try { applyModel(eb, draftRes.draft.draft); toast("info", "Restored your unsaved draft"); } catch {}
       }
@@ -1442,7 +1463,7 @@
     // the active control), cvRerender = structural change (rebuild the canvas).
     function cvSync() { renderValidation(); scheduleAutosave(); }
     function cvRerender() { renderPreview(); renderValidation(); scheduleAutosave(); }
-    function ebNewButton() { return { label: "Button", style: "primary", custom_id: "", url: "", emoji: "", disabled: false }; }
+    function ebNewButton() { return { label: "Button", style: "primary", custom_id: "", url: "", emoji: "", disabled: false, action: { type: "none", ephemeral: true } }; }
     function ebNewOption(n) { return { label: "Option", value: "value_" + n, description: "", emoji: "", default: false, action: { type: "none", ephemeral: true } }; }
     function ebNewSelect() { return { type: "select", custom_id: "", placeholder: "Choose…", min_values: 1, max_values: 1, disabled: false, options: [ebNewOption(1)] }; }
 
@@ -1569,18 +1590,31 @@
       (row.buttons || []).forEach((b, bi) => {
         const key = "btn:" + ri + ":" + bi;
         const btnEl = h("div", { class: "eb-d-btn " + (b.style || "secondary") + (b.disabled ? " disabled" : "") + " eb-cv-btn" });
-        if (s2(b.emoji)) btnEl.append(h("span", { class: "eb-d-btn-emoji" }, b.emoji + " "));
+        if (s2(b.emoji)) { const es = h("span", { class: "eb-d-btn-emoji" }); es.append(ebEmojiNode(b.emoji)); btnEl.append(es); }
         btnEl.append(ebEditable("eb-d-btn-label", () => b.label, (v) => { b.label = v; }, { tag: "span", label: "Button label", ph: "Button", max: EB_LIMITS.label }));
         btnEl.append(h("button", { type: "button", class: "eb-cv-gear", title: "Button settings", onclick: (e) => { e.stopPropagation(); ebPopToggle(key); } }, "▾"));
-        const pop = ebPop(key, (p) => p.append(
-          h("div", { class: "eb-cv-pop-lbl" }, "Style"),
-          h("div", { class: "eb-cv-styles" }, ...EB_BTN_STYLES.map(([v, l]) => h("button", { type: "button", class: "eb-cv-style " + v + ((b.style || "secondary") === v ? " sel" : ""), title: l, onclick: () => { b.style = v; cvRerender(); } }))),
-          h("label", { class: "eb-cv-lbl" }, "Emoji", ebEmojiField(() => b.emoji, (v) => { b.emoji = v; }, () => cvRerender())),
-          b.style === "link"
-            ? h("label", { class: "eb-cv-lbl" }, "Link URL", h("input", { class: "eb-cv-in", type: "url", value: b.url || "", placeholder: "https://…", oninput: (ev) => { b.url = ev.target.value; cvSync(); } }))
-            : h("label", { class: "eb-cv-lbl" }, "Custom ID (auto from label)", h("input", { class: "eb-cv-in", type: "text", value: b.custom_id || "", placeholder: ebAutoId(b.label, "button"), oninput: (ev) => { b.custom_id = ev.target.value; cvSync(); } })),
-          h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: b.disabled ? true : null, onchange: (ev) => { b.disabled = ev.target.checked; cvRerender(); } }), h("span", null, "Disabled")),
-          h("button", { type: "button", class: "eb-cv-del", onclick: () => { row.buttons.splice(bi, 1); if (!row.buttons.length) eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "Delete button")));
+        const pop = ebPop(key, (p) => {
+          const kids = [
+            h("div", { class: "eb-cv-pop-lbl" }, "Style"),
+            h("div", { class: "eb-cv-styles" }, ...EB_BTN_STYLES.map(([v, l]) => h("button", { type: "button", class: "eb-cv-style " + v + ((b.style || "secondary") === v ? " sel" : ""), title: l, onclick: () => { b.style = v; cvRerender(); } }))),
+            h("label", { class: "eb-cv-lbl" }, "Emoji", ebEmojiField(() => b.emoji, (v) => { b.emoji = v; }, () => cvRerender())),
+            b.style === "link"
+              ? h("label", { class: "eb-cv-lbl" }, "Link URL", h("input", { class: "eb-cv-in", type: "url", value: b.url || "", placeholder: "https://…", oninput: (ev) => { b.url = ev.target.value; cvSync(); } }))
+              : h("label", { class: "eb-cv-lbl" }, "Custom ID (auto from label)", h("input", { class: "eb-cv-in", type: "text", value: b.custom_id || "", placeholder: ebAutoId(b.label, "button"), oninput: (ev) => { b.custom_id = ev.target.value; cvSync(); } })),
+            h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: b.disabled ? true : null, onchange: (ev) => { b.disabled = ev.target.checked; cvRerender(); } }), h("span", null, "Disabled")),
+          ];
+          // Non-link buttons can DO something on click (same engine as dropdown
+          // options). Link buttons just open their URL.
+          if (b.style !== "link") {
+            b.action = b.action || { type: "none", ephemeral: true };
+            kids.push(
+              h("div", { class: "eb-cv-pop-lbl" }, "On click → does"),
+              h("select", { class: "eb-cv-sel", onchange: (ev) => { b.action.type = ev.target.value; cvRerender(); } }, ...EB_ACTION_TYPES.map(([v, l]) => h("option", { value: v, selected: (b.action.type || "none") === v ? true : null }, l))),
+              ...ebOptActionInline(b.action));
+          }
+          kids.push(h("button", { type: "button", class: "eb-cv-del", onclick: () => { row.buttons.splice(bi, 1); if (!row.buttons.length) eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "Delete button"));
+          p.append(...kids);
+        });
         r.append(h("div", { class: "eb-cv-btn-wrap" }, btnEl, pop));
       });
       if ((row.buttons || []).length < EB_LIMITS.buttonsPerRow) r.append(h("button", { type: "button", class: "eb-add-chip sm", title: "Add button", onclick: () => { row.buttons = row.buttons || []; row.buttons.push(ebNewButton()); cvRerender(); } }, "+"));
@@ -1881,6 +1915,8 @@
   }
   function ebMarkdown(t) {
     let x = escapeHtml(t || "");
+    // Custom Discord emojis: <:name:id> / <a:name:id> → <img> (escaped to &lt;…&gt;).
+    x = x.replace(/&lt;(a)?:(\w+):(\d+)&gt;/g, (_, anim, name, id) => `<img class="eb-cemoji-text" src="https://cdn.discordapp.com/emojis/${id}.${anim ? "gif" : "png"}?size=44" alt=":${name}:" title=":${name}:" onerror="this.replaceWith(document.createTextNode(':${name}:'))">`);
     x = x.replace(/```([\s\S]*?)```/g, (_, c) => `<pre>${c}</pre>`).replace(/`([^`]+)`/g, "<code>$1</code>");
     x = x.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>").replace(/__([^_]+)__/g, "<u>$1</u>").replace(/~~([^~]+)~~/g, "<s>$1</s>");
     x = x.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
@@ -5567,6 +5603,7 @@
     data.embDraftGet = async () => ({ draft: null });
     data.embDraftSave = async () => ({ ok: true });
     data.embTplDelete = async () => ({ ok: true });
+    data.emojis = async () => ({ emojis: [{ id: "1001", name: "pog", animated: false }, { id: "1002", name: "kekw", animated: false }, { id: "1003", name: "blobdance", animated: true }, { id: "1004", name: "pepega", animated: false }] });
     const MOD_DEFS = {
       welcome: {
         module: {
