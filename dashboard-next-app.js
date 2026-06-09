@@ -985,7 +985,10 @@
     // ---- render fns ----
     function curEmbed() { return eb.embeds[eb.activeEmbed] || eb.embeds[0]; }
     function syncPreview() { renderPreview(); renderValidation(); scheduleAutosave(); }
-    function renderAll() { renderEditor(); renderPreview(); renderValidation(); }
+    // renderAll is the structural rebuild (used by the Advanced form's add/
+    // remove/reorder). Clear any open canvas popover so its index-based key
+    // can't re-open on the wrong element after indices shift.
+    function renderAll() { eb._openPop = null; renderEditor(); renderPreview(); renderValidation(); }
 
     // Tabs replace the old accordion → one compact panel at a time.
     const EB_TABS = [["message", "Message"], ["embed", "Embed"], ["author", "Author"], ["media", "Media"], ["fields", "Fields"], ["buttons", "Buttons"], ["dropdowns", "Dropdowns"], ["footer", "Footer"], ["templates", "Templates"], ["send", "Send"]];
@@ -1722,6 +1725,9 @@
         if (!s2(row.custom_id)) errs.push(`Row ${i + 1}: select needs a custom ID.`); else if (ids.has(row.custom_id)) errs.push(`Duplicate custom ID “${row.custom_id}”.`); else ids.add(row.custom_id);
         if (!(row.options || []).length) errs.push(`Row ${i + 1}: select needs an option.`);
         if ((row.options || []).length > EB_LIMITS.options) errs.push(`Row ${i + 1}: max ${EB_LIMITS.options} options.`);
+        const minV = row.min_values == null ? 1 : row.min_values, maxV = row.max_values == null ? 1 : row.max_values;
+        if (minV > maxV) errs.push(`Row ${i + 1}: min values can't exceed max values.`);
+        if (maxV > (row.options || []).length) errs.push(`Row ${i + 1}: max values can't exceed the number of options.`);
         (row.options || []).forEach((o, j) => { if (!s2(o.label) || !s2(o.value)) errs.push(`Row ${i + 1} option ${j + 1}: label and value required.`); });
       }
     });

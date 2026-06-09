@@ -865,7 +865,9 @@
 .dash-next-preview .eb-embed:hover .eb-cv-embed-tools, .dash-next-preview .eb-embed:focus-within .eb-cv-embed-tools { opacity: 1; }
 
 /* Inline control popover */
-.dash-next-preview .eb-cv-pop { display: none; margin: 8px 0 4px; padding: 11px; background: #1e1f22; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; max-width: 360px; text-align: left; }
+/* Explicit width (not just max-width) so an open popover never inflates the
+   inline-flex .eb-cv-btn-wrap and overflow-clips inside .eb-preview on mobile. */
+.dash-next-preview .eb-cv-pop { display: none; margin: 8px 0 4px; padding: 11px; background: #1e1f22; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; width: min(360px, calc(100vw - 64px)); max-width: 100%; text-align: left; }
 .dash-next-preview .eb-cv-pop.open { display: block; }
 .dash-next-preview .eb-cv-pop-lbl { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #949ba4; margin-bottom: 7px; }
 .dash-next-preview .eb-cv-lbl { display: flex; flex-direction: column; gap: 3px; font-size: 0.71rem; color: #b5bac1; margin-bottom: 9px; }
