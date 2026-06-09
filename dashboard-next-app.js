@@ -4292,13 +4292,23 @@
     return sel;
   }
 
-  // Hype as a live-preview canvas: a "Hype reward" post with live trigger chips,
-  // plus the keyword / reward / anti-abuse controls.
+  // Hype as a live-preview canvas: a segmented Name/Tag/Invite/Boost selector,
+  // each its own reward post preview + config (enable, keywords, credits,
+  // channel, cooldown, role). Keys match the bot's hype_configs columns.
   function renderHypeCanvas(content, mod, values) {
-    const mv = Object.assign({ enabled: false, rewardChannelId: "", tagKeywords: [], creditAmount: 1, creditExpiryDays: 14, rewardRoleId: "", rewardInvites: true, rewardBoosts: true, preventDuplicates: true }, values || {});
-    mv.tagKeywords = Array.isArray(mv.tagKeywords) ? mv.tagKeywords.slice() : [];
+    const mv = Object.assign({
+      brand_name: "",
+      name_enabled: false, name_keywords: [], name_credits: 0, name_channel_id: "", name_cooldown_hours: 0, name_role_id: "",
+      tag_enabled: false, tag_keywords: [], tag_credits: 0, tag_channel_id: "", tag_cooldown_hours: 0, tag_role_id: "", tag_guild_id: "",
+      invite_enabled: false, invite_credits: 0, invite_channel_id: "",
+      boost_channel_id: "",
+    }, values || {});
+    mv.name_keywords = Array.isArray(mv.name_keywords) ? mv.name_keywords.slice() : [];
+    mv.tag_keywords = Array.isArray(mv.tag_keywords) ? mv.tag_keywords.slice() : [];
     const baseline = JSON.stringify(mv);
-    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const anyOn = () => mv.name_enabled || mv.tag_enabled || mv.invite_enabled || !!mv.boost_channel_id;
+    content.append(renderModuleHero(mod, statusBadgeFor(anyOn() ? "configured" : "missing")));
 
     const statusBox = h("div");
     const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
@@ -4307,58 +4317,104 @@
     const roleById = (id) => (state.roles || []).find((r) => r.id === id);
     const username = state.user?.username || "member";
 
-    // ---- Live preview: a Hype reward post ----
+    // Each reward detector + which fields it has.
+    const DETS = {
+      name:   { emoji: "👤", label: "Name", color: "#eb459e", title: "Name reward", hasKw: true, hasCd: true, hasRole: true,
+                en: "name_enabled", kw: "name_keywords", cr: "name_credits", ch: "name_channel_id", cd: "name_cooldown_hours", role: "name_role_id",
+                msg: (kw) => ["added ", h("code", { class: "hype-kw" }, kw || "[keyword]"), " to their name"] },
+      tag:    { emoji: "🏷️", label: "Tag", color: "#5865f2", title: "Tag reward", hasKw: true, hasCd: true, hasRole: true, hasGuild: true,
+                en: "tag_enabled", kw: "tag_keywords", cr: "tag_credits", ch: "tag_channel_id", cd: "tag_cooldown_hours", role: "tag_role_id",
+                msg: () => ["repped the server tag"] },
+      invite: { emoji: "📨", label: "Invite", color: "#57f287", title: "Invite reward",
+                en: "invite_enabled", cr: "invite_credits", ch: "invite_channel_id",
+                msg: () => ["invited a new member"] },
+      boost:  { emoji: "🚀", label: "Boost", color: "#f47fff", title: "Boost reward", noCredits: true,
+                ch: "boost_channel_id",
+                msg: () => ["boosted the server"] },
+    };
+    let active = "name";
+    const detOn = (d) => d.en ? !!mv[d.en] : !!mv[d.ch];
+
+    // ---- Live preview: the reward post for the active detector ----
     const device = h("div", { class: "eb-discord hype-preview" });
     function drawPreview() {
       clear(device);
-      const kw = (mv.tagKeywords && mv.tagKeywords[0]) || "[QUICK]";
-      const amt = mv.creditAmount != null ? mv.creditAmount : 1;
-      const role = mv.rewardRoleId ? roleById(mv.rewardRoleId) : null;
-      device.append(h("div", { class: "eb-embed hype-card", style: { borderColor: "#eb459e" } },
-        h("div", { class: "eb-embed-inner" },
-          h("div", { class: "hype-head" }, h("span", { class: "hype-ico", "aria-hidden": "true" }, "✨"), h("span", null, "Hype reward")),
-          h("div", { class: "hype-msg" }, h("strong", null, "@" + username), " added ", h("code", { class: "hype-kw" }, kw), " to their name"),
-          h("div", { class: "hype-award" },
-            h("span", { class: "hype-credits" }, "+" + amt + " credit" + (amt === 1 ? "" : "s")),
-            role ? h("span", { class: "hype-role" }, "+ @" + role.name) : null),
-          h("div", { class: "hype-triggers" },
-            h("span", { class: "hype-trig on" }, "Name tag"),
-            h("span", { class: "hype-trig" + (mv.rewardInvites !== false ? " on" : " off") }, "Invites"),
-            h("span", { class: "hype-trig" + (mv.rewardBoosts !== false ? " on" : " off") }, "Boosts")),
-          h("div", { class: "eb-e-footer" }, h("span", null, "Posted to #" + (chName(mv.rewardChannelId) || "hype"))))));
+      const d = DETS[active];
+      const kw = d.kw ? (mv[d.kw] && mv[d.kw][0]) : null;
+      const cr = d.cr ? (mv[d.cr] || 0) : 0;
+      const role = d.role && mv[d.role] ? roleById(mv[d.role]) : null;
+      const kids = [
+        h("div", { class: "hype-head" }, h("span", { class: "hype-ico", "aria-hidden": "true" }, "✨"), h("span", null, d.title)),
+        h("div", { class: "hype-msg" }, h("strong", null, "@" + username), " ", ...d.msg(kw)),
+      ];
+      if (!d.noCredits) {
+        kids.push(h("div", { class: "hype-award" },
+          h("span", { class: "hype-credits" }, "+" + cr + " credit" + (cr === 1 ? "" : "s")),
+          role ? h("span", { class: "hype-role" }, "+ @" + role.name) : null));
+      } else {
+        kids.push(h("div", { class: "hype-award" }, h("span", { class: "hype-role" }, "🎉 Thank-you posted")));
+      }
+      kids.push(h("div", { class: "eb-e-footer" }, h("span", null, detOn(d) ? ("Posts to #" + (chName(mv[d.ch]) || "hype")) : "Off — turn it on below")));
+      device.append(h("div", { class: "eb-embed hype-card", style: { borderColor: d.color } }, h("div", { class: "eb-embed-inner" }, ...kids)));
     }
-    drawPreview();
 
-    // ---- Top bar: reward post channel + enabled ----
-    const rewardCh = renderChannelSelect("hype-rewch", "rewardChannelId", state.channels || [], mv.rewardChannelId);
-    rewardCh.classList.add("w-select");
-    rewardCh.addEventListener("change", () => { mv.rewardChannelId = rewardCh.value; drawPreview(); markDirty(); });
-    const topbar = h("div", { class: "w-topbar" },
-      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), rewardCh),
-      mcSwitch("Hype enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+    // ---- Segmented detector selector (green dot = enabled) ----
+    const tabs = h("div", { class: "ev-tabs" });
+    function renderTabs() {
+      clear(tabs);
+      Object.keys(DETS).forEach((k) => {
+        const d = DETS[k];
+        const b = h("button", { type: "button", class: "ev-tab" + (k === active ? " active" : "") + (detOn(d) ? " hype-tab-on" : ""), onclick: () => { active = k; renderTabs(); drawPreview(); drawDetector(); } }, d.emoji + " " + d.label);
+        if (k === active) b.style.setProperty("--ev-accent", d.color);
+        tabs.append(b);
+      });
+    }
 
-    const earnSection = mcSection("What earns hype",
-      mcField("Name / tag keywords", mcKeywords(() => mv.tagKeywords, (a) => { mv.tagKeywords = a; }, () => { markDirty(); drawPreview(); }, { placeholder: "e.g. [QUICK] — Enter to add" }), "Members who put one of these in their name get rewarded"),
-      h("div", { class: "mc-switches" },
-        mcSwitch("Reward server invites", () => mv.rewardInvites !== false, (v) => { mv.rewardInvites = v; drawPreview(); markDirty(); }),
-        mcSwitch("Reward server boosts", () => mv.rewardBoosts !== false, (v) => { mv.rewardBoosts = v; drawPreview(); markDirty(); })));
+    // ---- Per-detector config ----
+    const detectorHost = h("div");
+    function drawDetector() {
+      clear(detectorHost);
+      const d = DETS[active];
+      const rows = [];
+      if (d.en) {
+        rows.push(h("div", { class: "mc-switch-row" }, mcSwitch(d.title + " enabled", () => mv[d.en] === true, (v) => { mv[d.en] = v; renderTabs(); drawPreview(); markDirty(); })));
+      }
+      if (d.hasKw) {
+        rows.push(mcField(d.label + " keywords", mcKeywords(() => mv[d.kw], (a) => { mv[d.kw] = a; }, () => { markDirty(); drawPreview(); }, { placeholder: "Type a keyword — Enter to add" }), "Members with one of these in their name are rewarded"));
+      }
+      const grid = [];
+      if (d.cr) grid.push(mcField("Credits per reward", mcNumber(() => mv[d.cr], (v) => { mv[d.cr] = v; drawPreview(); markDirty(); }, { min: 0, max: 1000000 })));
+      if (d.ch) {
+        const sel = renderChannelSelect("hype-" + active + "-ch", d.ch, state.channels || [], mv[d.ch]);
+        sel.classList.add("mc-select");
+        sel.addEventListener("change", () => { mv[d.ch] = sel.value; renderTabs(); drawPreview(); markDirty(); });
+        grid.push(mcField("Reward channel", sel, d.noCredits ? "Set a channel to enable boost thank-yous" : null));
+      }
+      if (d.hasCd) grid.push(mcField("Cooldown (hours)", mcNumber(() => mv[d.cd], (v) => { mv[d.cd] = v; markDirty(); }, { min: 0, max: 8760 }), "0 = once per season"));
+      if (grid.length) rows.push(h("div", { class: "mc-grid" }, ...grid));
+      if (d.hasRole) rows.push(mcField("Reward role", mcRoleSelect(() => mv[d.role], (v) => { mv[d.role] = v; drawPreview(); markDirty(); }, "— no role —")));
+      if (d.hasGuild) {
+        const gi = h("input", { type: "text", class: "mc-num", value: mv.tag_guild_id || "", placeholder: "Blank = this server", maxlength: 32 });
+        gi.addEventListener("input", () => { mv.tag_guild_id = gi.value.trim(); markDirty(); });
+        rows.push(mcField("Tag server ID (advanced)", gi, "Reward members repping another server's tag"));
+      }
+      detectorHost.append(mcSection(d.title, ...rows));
+    }
 
-    const rewardSection = mcSection("Reward",
-      h("div", { class: "mc-grid" },
-        mcField("Credits per detection", mcNumber(() => mv.creditAmount, (v) => { mv.creditAmount = v; drawPreview(); markDirty(); }, { min: 0, max: 1000 })),
-        mcField("Credit expiry (days)", mcNumber(() => mv.creditExpiryDays, (v) => { mv.creditExpiryDays = v; markDirty(); }, { min: 0, max: 365 }), "0 = never expires"),
-        mcField("Bonus role", mcRoleSelect(() => mv.rewardRoleId, (v) => { mv.rewardRoleId = v; drawPreview(); markDirty(); }, "— no bonus role —"))));
+    drawPreview(); renderTabs(); drawDetector();
 
-    const abuseSection = mcSection("Anti-abuse",
-      h("div", { class: "mc-switch-row" }, mcSwitch("Only reward each member once per trigger", () => mv.preventDuplicates !== false, (v) => { mv.preventDuplicates = v; markDirty(); })));
+    // ---- Brand name (applies to every reward embed) ----
+    const brandIn = h("input", { type: "text", class: "mc-num", value: mv.brand_name || "", placeholder: "Defaults to the server name", maxlength: 64 });
+    brandIn.addEventListener("input", () => { mv.brand_name = brandIn.value; markDirty(); });
+    const brandSection = mcSection("Branding", h("div", { class: "mc-grid" }, mcField("Brand name", brandIn, "Shown in every hype reward embed")));
 
     const tip = h("div", { class: "w-tip" },
       (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
-      h("div", null, "Arkoris watches member names, invites and boosts. When it spots one of your keywords it hands out credits and posts a thank-you to the channel above."));
+      h("div", null, "Each reward works on its own — pick a tab, turn it on, and set its credits, channel and role. Members earn the moment Arkoris spots the activity."));
 
     content.append(h("div", { class: "dash-card w-canvas" },
-      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What posts when someone reps your server")),
-      device, topbar, earnSection, rewardSection, abuseSection, tip, statusBox,
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Pick a reward type to set it up")),
+      tabs, device, detectorHost, brandSection, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
@@ -6740,18 +6796,27 @@
         module: {
           name: "hype", label: "Hype", tier: "premium", description: "Reward name/tag/invite/boost activity with credits.",
           fields: [
-            { key: "enabled", type: "boolean", label: "Enabled" },
-            { key: "rewardChannelId", type: "channel", label: "Reward post channel" },
-            { key: "tagKeywords", type: "keywords", label: "Name/tag keywords" },
-            { key: "creditAmount", type: "integer", label: "Credit per detection" },
-            { key: "creditExpiryDays", type: "integer", label: "Credit expiry (days)" },
-            { key: "rewardRoleId", type: "role", label: "Reward role" },
-            { key: "rewardInvites", type: "boolean", label: "Reward invites" },
-            { key: "rewardBoosts", type: "boolean", label: "Reward boosts" },
-            { key: "preventDuplicates", type: "boolean", label: "Prevent duplicate awards" },
+            { key: "brand_name", type: "text", label: "Brand name" },
+            { key: "name_enabled", type: "boolean", label: "Name reward enabled" },
+            { key: "name_keywords", type: "keywords", label: "Name keywords" },
+            { key: "name_credits", type: "integer", label: "Name reward credits" },
+            { key: "name_channel_id", type: "channel", label: "Name reward channel" },
+            { key: "name_cooldown_hours", type: "integer", label: "Name cooldown (hours)" },
+            { key: "name_role_id", type: "role", label: "Name reward role" },
+            { key: "tag_enabled", type: "boolean", label: "Tag reward enabled" },
+            { key: "tag_keywords", type: "keywords", label: "Tag keywords" },
+            { key: "tag_credits", type: "integer", label: "Tag reward credits" },
+            { key: "tag_channel_id", type: "channel", label: "Tag reward channel" },
+            { key: "tag_cooldown_hours", type: "integer", label: "Tag cooldown (hours)" },
+            { key: "tag_role_id", type: "role", label: "Tag reward role" },
+            { key: "tag_guild_id", type: "text", label: "Tag server ID" },
+            { key: "invite_enabled", type: "boolean", label: "Invite reward enabled" },
+            { key: "invite_credits", type: "integer", label: "Invite reward credits" },
+            { key: "invite_channel_id", type: "channel", label: "Invite reward channel" },
+            { key: "boost_channel_id", type: "channel", label: "Boost reward channel" },
           ],
         },
-        values: { enabled: true, rewardChannelId: "3", tagKeywords: ["[QUICK]", "QA"], creditAmount: 5, creditExpiryDays: 14, rewardRoleId: "22", rewardInvites: true, rewardBoosts: true, preventDuplicates: true },
+        values: { brand_name: "Velated PVP", name_enabled: true, name_keywords: ["velated", "vel"], name_credits: 25, name_channel_id: "3", name_cooldown_hours: 168, name_role_id: "22", tag_enabled: true, tag_keywords: [], tag_credits: 50, tag_channel_id: "3", tag_cooldown_hours: 0, tag_role_id: "20", tag_guild_id: "", invite_enabled: true, invite_credits: 10, invite_channel_id: "1", boost_channel_id: "1" },
       },
       events: {
         module: {
