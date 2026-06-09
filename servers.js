@@ -13,18 +13,23 @@
   }
 
   function card(s) {
-    var safeInvite = /^https:\/\/(discord\.gg|discord(?:app)?\.com\/invite)\//i.test(s.invite || "") ? s.invite : "#";
+    var validInvite = /^https:\/\/(discord\.gg|discord(?:app)?\.com\/invite)\//i.test(s.invite || "");
     var avatar = s.icon
       ? '<img class="srv-icon" src="' + esc(s.icon) + '" alt="" width="56" height="56" loading="lazy">'
       : '<div class="srv-icon srv-fallback">' + esc((s.name || "?").slice(0, 1).toUpperCase()) + "</div>";
     var members = s.members ? '<span class="srv-meta">👥 ' + Number(s.members).toLocaleString() + " members</span>" : "";
     var blurb = s.blurb ? '<p class="srv-blurb">' + esc(s.blurb) + "</p>" : "";
+    // Only servers with a real invite get a Join button; the rest show as
+    // private so we never publish a dead link.
+    var join = validInvite
+      ? '<a class="btn btn-primary srv-join" href="' + esc(s.invite) + '" target="_blank" rel="noopener noreferrer">Join Server</a>'
+      : '<span class="srv-join srv-private">🔒 Private — invite only</span>';
     return (
       '<div class="feature-card srv-card">' +
       '<div class="srv-head">' + avatar +
       '<div class="srv-id"><h3 class="srv-name">' + esc(s.name) + "</h3>" + members + "</div></div>" +
       blurb +
-      '<a class="btn btn-primary srv-join" href="' + esc(safeInvite) + '" target="_blank" rel="noopener noreferrer">Join Server</a>' +
+      join +
       "</div>"
     );
   }
@@ -37,7 +42,7 @@
     .then(function (d) {
       var servers = (d && d.servers) || [];
       if (!servers.length) {
-        if (statusEl) statusEl.textContent = "No servers listed yet — be the first! Run /listserver in your server.";
+        if (statusEl) statusEl.textContent = "Directory's warming up — check back in a moment.";
         return;
       }
       if (statusEl) statusEl.textContent = servers.length + " server" + (servers.length === 1 ? "" : "s") + " running Arkoris";

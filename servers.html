@@ -30,6 +30,7 @@
       .srv-join { margin-top: auto; text-align: center; }
       .servers-cta { margin-top: 40px; text-align: center; }
       .servers-cta code { font-family: var(--font-mono); background: rgba(43, 255, 158, 0.1); border: 1px solid rgba(43, 255, 158, 0.2); padding: 2px 8px; border-radius: 7px; color: var(--accent-soft); }
+      .srv-private { margin-top: auto; text-align: center; font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.03em; color: var(--text-muted); padding: 10px; border: 1px dashed rgba(255, 255, 255, 0.12); border-radius: 10px; }
     </style>
   </head>
   <body>
@@ -65,14 +66,14 @@
       <div class="servers-head" data-animate>
         <span class="eyebrow">Directory</span>
         <h1>Servers running Arkoris</h1>
-        <p>Real Discord communities powered by Arkoris. Jump into one — or list your own with <code>/listserver</code>.</p>
+        <p>Every Discord community powered by Arkoris, all in one place. Jump into any of them — server owners can set a custom invite &amp; tagline with <code>/listserver</code>.</p>
         <p id="servers-status">Loading servers…</p>
       </div>
 
       <div id="servers-grid" aria-live="polite"></div>
 
       <div class="servers-cta">
-        <p>Run Arkoris on your server? Make yourself discoverable — run <code>/listserver invite:https://discord.gg/yourcode</code> (server owner only).</p>
+        <p>Running Arkoris? Your server's listed automatically. To set a custom invite + tagline, run <code>/listserver invite:https://discord.gg/yourcode</code> (server owner only).</p>
         <a class="btn btn-primary btn-lg" data-link="inviteBot" href="#">➕ Add Arkoris to your server</a>
       </div>
     </main>
@@ -98,7 +99,7 @@
 
     <script src="config.js?v=48"></script>
     <script src="script.js?v=56"></script>
-    <script src="servers.js?v=48"></script>
+    <script src="servers.js?v=49"></script>
     <script>document.getElementById("yr").textContent = new Date().getFullYear();</script>
   </body>
 </html>
