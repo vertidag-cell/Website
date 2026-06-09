@@ -926,6 +926,10 @@
     // ---- elements we re-render into ----
     let editorEl, previewEl, validEl;
     let saveTimer = null;
+    let formSyncTimer = null;
+    // Re-render the side form on the next tick (after a pending click lands), so
+    // it never shows a value stale relative to a just-made inline preview edit.
+    function scheduleFormSync() { clearTimeout(formSyncTimer); formSyncTimer = setTimeout(() => renderEditor(), 0); }
     function scheduleAutosave() {
       const status = document.getElementById("dash-save-status");
       if (status) { status.textContent = "Saving…"; status.classList.add("saving"); }
@@ -961,7 +965,7 @@
     previewCol.append(
       h("div", { class: "eb-preview-head" },
         h("span", { class: "eb-preview-label" }, "Live preview"),
-        h("span", { class: "eb-preview-hint" }, "Updates as you type")
+        h("span", { class: "eb-preview-hint" }, "Click any text to edit it here")
       ),
       previewEl
     );
@@ -1288,38 +1292,136 @@
     }
 
     // ---- live preview ----
+    // ---- inline-editable preview ("edit the preview itself") ----
+    // plaintext-only contenteditable where supported (Chromium / Edge / Safari);
+    // falls back to a normal contenteditable + paste-as-text elsewhere.
+    const ebPlaintextOK = (() => { try { const d = document.createElement("div"); d.contentEditable = "plaintext-only"; return d.contentEditable === "plaintext-only"; } catch { return false; } })();
+    function ebReadText(el) { return (el.innerText || "").replace(/\n$/, ""); }
+    function ebCaretEnd(el) { try { const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } catch (_) {} }
+    // A contenteditable region bound to a model getter/setter. Edits update the
+    // model live WITHOUT re-rendering the preview (so the caret survives);
+    // markdown fields edit raw source while focused and re-render on blur.
+    function ebEditable(cls, get, set, opts) {
+      opts = opts || {};
+      const el = h(opts.tag || "div", { class: "eb-editable " + cls });
+      el.contentEditable = ebPlaintextOK ? "plaintext-only" : "true";
+      el.spellcheck = false;
+      // Labelled for assistive tech (a contenteditable is otherwise an unnamed
+      // edit field); placeholder stays as the visual hint.
+      el.setAttribute("role", "textbox");
+      el.setAttribute("aria-label", opts.label || opts.ph || "Edit");
+      if (opts.multiline) el.setAttribute("aria-multiline", "true");
+      if (opts.ph) el.setAttribute("data-ph", opts.ph);
+      const v0 = get() || "";
+      if (opts.markdown && s2(v0)) el.innerHTML = ebMarkdown(v0); else el.textContent = v0;
+      el.addEventListener("focus", () => {
+        // Swap rendered markdown -> raw source for editing, but only when there's
+        // actually markup to unwrap (plain text keeps the click caret position).
+        if (opts.markdown) { const raw = get() || ""; if (el.textContent !== raw) { el.textContent = raw; ebCaretEnd(el); } }
+      });
+      el.addEventListener("beforeinput", (ev) => {
+        if (opts.max && ebReadText(el).length >= opts.max && /^insert/.test(ev.inputType || "")) ev.preventDefault();
+      });
+      el.addEventListener("input", () => {
+        const v = ebReadText(el);
+        if (!v && el.innerHTML !== "") el.innerHTML = ""; // keep the :empty placeholder working
+        set(v); renderValidation(); scheduleAutosave();
+      });
+      el.addEventListener("blur", (ev) => {
+        let v = ebReadText(el);
+        if (!v.trim()) v = ""; // whitespace-only reads as empty (so the placeholder returns)
+        set(v);
+        if (opts.markdown) el.innerHTML = s2(v) ? ebMarkdown(v) : ""; else el.textContent = v;
+        renderValidation();
+        // Re-sync the side form so it never shows a stale value. If focus is
+        // moving INTO the form, defer so the click lands before the rebuild.
+        const to = ev.relatedTarget;
+        if (to && editorEl.contains(to)) scheduleFormSync(); else renderEditor();
+      });
+      el.addEventListener("paste", (ev) => {
+        ev.preventDefault();
+        let t = ((ev.clipboardData || window.clipboardData).getData("text") || "");
+        if (opts.max) { const room = opts.max - ebReadText(el).length; if (room <= 0) return; if (t.length > room) t = t.slice(0, room); }
+        try { document.execCommand("insertText", false, t); } catch (_) { el.textContent += t; }
+      });
+      if (!opts.multiline) el.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); el.blur(); } });
+      return el;
+    }
+
     function renderPreview() {
       clear(previewEl);
-      const device = h("div", { class: "eb-discord" });
-      // message content
-      if (s2(eb.content)) device.append(h("div", { class: "eb-msg-content", html: ebMarkdown(eb.content) }));
-      const anyEmbed = eb.embeds.some((e) => !ebEmbedEmpty(e));
-      eb.embeds.forEach((e) => { if (!ebEmbedEmpty(e)) device.append(ebPreviewEmbed(e)); });
+      const device = h("div", { class: "eb-discord eb-editing" });
+      // Message content above the embed — always editable.
+      device.append(ebEditable("eb-msg-content", () => eb.content, (v) => { eb.content = v; }, { label: "Message text above the embed", ph: "Message text above the embed (optional)", markdown: true, multiline: true, max: EB_LIMITS.content }));
+      // The active embed always renders (so an empty one can be built inline);
+      // any other embeds render only once they have content.
+      eb.embeds.forEach((e, i) => { if (!ebEmbedEmpty(e) || i === eb.activeEmbed) device.append(ebPreviewEmbed(e, true)); });
       eb.components.forEach((row) => device.append(ebPreviewComponentRow(row)));
-      if (!s2(eb.content) && !anyEmbed && !eb.components.length) device.append(h("div", { class: "eb-empty-preview" }, h("div", { class: "eb-empty-ico" }, "🪶"), h("div", null, "Your message preview will appear here"), h("div", { class: "eb-empty-sub" }, "Start typing on the left.")));
       previewEl.append(device);
     }
-    function ebPreviewEmbed(e) {
+    function ebPreviewEmbed(e, editable) {
       const col = /^#[0-9a-f]{6}$/i.test(e.color || "") ? e.color : "#e23b2e";
       const box = h("div", { class: "eb-embed", style: { borderColor: col } });
       const inner = h("div", { class: "eb-embed-inner" });
-      if (s2(e.author && e.author.name)) inner.append(h("div", { class: "eb-e-author" }, s2(e.author.icon_url) ? h("img", { class: "eb-e-author-ico", src: e.author.icon_url, onerror: "this.style.display='none'" }) : null, h("span", null, e.author.name)));
-      if (s2(e.title)) inner.append(e.url ? h("a", { class: "eb-e-title link", href: e.url, target: "_blank", rel: "noopener" }, e.title) : h("div", { class: "eb-e-title" }, e.title));
-      if (s2(e.description)) inner.append(h("div", { class: "eb-e-desc", html: ebMarkdown(e.description) }));
-      const inlineFields = (e.fields || []).filter((f) => s2(f.name) || s2(f.value));
-      if (inlineFields.length) {
+
+      // Author
+      if (editable) {
+        const a = h("div", { class: "eb-e-author" });
+        if (s2(e.author && e.author.icon_url)) a.append(h("img", { class: "eb-e-author-ico", src: e.author.icon_url, onerror: "this.style.display='none'" }));
+        a.append(ebEditable("eb-e-author-name", () => e.author && e.author.name, (v) => { (e.author = e.author || {}).name = v; }, { tag: "span", label: "Author name", ph: "Author name", max: EB_LIMITS.authorName }));
+        inner.append(a);
+      } else if (s2(e.author && e.author.name)) {
+        inner.append(h("div", { class: "eb-e-author" }, s2(e.author.icon_url) ? h("img", { class: "eb-e-author-ico", src: e.author.icon_url, onerror: "this.style.display='none'" }) : null, h("span", null, e.author.name)));
+      }
+
+      // Title
+      if (editable) {
+        inner.append(ebEditable("eb-e-title", () => e.title, (v) => { e.title = v; }, { label: "Embed title", ph: "Title", max: EB_LIMITS.title }));
+      } else if (s2(e.title)) {
+        inner.append(e.url ? h("a", { class: "eb-e-title link", href: e.url, target: "_blank", rel: "noopener" }, e.title) : h("div", { class: "eb-e-title" }, e.title));
+      }
+
+      // Description
+      if (editable) {
+        inner.append(ebEditable("eb-e-desc", () => e.description, (v) => { e.description = v; }, { label: "Embed description", ph: "Description (markdown supported)", markdown: true, multiline: true, max: EB_LIMITS.description }));
+      } else if (s2(e.description)) {
+        inner.append(h("div", { class: "eb-e-desc", html: ebMarkdown(e.description) }));
+      }
+
+      // Fields
+      const showFields = editable ? (e.fields || []) : (e.fields || []).filter((f) => s2(f.name) || s2(f.value));
+      if (showFields.length) {
         const fg = h("div", { class: "eb-e-fields" });
-        inlineFields.forEach((f) => fg.append(h("div", { class: `eb-e-field ${f.inline ? "inline" : ""}` }, h("div", { class: "eb-e-field-name", html: ebMarkdown(f.name) }), h("div", { class: "eb-e-field-val", html: ebMarkdown(f.value) }))));
+        showFields.forEach((f) => {
+          if (editable) {
+            fg.append(h("div", { class: `eb-e-field ${f.inline ? "inline" : ""}` },
+              ebEditable("eb-e-field-name", () => f.name, (v) => { f.name = v; }, { label: "Field name", ph: "Field name", markdown: true, max: EB_LIMITS.fieldName }),
+              ebEditable("eb-e-field-val", () => f.value, (v) => { f.value = v; }, { label: "Field value", ph: "Field value", markdown: true, multiline: true, max: EB_LIMITS.fieldValue })));
+          } else {
+            fg.append(h("div", { class: `eb-e-field ${f.inline ? "inline" : ""}` }, h("div", { class: "eb-e-field-name", html: ebMarkdown(f.name) }), h("div", { class: "eb-e-field-val", html: ebMarkdown(f.value) })));
+          }
+        });
         inner.append(fg);
       }
+
       if (s2(e.image && e.image.url)) inner.append(h("img", { class: "eb-e-image", src: e.image.url, onerror: "this.style.display='none'" }));
-      if (s2(e.footer && e.footer.text) || e.timestamp) {
-        const ts = e.timestamp ? new Date(e.timestamp) : null;
+
+      // Footer (+ timestamp)
+      const ts = e.timestamp ? new Date(e.timestamp) : null;
+      const tsStr = ts && !isNaN(ts) ? ts.toLocaleString() : "";
+      if (editable) {
+        const f = h("div", { class: "eb-e-footer" });
+        if (s2(e.footer && e.footer.icon_url)) f.append(h("img", { class: "eb-e-footer-ico", src: e.footer.icon_url, onerror: "this.style.display='none'" }));
+        f.append(ebEditable("eb-e-footer-text", () => e.footer && e.footer.text, (v) => { (e.footer = e.footer || {}).text = v; }, { tag: "span", label: "Footer text", ph: "Footer text", max: EB_LIMITS.footer }));
+        if (tsStr) f.append(h("span", { class: "eb-e-foot-ts" }, " • " + tsStr));
+        inner.append(f);
+      } else if (s2(e.footer && e.footer.text) || e.timestamp) {
         inner.append(h("div", { class: "eb-e-footer" },
           s2(e.footer && e.footer.icon_url) ? h("img", { class: "eb-e-footer-ico", src: e.footer.icon_url, onerror: "this.style.display='none'" }) : null,
           h("span", null, [s2(e.footer && e.footer.text) ? e.footer.text : null, ts && !isNaN(ts) ? (s2(e.footer && e.footer.text) ? " • " : "") + ts.toLocaleString() : null].filter(Boolean).join(""))
         ));
       }
+
       box.append(inner);
       if (s2(e.thumbnail && e.thumbnail.url)) { box.classList.add("has-thumb"); inner.append(h("img", { class: "eb-e-thumb", src: e.thumbnail.url, onerror: "this.style.display='none'" })); }
       return box;
@@ -5193,6 +5295,11 @@
     ] });
     data.categories = async () => ({ categories: [{ id: "10", name: "INFORMATION" }, { id: "11", name: "COMMUNITY" }] });
     data.roles = async () => ({ roles: [{ id: "20", name: "Member" }, { id: "21", name: "Admin" }, { id: "22", name: "Staff" }] });
+    // Embed Builder stubs (for ?mock=embed) — no backend in mock.
+    data.embTplList = async () => ({ templates: [] });
+    data.embDraftGet = async () => ({ draft: null });
+    data.embDraftSave = async () => ({ ok: true });
+    data.embTplDelete = async () => ({ ok: true });
     const MOD_DEFS = {
       welcome: {
         module: {
@@ -5226,7 +5333,7 @@
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
