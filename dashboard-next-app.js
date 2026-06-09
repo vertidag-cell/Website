@@ -119,6 +119,7 @@
     logout:    'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
     refresh:   'M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5',
     plug:      'M9 2v6M15 2v6M5 8h14v4a7 7 0 0 1-14 0zM12 19v3',
+    search:    'M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15z',
   };
   function iconSvg(name) {
     const d = ICON_PATHS[name] || ICON_PATHS.list;
@@ -399,267 +400,190 @@
   // Server-picker local UI state (search query + filter pill)
   const pickerState = { query: "", filter: "all" };
 
+  // Discord-native server picker. A calm "select a server" surface modeled on
+  // Discord's own UI: neutral grays, one blurple accent, a vertical list of
+  // server rows (health at a glance) instead of a card wall + aside + feature
+  // wall. New `.dsx-*` classes (styled in dashboard-next.css) so styles.css
+  // can't fight them.
   function renderGuildPicker() {
     clear(root);
+    const wrap = h("div", { class: "dsx-picker" });
+    wrap.append(renderPickerHead());
 
-    const totalCount   = state.guilds.length;
-    const premiumCount = state.guilds.filter((g) => g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime").length;
-    const ownerCount   = state.guilds.filter((g) => g.owner).length;
-
-    // ── Welcome header ─────────────────────────────────────────────
-    root.append(renderPickerHeader(totalCount));
-
-    // No manageable servers — premium empty state inside the layout
-    if (!totalCount) {
-      const card = h("div", { class: "picker-empty" },
-        (() => { const i = h("div", { class: "picker-empty-ico" }); i.appendChild(iconSvg("shield")); return i; })(),
-        h("h3", null, "No manageable servers found"),
-        h("p", null,
-          "You need to be a server owner, administrator, or have Manage Server permission AND have Arkoris installed in that server."),
-        h("div", { class: "dash-actions", style: { justifyContent: "center" } },
-          btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
-          btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true }),
-          btn("Refresh", { kind: "btn-outline", onclick: () => boot(true) })
-        )
-      );
-      root.append(card);
-      // Still show getting-started + features below
-      root.append(renderPickerFeaturePreview(), renderPickerSetupGuide());
+    if (!state.guilds.length) {
+      wrap.append(renderPickerEmpty());
+      root.append(wrap);
       return;
     }
 
-    // ── Main 2-column layout ───────────────────────────────────────
-    const grid = h("div", { class: "picker-grid" });
-
-    // ─ Left: search/filter + server cards
-    const left = h("div", { class: "picker-main" });
-    left.append(renderPickerSearchBar());
-    const listHost = h("div", { class: "picker-servers" });
-    left.append(listHost);
-    rerenderServerList(listHost);
-
-    // ─ Right: account + quick actions + premium info
-    const aside = h("aside", { class: "picker-aside" },
-      renderPickerAccountCard(totalCount, premiumCount, ownerCount),
-      renderPickerQuickActions(),
-      renderPickerPremiumCard()
-    );
-
-    grid.append(left, aside);
-    root.append(grid);
-
-    // ── Below the fold: feature preview + setup guide ─────────────
-    root.append(renderPickerFeaturePreview(), renderPickerSetupGuide());
+    wrap.append(renderPickerControls());
+    const list = h("div", { class: "dsx-server-list" });
+    wrap.append(list);
+    paintServerList(list);
+    wrap.append(renderPickerFooter());
+    root.append(wrap);
   }
 
-  function renderPickerHeader(totalCount) {
+  // Discord-styled avatar + server icon (own classes so styles.css can't reach them).
+  function dscAvatar(u, size) {
+    u = u || {};
+    const el = h("div", { class: "dsx-avatar", style: { width: (size || 40) + "px", height: (size || 40) + "px" } });
+    if (u.avatar) el.append(h("img", { src: `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128`, alt: "" }));
+    else el.append(h("span", null, (u.globalName || u.username || "U").charAt(0).toUpperCase()));
+    return el;
+  }
+  function dscGuildIcon(g, size) {
+    const el = h("div", { class: "dsx-gicon", style: { width: (size || 48) + "px", height: (size || 48) + "px" } });
+    if (g.icon) el.append(h("img", { src: `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=128`, alt: "" }));
+    else {
+      const initials = (g.name || "?").split(/\s+/).map((s) => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+      el.append(h("span", null, initials || "?"));
+    }
+    return el;
+  }
+
+  // Head: title + subline on the left, account chip + log out on the right.
+  function renderPickerHead() {
     const u = state.user || {};
     const name = u.globalName || u.username || "there";
-    return h("div", { class: "picker-header" },
-      h("div", { class: "picker-header-row" },
-        userAvatar(u),
-        h("div", { class: "picker-header-who" },
-          h("h1", { class: "picker-header-title" }, `Welcome back, ${name}`),
-          h("p", { class: "picker-header-sub" },
-            "Select a Discord server to manage setup, branding, role menus, /pop, staff pay, and every Arkoris feature.")
-        )
+    const logout = h("button", { type: "button", class: "dsx-icon-btn", title: "Log out", "aria-label": "Log out", onclick: handleLogout });
+    logout.append(iconSvg("logout"));
+    return h("header", { class: "dsx-pk-head" },
+      h("div", { class: "dsx-pk-headline" },
+        h("h1", { class: "dsx-pk-title" }, "Your servers"),
+        h("p", { class: "dsx-pk-sub" }, `Welcome back, ${name}. Pick a server to manage Arkoris.`)
       ),
-      h("div", { class: "picker-header-badges" },
-        h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Logged in with Discord"),
-        h("span", { class: "dash-status-pill" }, `${totalCount} manageable server${totalCount === 1 ? "" : "s"}`),
-        h("span", { class: "dash-status-pill premium" }, h("span", { class: "pill-dot" }), "Arkoris Dashboard")
-      ),
-      h("div", { class: "picker-header-actions" },
-        btn("Invite Bot",      { kind: "btn-primary", href: cfg.links?.inviteBot,      external: true }),
-        btn("Join Support",    { kind: "btn-ghost",   href: cfg.links?.supportDiscord, external: true }),
-        btn("View Pricing",    { kind: "btn-outline", href: "pricing.html" }),
-        btn("Log out",         { kind: "btn-ghost",   onclick: handleLogout })
+      h("div", { class: "dsx-account" },
+        h("div", { class: "dsx-account-id" },
+          dscAvatar(u, 30),
+          h("span", { class: "dsx-account-name" }, u.globalName || u.username || "—")
+        ),
+        logout
       )
     );
   }
 
-  function renderPickerSearchBar() {
-    const search = h("input", {
-      type: "search",
-      class: "picker-search",
-      placeholder: "Search your servers…",
-      value: pickerState.query,
-      autocomplete: "off",
-      spellcheck: "false",
-    });
-    search.addEventListener("input", () => {
-      pickerState.query = search.value;
-      rerenderServerList(root.querySelector(".picker-servers"));
-    });
+  // Search + segmented filter. Writes to the shared pickerState and repaints.
+  function renderPickerControls() {
+    const row = h("div", { class: "dsx-controls" });
 
-    const filters = [
-      { id: "all",      label: "All",       countFn: (gs) => gs.length },
-      { id: "premium",  label: "Premium",   countFn: (gs) => gs.filter((g) => g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime").length },
-      { id: "free",     label: "Free",      countFn: (gs) => gs.filter((g) => !["premium","monthly","lifetime"].includes(g.plan)).length },
-      { id: "owner",    label: "Owner",     countFn: (gs) => gs.filter((g) => g.owner).length },
-    ];
-    const pillRow = h("div", { class: "picker-filters" });
-    filters.forEach((f) => {
-      const count = f.countFn(state.guilds);
-      const pill = h("button", {
-        type: "button",
-        class: `picker-filter ${pickerState.filter === f.id ? "active" : ""}`,
+    const sico = h("span", { class: "dsx-search-ico" }); sico.append(iconSvg("search"));
+    const input = h("input", {
+      type: "search", class: "dsx-search-input", placeholder: "Search servers",
+      value: pickerState.query, autocomplete: "off", spellcheck: "false",
+      "aria-label": "Search your servers",
+    });
+    input.addEventListener("input", () => {
+      pickerState.query = input.value;
+      paintServerList(root.querySelector(".dsx-server-list"));
+    });
+    const search = h("div", { class: "dsx-search" }, sico, input);
+
+    const seg = h("div", { class: "dsx-seg", role: "tablist", "aria-label": "Filter servers" });
+    [["all", "All"], ["premium", "Premium"], ["owner", "Owner"]].forEach(([id, label]) => {
+      const active = pickerState.filter === id;
+      seg.append(h("button", {
+        type: "button", role: "tab", "aria-selected": active ? "true" : "false",
+        class: "dsx-seg-btn" + (active ? " active" : ""),
         onclick: () => {
-          pickerState.filter = f.id;
-          // Re-render filter row to reflect active state
-          const newBar = renderPickerSearchBar();
-          root.querySelector(".picker-searchbar").replaceWith(newBar);
-          rerenderServerList(root.querySelector(".picker-servers"));
+          if (pickerState.filter === id) return;
+          pickerState.filter = id;
+          row.replaceWith(renderPickerControls());
+          paintServerList(root.querySelector(".dsx-server-list"));
         },
-      },
-        f.label,
-        h("span", { class: "picker-filter-count" }, String(count))
-      );
-      pillRow.appendChild(pill);
+      }, label));
     });
 
-    const ico = h("span", { class: "picker-search-ico" });
-    ico.appendChild(iconSvg("activity"));
-    return h("div", { class: "picker-searchbar" },
-      h("div", { class: "picker-search-wrap" }, ico, search),
-      pillRow
-    );
+    row.append(search, seg);
+    return row;
   }
 
-  function filterGuilds(guilds) {
+  function pickerFilter(guilds) {
     const q = (pickerState.query || "").trim().toLowerCase();
     const f = pickerState.filter;
     return guilds.filter((g) => {
       if (q && !(g.name || "").toLowerCase().includes(q)) return false;
-      if (f === "premium" && !(g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime")) return false;
-      if (f === "free"    &&  (g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime")) return false;
-      if (f === "owner"   && !g.owner) return false;
+      const premium = g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime";
+      if (f === "premium" && !premium) return false;
+      if (f === "owner" && !g.owner) return false;
       return true;
     });
   }
 
-  function rerenderServerList(host) {
+  function paintServerList(host) {
     if (!host) return;
     clear(host);
-    const filtered = filterGuilds(state.guilds);
-    if (!filtered.length) {
-      host.append(
-        h("div", { class: "picker-empty-inline" },
-          (() => { const i = h("div", { class: "picker-empty-ico small" }); i.appendChild(iconSvg("activity")); return i; })(),
-          h("h4", null, "No matches"),
-          h("p", null,
-            pickerState.query
-              ? `No servers match "${pickerState.query}". Try a different search.`
-              : "No servers in this category.")
-        )
-      );
-      return;
+    const rows = pickerFilter(state.guilds);
+    if (!rows.length) {
+      host.append(h("div", { class: "dsx-list-empty" },
+        pickerState.query
+          ? `No servers match “${pickerState.query}”.`
+          : "No servers in this filter."));
+    } else {
+      rows.forEach((g, i) => {
+        const row = renderGuildRow(g);
+        row.style.setProperty("--i", String(i));
+        host.append(row);
+      });
     }
-    filtered.forEach((g, i) => {
-      const card = renderGuildCard(g);
-      // Staggered fade-in for premium feel
-      card.style.animationDelay = (i * 0.05) + "s";
-      host.appendChild(card);
-    });
+    host.append(renderAddServerRow());
   }
 
-  function renderGuildCard(g) {
-    const planLabel = g.plan === "lifetime" ? "Lifetime"
-                    : (g.plan === "premium" || g.plan === "monthly") ? "Premium"
-                    : "Free";
-    const planClass = g.plan === "lifetime" ? "lifetime"
-                    : (g.plan === "premium" || g.plan === "monthly") ? "premium"
-                    : "free";
+  function renderGuildRow(g) {
+    const premium = g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime";
+    const planLabel = g.plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
+    const role = g.owner ? "Owner" : "Manage Server";
 
-    const card = h("button", { class: "picker-server-card", type: "button",
-      onclick: () => selectGuild(g.id),
-      "aria-label": `Manage ${g.name}` });
-
-    card.append(
-      h("div", { class: "picker-server-top" },
-        guildIcon(g),
-        h("div", { class: "picker-server-info" },
-          h("div", { class: "picker-server-name" }, g.name),
-          h("div", { class: "picker-server-id" }, "ID · " + (g.id ? g.id.slice(-6) : "—"))
-        ),
-        h("span", { class: `dash-status-pill ${planClass}` },
-          g.plan === "lifetime" || g.plan === "premium" || g.plan === "monthly" ? h("span", { class: "pill-dot" }) : null,
-          planLabel)
-      ),
-      h("div", { class: "picker-server-badges" },
-        h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Bot Installed"),
-        g.owner ? h("span", { class: "dash-status-pill" }, "Owner")
-                : h("span", { class: "dash-status-pill" }, "Manage Server")
-      ),
-      h("div", { class: "picker-server-actions" },
-        h("span", { class: "picker-manage-btn" }, "Manage Server →")
-      )
-    );
-
-    return card;
-  }
-
-  // ── Aside cards ──────────────────────────────────────────────────
-  function renderPickerAccountCard(totalCount, premiumCount, ownerCount) {
-    return h("div", { class: "picker-aside-card" },
-      h("h4", null, "Account"),
-      h("div", { class: "picker-account-row" },
-        userAvatar(state.user),
-        h("div", null,
-          h("div", { class: "picker-account-name" }, state.user?.globalName || state.user?.username || "—"),
-          h("div", { class: "picker-account-sub" }, "@" + (state.user?.username || "—"))
+    const enter = h("span", { class: "dsx-enter", "aria-hidden": "true" }); enter.append(iconSvg("arrowRight"));
+    return h("button", {
+      type: "button", class: "dsx-server-row",
+      onclick: () => selectGuild(g.id), "aria-label": `Manage ${g.name || "server"}`,
+    },
+      dscGuildIcon(g, 48),
+      h("div", { class: "dsx-server-main" },
+        h("div", { class: "dsx-server-name" }, g.name || "Unknown server"),
+        h("div", { class: "dsx-server-meta" },
+          h("span", { class: "dsx-status" }, h("span", { class: "dsx-dot online" }), "Installed"),
+          h("span", { class: "dsx-sep", "aria-hidden": "true" }, "·"),
+          h("span", null, role)
         )
       ),
-      h("div", { class: "picker-mini-stats" },
-        renderMiniStat(String(totalCount),   "Servers"),
-        renderMiniStat(String(premiumCount), "Premium"),
-        renderMiniStat(String(ownerCount),   "Owner")
-      )
-    );
-  }
-  function renderMiniStat(value, label) {
-    return h("div", { class: "picker-mini-stat" },
-      h("div", { class: "picker-mini-stat-v" }, value),
-      h("div", { class: "picker-mini-stat-l" }, label)
+      h("span", { class: "dsx-plan" + (premium ? " premium" : "") }, planLabel),
+      enter
     );
   }
 
-  function renderPickerQuickActions() {
-    return h("div", { class: "picker-aside-card" },
-      h("h4", null, "Quick Actions"),
-      h("div", { class: "picker-quick-list" },
-        renderQuickRow("plug",    "Invite Bot",     cfg.links?.inviteBot,      true),
-        renderQuickRow("lifeRing","Support Server", cfg.links?.supportDiscord, true),
-        renderQuickRow("calendar","View Pricing",   "pricing.html",            false),
-        renderQuickRow("fileText","Dashboard Help", "faq.html",                false)
-      )
-    );
-  }
-  function renderQuickRow(iconName, label, href, external) {
+  function renderAddServerRow() {
+    const enter = h("span", { class: "dsx-enter", "aria-hidden": "true" }); enter.append(iconSvg("arrowRight"));
     return h("a", {
-      class: "picker-quick-row",
-      href: href || "#",
-      target: external ? "_blank" : null,
-      rel:    external ? "noopener noreferrer" : null,
+      class: "dsx-add-row", href: cfg.links?.inviteBot || "#",
+      target: "_blank", rel: "noopener noreferrer",
     },
-      icon(iconName, "picker-quick-ico"),
-      h("span", { class: "picker-quick-label" }, label),
-      h("span", { class: "picker-quick-arrow" }, "→")
+      h("span", { class: "dsx-add-plus", "aria-hidden": "true" }, "+"),
+      h("span", { class: "dsx-add-label" }, "Add Arkoris to another server"),
+      enter
     );
   }
 
-  function renderPickerPremiumCard() {
-    return h("div", { class: "picker-aside-card picker-premium" },
-      h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" } },
-        icon("sparkle", "picker-quick-ico"),
-        h("h4", { style: { margin: 0, color: "var(--dash-red-2)" } }, "Activate Premium")
-      ),
-      h("p", { style: { fontSize: "0.84rem", color: "var(--dash-muted)", margin: "0 0 12px" } },
-        "Premium is activated inside Discord. Invite the bot, pick a server, then run ",
-        h("code", null, "/subscribe"), " — checkout opens automatically."),
-      h("div", { class: "dash-actions", style: { marginTop: 0 } },
-        btn("Invite Bot",   { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
-        btn("Pricing",      { kind: "btn-ghost",   href: "pricing.html" })
+  function renderPickerFooter() {
+    return h("div", { class: "dsx-pk-footer" },
+      h("a", { href: cfg.links?.supportDiscord || "#", target: "_blank", rel: "noopener noreferrer" }, "Support"),
+      h("span", { class: "dsx-dotsep", "aria-hidden": "true" }, "·"),
+      h("a", { href: "pricing.html" }, "Pricing"),
+      h("span", { class: "dsx-dotsep", "aria-hidden": "true" }, "·"),
+      h("a", { href: "faq.html" }, "Help")
+    );
+  }
+
+  function renderPickerEmpty() {
+    const ico = h("div", { class: "dsx-empty-ico" }); ico.append(iconSvg("plug"));
+    return h("div", { class: "dsx-empty" },
+      ico,
+      h("h2", null, "No servers to manage yet"),
+      h("p", null, "Add Arkoris to a Discord server you own or help manage, then it'll show up here."),
+      h("div", { class: "dsx-empty-actions" },
+        btn("Add Arkoris to a server", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
+        btn("Join support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
       )
     );
   }
@@ -4944,8 +4868,27 @@
     }
   }
 
+  // Preview-only mock mode: append ?mock=1 to the URL to render the picker with
+  // sample servers and skip the backend. Lets us iterate on dashboard UI states
+  // locally (npm run dev) without a live session. Harmless in production: the
+  // page is password-gated, and this only shows fake data when explicitly asked.
+  function maybeRenderMock() {
+    if (!/[?&]mock=1(&|$)/.test(location.search)) return false;
+    state.user = { id: "0", username: "previewuser", globalName: "Preview User", avatar: null };
+    state.guilds = [
+      { id: "100000000000000001", name: "Velated PVP",          icon: null, owner: true,  plan: "premium" },
+      { id: "100000000000000002", name: "Ark Legends Cluster",  icon: null, owner: false, plan: "free" },
+      { id: "100000000000000003", name: "The Island Survivors", icon: null, owner: true,  plan: "lifetime" },
+      { id: "100000000000000004", name: "Ragnarok Raiders",     icon: null, owner: false, plan: "free" },
+      { id: "100000000000000005", name: "Genesis Tribe",        icon: null, owner: true,  plan: "monthly" },
+    ];
+    render();
+    return true;
+  }
+
   async function boot() {
     clear(root);
+    if (maybeRenderMock()) return;
     // Premium skeleton while we fetch identity + guild list.
     root.append(renderPickerBootSkeleton());
     await consumeAuthHandoff();

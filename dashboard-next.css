@@ -55,9 +55,287 @@
 }
 
 /* ============================================================================
-   REDESIGN WORK STARTS BELOW — add scoped overrides here, e.g.:
-
-   .dash-next-preview .dash-sidebar { ... }
-   .dash-next-preview .dash-layout  { ... }
-
+   DISCORD-NATIVE DESIGN SYSTEM  (dashboard redesign)
+   ---------------------------------------------------------------------------
+   Tokens + components for the reworked dashboard, modeled on Discord's own
+   surface so the tool feels native to the platform it manages. Mostly neutral:
+   neutral grays carry the UI, blurple is the single accent (primary action +
+   current selection), semantic green = online / installed. Everything is scoped
+   under .dash-next-preview so it only affects the private preview.
    ============================================================================ */
+.dash-next-preview {
+  --dsc-bg-deep: #1e1f22;
+  --dsc-bg: #2b2d31;
+  --dsc-bg-raise: #313338;
+  --dsc-bg-hover: #383a40;
+  --dsc-bg-active: #404249;
+  --dsc-text: #f2f3f5;
+  --dsc-text-body: #dbdee1;
+  --dsc-text-muted: #b5bac1;
+  --dsc-text-faint: #949ba4;
+  --dsc-blurple: #5865f2;
+  --dsc-blurple-hover: #4752c4;
+  --dsc-green: #23a55a;
+  --dsc-amber: #f0b232;
+  --dsc-amber-text: #f5c563;
+  --dsc-red: #da373c;
+  --dsc-radius: 8px;
+  --dsc-radius-sm: 6px;
+  --dsc-radius-icon: 16px;
+
+  background-color: var(--dsc-bg-deep);
+}
+
+/* Drop the marketing background FX + redundant hero so the dashboard reads as a
+   clean Discord-neutral surface. The PRIVATE PREVIEW badge is a real element
+   (.dash-preview-badge), so hiding these body pseudo-layers never touches it. */
+.dash-next-preview::before,
+.dash-next-preview::after { display: none !important; }
+.dash-next-preview .dash-shell { background: transparent; }
+.dash-next-preview .page-hero { display: none; }
+
+/* Tame the marketing navbar so the neon-green CTA + green accent line don't
+   break the Discord-neutral surface. Scoped to the preview; live site untouched.
+   The small green brand logo stays as the one deliberate brand pop. */
+.dash-next-preview .navbar {
+  background: rgba(30, 31, 34, 0.82);
+  border-bottom-color: rgba(0, 0, 0, 0.32);
+}
+.dash-next-preview .navbar .btn-primary {
+  background: var(--dsc-blurple); background-image: none; border-color: transparent;
+  color: #fff; box-shadow: none;
+}
+.dash-next-preview .navbar .btn-primary:hover { background: var(--dsc-blurple-hover); }
+
+/* ---- Picker shell ---- */
+.dsx-picker {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 8px 0 48px;
+  color: var(--dsc-text-body);
+}
+
+/* ---- Head: title + account ---- */
+.dsx-pk-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 24px;
+}
+.dsx-pk-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--dsc-text);
+}
+.dsx-pk-sub {
+  margin: 6px 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--dsc-text-muted);
+  max-width: 56ch;
+}
+.dsx-account { display: flex; align-items: center; gap: 8px; flex: none; }
+.dsx-account-id {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--dsc-bg-raise);
+  border-radius: 999px;
+  padding: 4px 14px 4px 4px;
+}
+.dsx-account-name {
+  font-size: 0.875rem; font-weight: 600; color: var(--dsc-text-body);
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ---- Avatars / server icons ---- */
+.dsx-avatar {
+  flex: none; border-radius: 50%; overflow: hidden;
+  background: var(--dsc-blurple); color: #fff;
+  display: grid; place-items: center;
+  font-weight: 600; font-size: 0.8rem;
+}
+.dsx-avatar img, .dsx-gicon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dsx-gicon {
+  flex: none; border-radius: var(--dsc-radius-icon); overflow: hidden;
+  background: var(--dsc-bg-active); color: var(--dsc-text);
+  display: grid; place-items: center;
+  font-weight: 600; font-size: 0.95rem; letter-spacing: 0.02em;
+}
+
+/* ---- Icon button (e.g. log out) ---- */
+.dsx-icon-btn {
+  flex: none; width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border: 0; border-radius: var(--dsc-radius);
+  background: var(--dsc-bg-raise); color: var(--dsc-text-muted);
+  cursor: pointer; transition: background .15s, color .15s;
+}
+.dsx-icon-btn:hover { background: var(--dsc-bg-hover); color: var(--dsc-text); }
+.dsx-icon-btn:focus-visible { outline: 2px solid var(--dsc-blurple); outline-offset: 2px; }
+.dsx-icon-btn svg { width: 18px; height: 18px; }
+
+/* ---- Controls: search + segmented filter ---- */
+.dsx-controls {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 14px; flex-wrap: wrap;
+}
+.dsx-search {
+  flex: 1 1 280px;
+  display: flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 12px;
+  background: var(--dsc-bg-deep);
+  border: 1px solid transparent; border-radius: var(--dsc-radius-sm);
+  transition: border-color .15s;
+}
+.dsx-search:focus-within { border-color: var(--dsc-blurple); }
+.dsx-search-ico { display: inline-flex; color: var(--dsc-text-faint); }
+.dsx-search-ico svg { width: 18px; height: 18px; }
+.dsx-search-input {
+  flex: 1; min-width: 0;
+  background: transparent; border: 0; outline: 0;
+  color: var(--dsc-text); font: inherit; font-size: 0.9375rem;
+}
+.dsx-search-input::placeholder { color: var(--dsc-text-faint); }
+.dsx-seg {
+  display: inline-flex; gap: 2px; padding: 3px;
+  background: var(--dsc-bg-deep); border-radius: var(--dsc-radius-sm);
+}
+.dsx-seg-btn {
+  border: 0; background: transparent;
+  color: var(--dsc-text-muted); font: inherit; font-size: 0.8125rem; font-weight: 600;
+  padding: 6px 14px; border-radius: 5px; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.dsx-seg-btn:hover { color: var(--dsc-text); }
+.dsx-seg-btn.active { background: var(--dsc-bg-hover); color: #fff; }
+.dsx-seg-btn:focus-visible { outline: 2px solid var(--dsc-blurple); outline-offset: 1px; }
+
+/* ---- Server list panel ---- */
+.dsx-server-list {
+  background: var(--dsc-bg-raise);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: var(--dsc-radius);
+  overflow: hidden;
+}
+.dsx-server-row, .dsx-add-row {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 12px 16px; text-align: left;
+  background: transparent; border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--dsc-text-body); font: inherit; cursor: pointer;
+  text-decoration: none;
+  transition: background .12s;
+}
+.dsx-server-list > :first-child { border-top: 0; }
+.dsx-server-row:hover, .dsx-add-row:hover { background: var(--dsc-bg-hover); }
+.dsx-server-row:focus-visible, .dsx-add-row:focus-visible {
+  outline: 2px solid var(--dsc-blurple); outline-offset: -2px;
+}
+.dsx-server-main { flex: 1; min-width: 0; }
+.dsx-server-name {
+  font-size: 1rem; font-weight: 600; color: var(--dsc-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dsx-server-meta {
+  display: flex; align-items: center; gap: 7px;
+  margin-top: 2px;
+  font-size: 0.8125rem; color: var(--dsc-text-muted);
+}
+.dsx-status { display: inline-flex; align-items: center; gap: 6px; }
+.dsx-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.dsx-dot.online { background: var(--dsc-green); box-shadow: 0 0 0 3px rgba(35, 165, 90, 0.16); }
+.dsx-sep { opacity: 0.5; }
+.dsx-plan {
+  flex: none;
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.01em;
+  padding: 3px 10px; border-radius: 999px;
+  color: var(--dsc-text-muted); background: rgba(255, 255, 255, 0.07);
+}
+.dsx-plan.premium { color: var(--dsc-amber-text); background: rgba(240, 178, 50, 0.14); }
+.dsx-enter {
+  flex: none; display: inline-flex; color: var(--dsc-text-faint);
+  transition: transform .15s, color .15s;
+}
+.dsx-enter svg { width: 18px; height: 18px; }
+.dsx-server-row:hover .dsx-enter, .dsx-add-row:hover .dsx-enter {
+  color: var(--dsc-text); transform: translateX(2px);
+}
+
+/* ---- Add-server row ---- */
+.dsx-add-row { color: var(--dsc-text-muted); }
+.dsx-add-plus {
+  flex: none; width: 48px; height: 48px;
+  display: grid; place-items: center;
+  border: 1.5px dashed rgba(255, 255, 255, 0.18); border-radius: var(--dsc-radius-icon);
+  color: var(--dsc-green); font-size: 1.5rem; font-weight: 500; line-height: 1;
+}
+.dsx-add-label { flex: 1; font-weight: 500; }
+.dsx-add-row:hover .dsx-add-plus { border-color: var(--dsc-green); }
+
+/* ---- List empty (filter no match) ---- */
+.dsx-list-empty {
+  padding: 28px 16px; text-align: center;
+  color: var(--dsc-text-faint); font-size: 0.9rem;
+}
+
+/* ---- Footer ---- */
+.dsx-pk-footer {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 18px;
+  font-size: 0.8125rem; color: var(--dsc-text-faint);
+}
+.dsx-pk-footer a { color: var(--dsc-text-muted); text-decoration: none; }
+.dsx-pk-footer a:hover { color: var(--dsc-text); text-decoration: underline; }
+.dsx-dotsep { opacity: 0.5; }
+
+/* ---- Empty state (no servers) ---- */
+.dsx-empty {
+  max-width: 460px; margin: 36px auto; padding: 40px 28px; text-align: center;
+  background: var(--dsc-bg-raise);
+  border: 1px solid rgba(0, 0, 0, 0.25); border-radius: var(--dsc-radius);
+}
+.dsx-empty-ico {
+  width: 56px; height: 56px; margin: 0 auto 16px;
+  display: grid; place-items: center; border-radius: 50%;
+  background: var(--dsc-bg-hover); color: var(--dsc-text-muted);
+}
+.dsx-empty-ico svg { width: 26px; height: 26px; }
+.dsx-empty h2 { margin: 0 0 8px; font-size: 1.25rem; color: var(--dsc-text); }
+.dsx-empty p { margin: 0 0 22px; font-size: 0.9375rem; line-height: 1.55; color: var(--dsc-text-muted); }
+.dsx-empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ---- Discord-styled buttons inside the picker (override the green site btn) ---- */
+.dsx-picker .btn-primary {
+  background: var(--dsc-blurple); border-color: transparent; color: #fff;
+  box-shadow: none; background-image: none;
+}
+.dsx-picker .btn-primary:hover { background: var(--dsc-blurple-hover); }
+.dsx-picker .btn-ghost {
+  background: transparent; border-color: transparent; color: var(--dsc-text-muted);
+}
+.dsx-picker .btn-ghost:hover { background: var(--dsc-bg-hover); color: var(--dsc-text); }
+
+/* ---- Motion: gentle row entrance ---- */
+@keyframes dsxRowIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.dsx-server-row { animation: dsxRowIn .26s ease-out backwards; animation-delay: calc(var(--i, 0) * 32ms); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dsx-server-row { animation: none; }
+  .dsx-enter, .dsx-icon-btn, .dsx-seg-btn, .dsx-server-row, .dsx-add-row, .dsx-search { transition: none; }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+  .dsx-pk-head { flex-direction: column; }
+  .dsx-account { align-self: stretch; justify-content: space-between; }
+  .dsx-controls { align-items: stretch; }
+  .dsx-search { flex-basis: auto; }
+  .dsx-seg { justify-content: space-between; }
+  .dsx-seg-btn { flex: 1; text-align: center; }
+  .dsx-server-row, .dsx-add-row { padding: 11px 12px; gap: 12px; }
+  .dsx-gicon, .dsx-add-plus { width: 44px !important; height: 44px !important; }
+  .dsx-plan { display: none; }
+}
