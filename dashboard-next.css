@@ -582,3 +582,63 @@
   .dsx-ovh-bar > span, .dsx-action, .dsx-action .dsx-enter { transition: none; }
   .dsx-ov-act-skel { animation: none; }
 }
+
+/* ---- Sidebar (.dsx-nav — Discord channel-list metaphor) ---------------------
+   Keeps the .dash-sidebar class on the element for the mobile drawer + layout
+   grid; everything visual is overridden here. */
+.dash-next-preview .dsx-nav {
+  background: var(--dsc-bg-raise);
+  border: 1px solid var(--dsc-line);
+  border-radius: var(--dsc-radius);
+  padding: 10px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.dsx-nav-head { display: flex; align-items: center; gap: 10px; padding: 6px 6px 12px; border-bottom: 1px solid var(--dsc-line); margin-bottom: 6px; }
+.dsx-nav-mark { flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--dsc-blurple); display: grid; place-items: center; color: #fff; }
+.dsx-nav-mark svg { width: 18px; height: 18px; }
+.dsx-nav-brand { font-weight: 700; color: var(--dsc-text); font-size: 0.95rem; line-height: 1.15; }
+.dsx-nav-brand-sub { font-size: 0.72rem; color: var(--dsc-text-faint); }
+.dsx-nav-scroll { display: flex; flex-direction: column; gap: 2px; }
+.dsx-nav-group { display: flex; flex-direction: column; }
+.dsx-nav-cat {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 9px 8px 4px; background: none; border: 0;
+  color: var(--dsc-text-faint); font: inherit; font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+}
+.dsx-nav-cat:hover { color: var(--dsc-text-muted); }
+.dsx-nav-caret { display: inline-flex; transition: transform .15s; }
+.dsx-nav-caret svg { width: 13px; height: 13px; transform: rotate(90deg); }
+.dsx-nav-group.collapsed .dsx-nav-caret svg { transform: rotate(0deg); }
+.dsx-nav-group.collapsed .dsx-nav-items { display: none; }
+.dsx-nav-items { display: flex; flex-direction: column; gap: 1px; }
+.dsx-nav-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 7px 9px; border: 0; border-radius: var(--dsc-radius-sm);
+  background: none; color: var(--dsc-text-muted); font: inherit; font-size: 0.86rem; font-weight: 500;
+  cursor: pointer; text-align: left; transition: background .1s, color .1s;
+}
+.dsx-nav-item:hover { background: var(--dsc-bg-hover); color: var(--dsc-text); }
+.dsx-nav-item.active { background: rgba(88, 101, 242, 0.16); color: #fff; }
+.dsx-nav-item.active .dsx-nav-ico { color: #aab2f7; }
+.dsx-nav-ico { flex: none; display: inline-flex; color: var(--dsc-text-faint); }
+.dsx-nav-ico svg { width: 17px; height: 17px; }
+.dsx-nav-item:hover .dsx-nav-ico { color: var(--dsc-text-muted); }
+.dsx-nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsx-nav-pro { flex: none; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.04em; color: var(--dsc-amber-text); background: rgba(240, 178, 50, 0.14); padding: 1px 5px; border-radius: 4px; }
+.dsx-nav-lock { flex: none; display: inline-flex; color: var(--dsc-text-faint); opacity: 0.7; }
+.dsx-nav-lock svg { width: 13px; height: 13px; }
+.dsx-nav-item.locked { opacity: 0.6; }
+.dsx-nav-foot { display: flex; gap: 6px; padding-top: 10px; margin-top: 6px; border-top: 1px solid var(--dsc-line); }
+.dsx-nav-foot-btn {
+  flex: 1; text-align: center; padding: 8px 10px; border-radius: var(--dsc-radius-sm);
+  font-size: 0.8rem; font-weight: 600; text-decoration: none;
+  background: var(--dsc-bg); color: var(--dsc-text-muted); border: 1px solid var(--dsc-line);
+  transition: background .12s, color .12s;
+}
+.dsx-nav-foot-btn:hover { background: var(--dsc-bg-hover); color: var(--dsc-text); }
+.dsx-nav-foot-btn.primary { background: var(--dsc-blurple); color: #fff; border-color: transparent; }
+.dsx-nav-foot-btn.primary:hover { background: var(--dsc-blurple-hover); }
+@media (prefers-reduced-motion: reduce) {
+  .dsx-nav-item, .dsx-nav-caret, .dsx-nav-foot-btn { transition: none; }
+}

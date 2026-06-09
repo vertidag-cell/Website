@@ -720,15 +720,18 @@
   /** Grouped sidebar with icons, sections, premium-locked indicators. */
   function renderSidebar(plan) {
     const isPremium = plan === "premium" || plan === "monthly" || plan === "lifetime";
-    const side = h("div", { class: "dash-sidebar", role: "tablist", "aria-label": "Dashboard navigation" });
+    // Keep .dash-sidebar for the mobile-drawer toggle + layout grid; the new
+    // Discord-native look is driven entirely by .dsx-nav (+ children).
+    const side = h("div", { class: "dash-sidebar dsx-nav", role: "tablist", "aria-label": "Dashboard navigation" });
 
-    // Brand block
+    // Brand header
+    const brandMark = h("div", { class: "dsx-nav-mark", "aria-hidden": "true" }); brandMark.append(iconSvg("flag"));
     side.append(
-      h("div", { class: "dash-side-brand" },
-        h("div", { class: "dash-side-brand-mark" }, iconSvg("flag")),
-        h("div", { class: "dash-side-brand-text" },
-          h("div", { class: "dash-side-brand-name" }, "Arkoris"),
-          h("div", { class: "dash-side-brand-sub" }, "Dashboard")
+      h("div", { class: "dsx-nav-head" },
+        brandMark,
+        h("div", { class: "dsx-nav-head-text" },
+          h("div", { class: "dsx-nav-brand" }, "Arkoris"),
+          h("div", { class: "dsx-nav-brand-sub" }, "Dashboard")
         )
       )
     );
@@ -777,17 +780,19 @@
     };
 
     if (!state.collapsedGroups) state.collapsedGroups = new Set();
+    const scroll = h("nav", { class: "dsx-nav-scroll" });
     groups.forEach((g) => {
       if (!g.items.length) return;
       const hasActive = g.items.includes(state.activeTab);
-      // The group holding the active tab is always rendered expanded so the
-      // user never loses sight of where they are.
+      // The group holding the active tab always renders expanded so the user
+      // never loses sight of where they are.
       const collapsed = !hasActive && state.collapsedGroups.has(g.label);
 
-      const group  = h("div", { class: `dash-side-group ${collapsed ? "collapsed" : ""}` });
+      const group = h("div", { class: `dsx-nav-group ${collapsed ? "collapsed" : ""}` });
+      const caret = h("span", { class: "dsx-nav-caret", "aria-hidden": "true" }); caret.append(iconSvg("arrowRight"));
       const header = h("button", {
         type: "button",
-        class: "dash-side-section",
+        class: "dsx-nav-cat",
         "aria-expanded": collapsed ? "false" : "true",
         onclick: () => {
           const nowCollapsed = !group.classList.contains("collapsed");
@@ -796,17 +801,18 @@
           if (nowCollapsed) state.collapsedGroups.add(g.label);
           else              state.collapsedGroups.delete(g.label);
         },
-      }, g.label, h("span", { class: "dash-side-caret" }, iconSvg("arrowRight")));
+      }, h("span", null, g.label), caret);
       group.append(header);
 
+      const items = h("div", { class: "dsx-nav-items" });
       g.items.forEach((id) => {
         const mod = state.modules.find((m) => m.name === id);
         const label = labels[id] || (mod?.label || id);
         const isPremTier = !!mod && mod.tier === "premium";
         const locked = isPremTier && !isPremium;
-        const tab = h("button", {
+        const item = h("button", {
           type: "button",
-          class: `dash-tab ${id === state.activeTab ? "active" : ""} ${locked ? "locked" : ""}`,
+          class: `dsx-nav-item ${id === state.activeTab ? "active" : ""} ${locked ? "locked" : ""}`,
           role: "tab",
           "aria-selected": id === state.activeTab ? "true" : "false",
           onclick: () => {
@@ -820,19 +826,22 @@
             render();
           },
         });
-        tab.append(tabIcon(id), label);
-        if (isPremTier) tab.append(h("span", { class: "dash-tab-tier" }, "PRO"));
-        if (locked)     tab.append(h("span", { class: "dash-lock" }, iconSvg("lock")));
-        group.append(tab);
+        const ico = h("span", { class: "dsx-nav-ico", "aria-hidden": "true" }); ico.append(iconSvg(TAB_ICONS[id] || "list"));
+        item.append(ico, h("span", { class: "dsx-nav-label" }, label));
+        if (isPremTier) item.append(h("span", { class: "dsx-nav-pro" }, "PRO"));
+        if (locked) { const lk = h("span", { class: "dsx-nav-lock", "aria-hidden": "true" }); lk.append(iconSvg("lock")); item.append(lk); }
+        items.append(item);
       });
-      side.append(group);
+      group.append(items);
+      scroll.append(group);
     });
+    side.append(scroll);
 
-    // Footer — quick support shortcut
+    // Footer — support + invite
     side.append(
-      h("div", { class: "dash-side-foot" },
-        btn("Discord", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true }),
-        btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true })
+      h("div", { class: "dsx-nav-foot" },
+        h("a", { class: "dsx-nav-foot-btn", href: cfg.links?.supportDiscord || "#", target: "_blank", rel: "noopener noreferrer" }, "Support"),
+        h("a", { class: "dsx-nav-foot-btn primary", href: cfg.links?.inviteBot || "#", target: "_blank", rel: "noopener noreferrer" }, "Invite Bot")
       )
     );
 
