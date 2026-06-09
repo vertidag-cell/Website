@@ -2355,136 +2355,93 @@
       const a = await data.analytics(state.selectedGuildId, days);
       clear(content);
 
-      // ── Hero + range toggle + export ──────────────────────────────
-      const rangeBtns = h("div", { class: "analytics-range" });
+      const wrap = h("div", { class: "dsx-an" });
+
+      // Header: title + range toggle + export
+      const range = h("div", { class: "dsx-an-range" });
       [[7, "7 days"], [14, "14 days"], [30, "30 days"]].forEach(([d, label]) => {
-        rangeBtns.appendChild(h("button", {
+        range.appendChild(h("button", {
           type: "button",
-          class: "analytics-range-btn" + (d === days ? " active" : ""),
+          class: "dsx-an-range-btn" + (d === days ? " active" : ""),
           onclick: () => { state._analyticsDays = d; loadAnalytics(content); },
         }, label));
       });
-      const exportBtn = h("button", {
-        type: "button",
-        class: "btn btn-ghost analytics-export-btn",
-        onclick: () => exportAnalyticsCsv(a),
-      }, "↓ Export CSV");
-      content.append(
-        h("div", { class: "dash-module-hero" },
-          (() => { const i = h("div", { class: "dash-module-hero-ico" }); i.appendChild(iconSvg("poll")); return i; })(),
-          h("div", { class: "dash-module-hero-body" },
-            h("div", { class: "dash-module-hero-row" },
-              h("h2", { class: "dash-module-hero-title" }, "Analytics"),
-              h("span", { class: "dash-status-pill" }, `Last ${days} days`)
-            ),
-            h("p", { class: "dash-module-hero-desc" },
-              "Real activity recorded across your server. Everything updates automatically as the bot is used.")
+      const exportBtn = h("button", { type: "button", class: "dsx-an-export", onclick: () => exportAnalyticsCsv(a) }, "Export CSV");
+      wrap.append(
+        h("header", { class: "dsx-an-head" },
+          h("div", null,
+            h("h1", { class: "dsx-an-title" }, "Analytics"),
+            h("p", { class: "dsx-an-sub" }, "Real activity across your server, last " + days + " days. Pick a metric to chart it.")
           ),
-          h("div", { class: "analytics-hero-actions" }, rangeBtns, exportBtn)
+          h("div", { class: "dsx-an-actions" }, range, exportBtn)
         )
       );
 
-      const counters = ["messages", "commands", "voice_joins", "welcomes", "pop_uses"];
-      const anyData = counters.some((m) => ((a.cards && a.cards[m] && a.cards[m].total) || 0) > 0);
+      // Metric-selector chart — the whole view (no rectangular card wall)
+      wrap.append(renderAnalyticsChart(a, days));
 
-      // ── Summary cards (every metric) ──────────────────────────────
-      const grid = h("div", { class: "dash-stat-grid" });
-      // Members card (gauge)
-      const memberGrowth = (a.memberSeries && a.memberSeries.length > 1)
-        ? (a.memberSeries[a.memberSeries.length - 1].value - a.memberSeries[0].value)
-        : null;
-      grid.appendChild(renderActivityCard({
-        label: "Members",
-        value: a.members != null ? fmtNum(a.members) : "—",
-        delta: memberGrowth,
-        deltaSuffix: ` in ${days}d`,
-        iconName: "user",
-        series: a.memberSeries,
-      }));
-      counters.forEach((m) => {
-        const c = (a.cards && a.cards[m]) || { total: 0, week: 0, prevWeek: 0 };
-        grid.appendChild(renderActivityCard({
-          label: METRIC_META[m].label,
-          value: fmtNum(c.total),
-          sub: "all-time total",
-          iconName: METRIC_META[m].iconName,
-          series: a.series && a.series[m],
-        }));
-      });
-      // Donations card — real money from completed payments
-      const don = a.donations || { total: 0, count: 0, currency: "USD", series: [] };
-      grid.appendChild(renderActivityCard({
-        label: "Donations",
-        value: fmtMoney(don.total, don.currency),
-        sub: `${don.count} payment${don.count === 1 ? "" : "s"}`,
-        iconName: "coin",
-        series: don.series,
-      }));
-      content.append(grid);
-
-      // ── Main interactive chart ────────────────────────────────────
-      content.append(renderAnalyticsBigChart(a, counters));
-
-      // ── Member growth chart ───────────────────────────────────────
-      if (a.memberSeries && a.memberSeries.some((p) => p.value > 0)) {
-        content.append(
-          h("div", { class: "dash-card" },
-            h("h3", null, "Member growth"),
-            h("p", null, `Server member count over the last ${days} days.`),
-            areaChartWrap(a.memberSeries, "Members")
-          )
-        );
-      }
-
-      // ── Donations / revenue ───────────────────────────────────────
-      content.append(renderDonationsCard(a.donations, days));
-
-      // ── Busiest hours heatmap ─────────────────────────────────────
-      content.append(renderHeatmapCard(a.heatmap));
-
-      // ── Top channels ──────────────────────────────────────────────
-      content.append(renderTopChannelsCard(a.topChannels));
-
-      // ── Per-metric breakdown ──────────────────────────────────────
-      const breakdown = h("div", { class: "dash-card" },
-        h("h3", null, "Metric breakdown"),
-        h("p", null, "Totals, averages, and peak days for every tracked metric.")
-      );
-      const bgrid = h("div", { class: "analytics-breakdown" });
-      counters.forEach((m) => {
-        const series = (a.series && a.series[m]) || [];
-        const c = (a.cards && a.cards[m]) || { total: 0, week: 0, prevWeek: 0 };
-        const peak = seriesPeak(series);
-        const delta = c.week - c.prevWeek;
-        const up = delta >= 0;
-        bgrid.appendChild(
-          h("div", { class: "analytics-bd-card" },
-            h("div", { class: "analytics-bd-head" },
-              icon(METRIC_META[m].iconName, "analytics-mini-ico"),
-              h("div", { class: "analytics-bd-name" }, METRIC_META[m].label)
-            ),
-            h("div", { class: "analytics-bd-rows" },
-              renderBdRow("All-time", fmtNum(c.total)),
-              renderBdRow("This week", fmtNum(c.week)),
-              renderBdRow("Week change", h("span", { class: "dash-stat-delta " + (up ? "up" : "down"), style: { fontSize: "0.78rem" } },
-                (up ? "▲ " : "▼ ") + fmtNum(Math.abs(delta)))),
-              renderBdRow("Daily average", fmtNum(Math.round(seriesAvg(series)))),
-              renderBdRow("Peak day", peak.value > 0 ? `${fmtNum(peak.value)} · ${fmtDay(peak.day)}` : "—")
-            )
-          )
-        );
-      });
-      breakdown.append(bgrid);
-      content.append(breakdown);
-
-      if (!anyData) {
-        // Friendly note pinned under the hero when nothing's recorded yet
-        content.querySelector(".dash-module-hero").after(
-          notice("info", "Analytics are still warming up",
-            "Tracking started when the bot was last updated. As your members chat, run commands and join voice, these charts fill in automatically.")
-        );
-      }
+      content.append(wrap);
     } catch (e) { renderTabError(content, e); }
+  }
+
+  // Interactive analytics chart: click a metric to chart its series over the
+  // selected range. Defaults to Members so member growth is shown first.
+  function renderAnalyticsChart(a, days) {
+    const metrics = [
+      { key: "members",     label: "Members",     series: a.memberSeries || [],                     total: a.members, totalLabel: "Current" },
+      { key: "messages",    label: "Messages",    series: (a.series && a.series.messages) || [],    total: (a.cards && a.cards.messages && a.cards.messages.total) },
+      { key: "commands",    label: "Commands",    series: (a.series && a.series.commands) || [],    total: (a.cards && a.cards.commands && a.cards.commands.total) },
+      { key: "voice_joins", label: "Voice joins", series: (a.series && a.series.voice_joins) || [], total: (a.cards && a.cards.voice_joins && a.cards.voice_joins.total) },
+      { key: "welcomes",    label: "Welcomes",    series: (a.series && a.series.welcomes) || [],    total: (a.cards && a.cards.welcomes && a.cards.welcomes.total) },
+    ];
+
+    const card = h("div", { class: "dsx-an-chart" });
+    const pills = h("div", { class: "dsx-an-pills", role: "tablist", "aria-label": "Metric" });
+    const summary = h("div", { class: "dsx-an-summary" });
+    const host = h("div", { class: "dsx-an-host" });
+
+    function sumStat(label, value) {
+      return h("div", { class: "dsx-an-sum" },
+        h("div", { class: "dsx-an-sum-v" }, value),
+        h("div", { class: "dsx-an-sum-l" }, label));
+    }
+
+    function draw(m) {
+      pills.querySelectorAll(".dsx-an-pill").forEach((p) => {
+        const on = p.dataset.key === m.key;
+        p.classList.toggle("active", on);
+        p.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      clear(summary); clear(host);
+      const series = m.series || [];
+      const hasData = series.some((p) => (p.value || 0) > 0);
+      if (!hasData) {
+        host.append(h("div", { class: "dsx-an-empty" },
+          "No " + m.label.toLowerCase() + " data for this range yet — it fills in as the bot is used."));
+      } else {
+        host.append(areaChartWrap(series, m.label));
+      }
+      const total = m.total != null ? m.total : seriesSum(series);
+      const peak = seriesPeak(series);
+      summary.append(
+        sumStat(m.totalLabel || "Total", fmtNum(total)),
+        sumStat("Daily avg", fmtNum(Math.round(seriesAvg(series)))),
+        sumStat("Peak", peak.value > 0 ? fmtNum(peak.value) + " · " + fmtDay(peak.day) : "—")
+      );
+    }
+
+    metrics.forEach((m, i) => {
+      pills.appendChild(h("button", {
+        type: "button", role: "tab", "data-key": m.key,
+        class: "dsx-an-pill" + (i === 0 ? " active" : ""),
+        "aria-selected": i === 0 ? "true" : "false",
+        onclick: () => draw(m),
+      }, m.label));
+    });
+
+    card.append(pills, summary, host);
+    draw(metrics[0]); // Members
+    return card;
   }
 
   /** Currency formatter with a safe fallback for odd codes. */
@@ -4941,16 +4898,18 @@
         overrides: {},
       },
     });
+    const MOCK_DAYS = ["2026-06-03", "2026-06-04", "2026-06-05", "2026-06-06", "2026-06-07", "2026-06-08", "2026-06-09"];
+    const mkS = (vals) => vals.map((v, i) => ({ day: MOCK_DAYS[i], value: v }));
     data.analytics = async () => ({
-      days: 7, members: 1247, memberSeries: [1180, 1192, 1201, 1210, 1228, 1239, 1247],
+      days: 7, members: 1247, memberSeries: mkS([1180, 1192, 1201, 1210, 1228, 1239, 1247]),
       cards: {
         messages: { total: 18432, week: 4210, prevWeek: 3870 }, commands: { total: 2304, week: 540, prevWeek: 610 },
         pop_uses: { total: 892, week: 210, prevWeek: 180 }, voice_joins: { total: 430, week: 96, prevWeek: 88 },
         welcomes: { total: 312, week: 74, prevWeek: 65 },
       },
       series: {
-        messages: [520, 610, 580, 640, 700, 660, 500], commands: [80, 76, 90, 70, 85, 72, 67],
-        voice_joins: [12, 14, 11, 16, 13, 15, 15], welcomes: [9, 11, 10, 12, 11, 10, 11],
+        messages: mkS([520, 610, 580, 640, 700, 660, 500]), commands: mkS([80, 76, 90, 70, 85, 72, 67]),
+        voice_joins: mkS([12, 14, 11, 16, 13, 15, 15]), welcomes: mkS([9, 11, 10, 12, 11, 10, 11]),
       },
     });
     data.audit = async () => ({ entries: [
