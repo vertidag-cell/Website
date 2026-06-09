@@ -409,3 +409,47 @@
 .dash-next-preview .dash-status-pill.lifetime .pill-dot {
   background: var(--dsc-amber);
 }
+
+/* ---------------------------------------------------------------------------
+   Stomp the remaining HARDCODED greens in dashboard components so the surface
+   stays strictly black + blurple. (These literals don't flow through the var
+   remap.) Tiny online/installed status dots stay green by design — Discord's
+   own convention — but every decorative green becomes blurple.
+   --------------------------------------------------------------------------- */
+.dash-next-preview { --success: #5865f2; --dash-success: #5865f2; }
+
+/* Recent activity: "ok" rows were neon green */
+.dash-next-preview .dash-audit-action.ok {
+  background: rgba(88, 101, 242, 0.12);
+  color: #b3bbf7;
+}
+
+/* Setup-progress ring: green glow -> blurple glow */
+.dash-next-preview .ring-fill {
+  filter: drop-shadow(0 0 6px rgba(88, 101, 242, 0.5));
+}
+
+/* Quick-action icon tiles */
+.dash-next-preview .dash-quick-action-ico {
+  background: rgba(88, 101, 242, 0.12);
+  border-color: rgba(88, 101, 242, 0.28);
+}
+
+/* Setup checklist: hover / checkmark / done states */
+.dash-next-preview .setup-check-row:hover {
+  border-color: rgba(88, 101, 242, 0.30);
+  background: rgba(88, 101, 242, 0.06);
+}
+.dash-next-preview .setup-check-mark:hover {
+  border-color: rgba(88, 101, 242, 0.5);
+  background: rgba(88, 101, 242, 0.12);
+}
+.dash-next-preview .setup-check-mark.active {
+  color: #aab2f7;
+  border-color: rgba(88, 101, 242, 0.4);
+  background: rgba(88, 101, 242, 0.14);
+}
+.dash-next-preview .setup-check-row.done .setup-check-box {
+  background: rgba(88, 101, 242, 0.16);
+  border-color: rgba(88, 101, 242, 0.4);
+}

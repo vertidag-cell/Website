@@ -2045,7 +2045,7 @@
     const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
     const area = line + ` L${W} ${H} L0 ${H} Z`;
     return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="spark-svg">`
-      + `<path d="${area}" fill="rgba(43,255,158,0.16)"/>`
+      + `<path d="${area}" fill="rgba(88,101,242,0.16)"/>`
       + `<path d="${line}" fill="none" stroke="var(--dash-red-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
       + `</svg>`;
   }
@@ -2087,8 +2087,8 @@
       + `<circle class="chart-hover-dot" cx="0" cy="0" r="5" style="opacity:0"/>`;
     const svg = `<svg viewBox="0 0 ${W} ${H}" class="area-chart" preserveAspectRatio="xMidYMid meet">`
       + `<defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">`
-      + `<stop offset="0%" stop-color="rgba(43,255,158,0.44)"/>`
-      + `<stop offset="100%" stop-color="rgba(43,255,158,0.02)"/>`
+      + `<stop offset="0%" stop-color="rgba(88,101,242,0.44)"/>`
+      + `<stop offset="100%" stop-color="rgba(88,101,242,0.02)"/>`
       + `</linearGradient></defs>`
       + grid
       + `<path d="${area}" fill="url(#areaGrad)"/>`
@@ -4916,7 +4916,12 @@
         voice_joins: [12, 14, 11, 16, 13, 15, 15], welcomes: [9, 11, 10, 12, 11, 10, 11],
       },
     });
-    data.audit = async () => ({ entries: [] });
+    data.audit = async () => ({ entries: [
+      { ts: "2026-05-17T19:29:34Z", ok: true,  action: "module_save", target: "branding" },
+      { ts: "2026-05-17T18:39:24Z", ok: true,  action: "module_save", target: "welcome" },
+      { ts: "2026-05-17T18:12:01Z", ok: true,  action: "panel_post",  target: "roleMenus" },
+      { ts: "2026-05-17T17:49:46Z", ok: false, action: "paypal_test", target: "payments" },
+    ] });
 
     if (mode === "overview") {
       state.selectedGuildId = state.guilds[0].id;
