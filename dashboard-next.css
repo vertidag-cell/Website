@@ -1125,6 +1125,21 @@
 .dash-next-preview .hype-trig.off { color: var(--dsc-text-faint); text-decoration: line-through; opacity: 0.7; }
 .dash-next-preview .mc-switches { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 14px; }
 
+/* ---- Events canvas (segmented event type + announcement preview) ---- */
+.dash-next-preview .ev-tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--dsc-bg-raise); border: 1px solid var(--dsc-line); border-radius: 10px; margin-bottom: 12px; }
+.dash-next-preview .ev-tab { font: inherit; font-size: 0.85rem; font-weight: 600; padding: 6px 14px; border: 0; background: transparent; color: var(--dsc-text-muted); border-radius: 7px; cursor: pointer; transition: color .12s, background .12s; }
+.dash-next-preview .ev-tab:hover { color: var(--dsc-text); }
+.dash-next-preview .ev-tab.active { background: var(--dsc-bg); color: #fff; box-shadow: inset 0 -2px 0 var(--ev-accent, var(--dsc-blurple)); }
+.dash-next-preview .event-preview { margin-bottom: 14px; }
+.dash-next-preview .event-ping { margin-bottom: 8px; font-size: 0.85rem; color: #dbdee1; }
+.dash-next-preview .event-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.05rem; color: #fff; margin-bottom: 6px; }
+.dash-next-preview .event-emoji { font-size: 1.25rem; }
+.dash-next-preview .event-blurb { color: #dbdee1; font-size: 0.88rem; margin-bottom: 12px; }
+.dash-next-preview .event-prize { display: flex; flex-direction: column; gap: 3px; padding: 11px 13px; border: 1px solid; border-radius: 10px; background: rgba(255, 255, 255, 0.03); }
+.dash-next-preview .event-prize-amt { font-size: 1.1rem; font-weight: 800; }
+.dash-next-preview .event-prize-sub { font-size: 0.78rem; color: var(--dsc-text-muted); }
+.dash-next-preview .event-foot-line { margin-top: 10px; font-size: 0.8rem; color: var(--dsc-text-faint); }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }

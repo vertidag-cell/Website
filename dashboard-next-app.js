@@ -3533,6 +3533,7 @@
       if (mod.name === "pets") return renderPetsCanvas(content, mod, m.values);
       if (mod.name === "credits") return renderCreditsCanvas(content, mod, m.values);
       if (mod.name === "hype") return renderHypeCanvas(content, mod, m.values);
+      if (mod.name === "events") return renderEventsCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4496,6 +4497,107 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What posts when someone reps your server")),
       device, topbar, earnSection, rewardSection, abuseSection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Events as a live-preview canvas: a segmented Dino/Number/Vault selector
+  // drives both the announcement preview and that type's reward fields.
+  function renderEventsCanvas(content, mod, values) {
+    const mv = Object.assign({
+      enabled: false, announceChannelId: "", trackChannelId: "", pingRoleId: "", allowedRoleIds: [],
+      dinoBase: 5, dinoBump: 1, dinoPer: 50, numberBase: 5, numberBump: 1, numberPer: 100, vaultBase: 5, vaultBump: 1, vaultPer: 50,
+    }, values || {});
+    mv.allowedRoleIds = Array.isArray(mv.allowedRoleIds) ? mv.allowedRoleIds.slice() : [];
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const roleById = (id) => (state.roles || []).find((r) => r.id === id);
+
+    const TYPES = {
+      dino: { emoji: "🦖", label: "Dino", color: "#57f287", title: "Dino Guessing Event", blurb: "Guess which dino is hidden", baseKey: "dinoBase", bumpKey: "dinoBump", perKey: "dinoPer", noun: "wrong guesses" },
+      number: { emoji: "🔢", label: "Number", color: "#5865f2", title: "Number Guess", blurb: "Guess the secret number", baseKey: "numberBase", bumpKey: "numberBump", perKey: "numberPer", noun: "wrong guesses" },
+      vault: { emoji: "🔐", label: "Vault", color: "#faa61a", title: "Vault Crack", blurb: "Crack the vault code", baseKey: "vaultBase", bumpKey: "vaultBump", perKey: "vaultPer", noun: "wrong attempts" },
+    };
+    let active = "dino";
+
+    // ---- Live preview: event announcement (themed by active type) ----
+    const device = h("div", { class: "eb-discord event-preview" });
+    function drawPreview() {
+      clear(device);
+      const t = TYPES[active];
+      const base = mv[t.baseKey] != null ? mv[t.baseKey] : 0;
+      const bump = mv[t.bumpKey] != null ? mv[t.bumpKey] : 0;
+      const per = mv[t.perKey] != null ? mv[t.perKey] : 1;
+      const role = mv.pingRoleId ? roleById(mv.pingRoleId) : null;
+      device.append(h("div", { class: "eb-embed event-card", style: { borderColor: t.color } },
+        h("div", { class: "eb-embed-inner" },
+          role ? h("div", { class: "event-ping" }, "🔔 ", h("span", { class: "w-mention" }, "@" + role.name)) : null,
+          h("div", { class: "event-head" }, h("span", { class: "event-emoji", "aria-hidden": "true" }, t.emoji), h("span", null, t.title)),
+          h("div", { class: "event-blurb" }, t.blurb + " — first correct answer wins the pot."),
+          h("div", { class: "event-prize", style: { borderColor: t.color } },
+            h("span", { class: "event-prize-amt", style: { color: t.color } }, "🏆 " + base + " credits"),
+            h("span", { class: "event-prize-sub" }, bump > 0 ? ("grows +" + bump + " every " + per + " " + t.noun) : "fixed prize")),
+          h("div", { class: "event-foot-line" }, "Guess in #" + (chName(mv.trackChannelId) || "events")),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Announced in #" + (chName(mv.announceChannelId) || "events"))))));
+    }
+
+    // ---- Segmented event-type selector ----
+    const tabs = h("div", { class: "ev-tabs" });
+    function renderTabs() {
+      clear(tabs);
+      Object.keys(TYPES).forEach((k) => {
+        const t = TYPES[k];
+        const b = h("button", { type: "button", class: "ev-tab" + (k === active ? " active" : ""), onclick: () => { active = k; renderTabs(); drawPreview(); drawRewards(); } }, t.emoji + " " + t.label);
+        if (k === active) b.style.setProperty("--ev-accent", t.color);
+        tabs.append(b);
+      });
+    }
+
+    // ---- Active type's reward fields ----
+    const rewardHost = h("div");
+    function drawRewards() {
+      clear(rewardHost);
+      const t = TYPES[active];
+      const perLabel = t.noun.charAt(0).toUpperCase() + t.noun.slice(1) + " per bump";
+      rewardHost.append(mcSection(t.label + " reward",
+        h("div", { class: "mc-grid" },
+          mcField("Base prize (credits)", mcNumber(() => mv[t.baseKey], (v) => { mv[t.baseKey] = v; drawPreview(); markDirty(); }, { min: 0, max: 10000 })),
+          mcField("Added per interval", mcNumber(() => mv[t.bumpKey], (v) => { mv[t.bumpKey] = v; drawPreview(); markDirty(); }, { min: 0, max: 10000 })),
+          mcField(perLabel, mcNumber(() => mv[t.perKey], (v) => { mv[t.perKey] = v; drawPreview(); markDirty(); }, { min: 1, max: 10000 }))),
+        h("div", { class: "mc-hint mc-hint-block" }, "Switch the tab above to set rewards for the other event types.")));
+    }
+
+    drawPreview(); renderTabs(); drawRewards();
+
+    // ---- Top bar: announce channel + enabled ----
+    const annCh = renderChannelSelect("ev-annch", "announceChannelId", state.channels || [], mv.announceChannelId);
+    annCh.classList.add("w-select");
+    annCh.addEventListener("change", () => { mv.announceChannelId = annCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), annCh),
+      mcSwitch("Events enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    // ---- Where it runs ----
+    const trackCh = renderChannelSelect("ev-trackch", "trackChannelId", state.channels || [], mv.trackChannelId);
+    trackCh.classList.add("mc-select");
+    trackCh.addEventListener("change", () => { mv.trackChannelId = trackCh.value; drawPreview(); markDirty(); });
+    const whereSection = mcSection("Where it runs",
+      h("div", { class: "mc-grid" },
+        mcField("Guess channel", trackCh, "Where players type their guesses"),
+        mcField("Event ping role", mcRoleSelect(() => mv.pingRoleId, (v) => { mv.pingRoleId = v; drawPreview(); markDirty(); }, "— no ping —"))),
+      mcField("Who can start events", mcChips("role", () => mv.allowedRoleIds, (a) => { mv.allowedRoleIds = a; }, markDirty, { empty: "Server admins only", add: "+ Add a host role" })));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Hosts run ", h("code", null, "/event-start"), " to launch one. The prize pot grows with every wrong guess, so the longer it runs the bigger the payout."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Pick an event type to preview")),
+      tabs, device, topbar, whereSection, rewardHost, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
@@ -6470,10 +6572,23 @@
         },
         values: { enabled: true, rewardChannelId: "3", tagKeywords: ["[QUICK]", "QA"], creditAmount: 5, creditExpiryDays: 14, rewardRoleId: "22", rewardInvites: true, rewardBoosts: true, preventDuplicates: true },
       },
+      events: {
+        module: {
+          name: "events", label: "Events", tier: "premium", description: "Dino / Number / Vault guessing events with credit rewards.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "announceChannelId", type: "channel", label: "Event announce channel" },
+            { key: "trackChannelId", type: "channel", label: "Guess channel" },
+            { key: "pingRoleId", type: "role", label: "Event ping role" },
+            { key: "allowedRoleIds", type: "roles", label: "Allowed host roles" },
+          ],
+        },
+        values: { enabled: true, announceChannelId: "3", trackChannelId: "1", pingRoleId: "20", allowedRoleIds: ["22"], dinoBase: 50, dinoBump: 5, dinoPer: 25, numberBase: 30, numberBump: 2, numberPer: 100, vaultBase: 100, vaultBump: 10, vaultPer: 50 },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
