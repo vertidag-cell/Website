@@ -484,7 +484,15 @@
 .dsx-topbar-sub { font-size: 0.8rem; color: var(--dsc-text-muted); margin-top: 1px; }
 .dsx-save { flex: none; font-size: 0.78rem; color: var(--dsc-text-faint); font-weight: 600; }
 
-/* ---- Overview wrapper ---- */
+/* ---- Overview wrapper ----
+   .dash-content is display:grid; its default align-content:stretch stretched the
+   single overview row to the (tall) sidebar height, blowing the section gaps out.
+   Pin grid rows to the top so sections stay content-sized. */
+/* Our overview blocks are <section>s, which inherit the marketing site's global
+   `section { padding: 96px 0 }` — that 192px of vertical padding was inflating
+   every block (the "gap"). Neutralize it; the health card sets its own padding. */
+.dash-next-preview .dsx-ov-stats,
+.dash-next-preview .dsx-ov-section { padding: 0; }
 .dsx-ov { display: flex; flex-direction: column; gap: 20px; max-width: 940px; }
 
 /* ---- Health hero ---- */
@@ -516,8 +524,9 @@
 .dsx-btn-primary:hover { background: var(--dsc-blurple-hover); }
 
 /* ---- Weekly stats ---- */
-.dsx-ov-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.dsx-ov-stats { display: flex; gap: 12px; }
 .dsx-ov-stat {
+  flex: 1; min-width: 0;
   background: var(--dsc-bg-raise); border: 1px solid var(--dsc-line);
   border-radius: var(--dsc-radius); padding: 14px 16px;
 }
