@@ -4925,23 +4925,40 @@
     ] });
     data.categories = async () => ({ categories: [{ id: "10", name: "INFORMATION" }, { id: "11", name: "COMMUNITY" }] });
     data.roles = async () => ({ roles: [{ id: "20", name: "Member" }, { id: "21", name: "Admin" }, { id: "22", name: "Staff" }] });
-    data.module = async () => ({
-      module: {
-        name: "welcome", label: "Welcome", description: "Greet new members with a custom embed when they join.", tier: "free",
-        fields: [
-          { key: "enabled", type: "boolean", label: "Enabled", help: "Turn welcome messages on or off." },
-          { key: "channelId", type: "channel", label: "Welcome channel", help: "Where greetings are posted." },
-          { key: "title", type: "text", label: "Embed title", max: 256 },
-          { key: "message", type: "textarea", label: "Message", help: "Use {user} to mention the new member.", max: 2000 },
-          { key: "mentionUser", type: "boolean", label: "Mention the new member" },
-          { key: "embedColor", type: "hex", label: "Embed color" },
-          { key: "imageUrl", type: "image-url", label: "Image URL" },
-        ],
+    const MOD_DEFS = {
+      welcome: {
+        module: {
+          name: "welcome", label: "Welcome", description: "Greet new members with a custom embed when they join.", tier: "free",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled", help: "Turn welcome messages on or off." },
+            { key: "channelId", type: "channel", label: "Welcome channel", help: "Where greetings are posted." },
+            { key: "title", type: "text", label: "Embed title", max: 256 },
+            { key: "message", type: "textarea", label: "Message", help: "Use {user} to mention the new member.", max: 2000 },
+            { key: "mentionUser", type: "boolean", label: "Mention the new member" },
+            { key: "embedColor", type: "hex", label: "Embed color" },
+            { key: "imageUrl", type: "image-url", label: "Image URL" },
+          ],
+        },
+        values: { enabled: true, channelId: "2", title: "Welcome to the server!", message: "Hey {user}, glad you're here — check the rules and have fun!", mentionUser: true, embedColor: "#5865f2", imageUrl: "" },
       },
-      values: { enabled: true, channelId: "2", title: "Welcome to the server!", message: "Hey {user}, glad you're here — check the rules and have fun!", mentionUser: true, embedColor: "#5865f2", imageUrl: "" },
-    });
+      branding: {
+        module: {
+          name: "branding", label: "Branding", customUi: true, tier: "premium", description: "Customize the look of every Arkoris embed across the server.",
+          fields: [
+            { key: "primaryColor", type: "hex", label: "Primary color", help: "Accent color used on embeds." },
+            { key: "footerText", type: "text", label: "Footer text", max: 2048 },
+            { key: "footerIcon", type: "image-url", label: "Footer icon URL" },
+            { key: "thumbnail", type: "image-url", label: "Default thumbnail URL" },
+            { key: "showTimestamp", type: "boolean", label: "Show timestamp on embeds" },
+          ],
+        },
+        values: { primaryColor: "#5865f2", footerText: "Velated PVP · Powered by Arkoris", footerIcon: "", thumbnail: "", showTimestamp: true },
+      },
+      ark: { module: { name: "ark", label: "ARK Server Suite", customUi: true, tier: "premium" }, values: {} },
+    };
+    data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];

@@ -785,3 +785,16 @@
 .dash-next-preview .dash-tag.lifetime { background: rgba(240, 178, 50, 0.14); color: var(--dsc-amber-text); border-color: rgba(240, 178, 50, 0.3); }
 /* Premium upsell page: orange chip border -> blurple (badge/glow already remapped). */
 .dash-next-preview .dash-upsell-chip { border-color: rgba(88, 101, 242, 0.25); }
+
+/* ---- Mobile polish ---- */
+@media (max-width: 600px) {
+  /* Module form save bar: flex with no wrap was overlapping Save / Reset at
+     phone widths. Wrap it, drop the flex spacer, let the buttons share a row. */
+  .dash-next-preview .dash-sticky-actions { flex-wrap: wrap; gap: 8px; }
+  .dash-next-preview .dash-sticky-actions .filler { display: none; }
+  .dash-next-preview .dash-sticky-actions .btn { flex: 1 1 auto; }
+}
+@media (max-width: 560px) {
+  /* Overview weekly stats: stack the 3 tiles instead of a cramped 3-up row. */
+  .dash-next-preview .dsx-ov-stats { flex-direction: column; }
+}
