@@ -199,6 +199,83 @@
   function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
   function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
+  // ---- Emoji picker (used by the Embed Builder button/option emoji fields) ----
+  const EMOJI_CATS = [
+    { key: "smileys", name: "Smileys", icon: "😀", emojis: [["😀","grin"],["😃","smile happy"],["😄","laugh"],["😁","grin"],["😆","laugh"],["😅","sweat"],["😂","joy lol"],["🤣","rofl lol"],["🙂","slight smile"],["🙃","upside"],["😉","wink"],["😊","blush"],["😇","angel"],["🥰","love"],["😍","heart eyes love"],["🤩","star struck"],["😘","kiss"],["😗","kiss"],["😋","yum"],["😛","tongue"],["😜","wink tongue"],["🤪","zany"],["😝","tongue"],["🤑","money"],["🤗","hug"],["🤭","giggle"],["🤫","shh quiet"],["🤔","thinking"],["🤐","zip"],["🤨","raised brow"],["😐","neutral"],["😑","expressionless"],["😶","no mouth"],["😏","smirk"],["😒","unamused"],["🙄","eye roll"],["😬","grimace"],["😌","relieved"],["😔","pensive sad"],["😪","sleepy"],["🤤","drool"],["😴","sleep zzz"],["😷","mask sick"],["🤒","sick"],["🤕","hurt"],["🤢","nauseous"],["🤮","vomit"],["🤧","sneeze"],["🥵","hot"],["🥶","cold"],["🥳","party"],["😎","cool sunglasses"],["🤓","nerd"],["🧐","monocle"],["😕","confused"],["😟","worried"],["🙁","frown"],["☹️","frown"],["😮","wow"],["😲","astonished"],["😳","flushed"],["🥺","pleading"],["😨","fear"],["😰","anxious"],["😥","sad"],["😢","cry"],["😭","sob cry"],["😱","scream"],["😖","confounded"],["😞","disappointed"],["😩","weary"],["😫","tired"],["🥱","yawn"],["😤","triumph"],["😡","rage angry mad"],["😠","angry mad"],["🤬","cursing"],["😈","devil"],["👿","imp angry"],["💀","skull dead"],["☠️","skull"],["💩","poop"],["🤡","clown"],["👻","ghost"],["👽","alien"],["👾","invader"],["🤖","robot"],["🎃","pumpkin"]] },
+    { key: "gestures", name: "Gestures & People", icon: "👍", emojis: [["👍","thumbs up like yes"],["👎","thumbs down no"],["👌","ok"],["🤌","pinch"],["🤏","small"],["✌️","peace victory"],["🤞","fingers crossed"],["🤟","love you"],["🤘","rock"],["🤙","call"],["👈","left"],["👉","right"],["👆","up"],["👇","down"],["☝️","point up"],["✋","raise hand stop"],["🤚","back hand"],["🖐️","hand"],["🖖","vulcan"],["👋","wave hi bye"],["🤝","handshake deal"],["🙏","pray thanks please"],["✍️","write"],["💪","muscle strong"],["🦾","mechanical arm"],["🙌","raise hands praise"],["👏","clap"],["🤲","palms"],["🙇","bow"],["🤦","facepalm"],["🤷","shrug"],["🧠","brain"],["👀","eyes look"],["👁️","eye"],["👶","baby"],["🧑","person"],["👑","crown king"],["🎩","top hat"],["🦸","hero"],["🦹","villain"]] },
+    { key: "hearts", name: "Hearts & Symbols", icon: "❤️", emojis: [["❤️","red heart love"],["🧡","orange heart"],["💛","yellow heart"],["💚","green heart"],["💙","blue heart"],["💜","purple heart"],["🖤","black heart"],["🤍","white heart"],["🤎","brown heart"],["💔","broken heart"],["❣️","heart"],["💕","hearts"],["💞","hearts"],["💓","beating heart"],["💗","growing heart"],["💖","sparkle heart"],["💘","cupid"],["💝","gift heart"],["💟","heart deco"],["💯","100 perfect"],["✨","sparkles"],["⭐","star"],["🌟","glowing star"],["💫","dizzy star"],["⚡","lightning bolt"],["🔥","fire lit hot"],["💥","boom"],["💢","anger"],["💦","sweat drops"],["💨","dash wind"],["💬","speech"],["💭","thought"],["✅","check yes done"],["❌","cross no"],["❓","question"],["❗","exclamation"],["⚠️","warning"],["🚫","no ban"],["♻️","recycle"],["🔞","18"],["✔️","check"],["➕","plus"],["➖","minus"],["💲","dollar"],["🔱","trident"],["⚜️","fleur"]] },
+    { key: "objects", name: "Objects", icon: "🎮", emojis: [["🎮","game controller"],["🕹️","joystick"],["🎲","dice"],["🎯","dart target"],["🎰","slot"],["🏆","trophy win"],["🥇","gold medal first"],["🥈","silver medal"],["🥉","bronze medal"],["🏅","medal"],["🎁","gift present"],["🎉","party tada"],["🎊","confetti"],["🎈","balloon"],["🔔","bell"],["🔕","mute bell"],["📣","megaphone"],["📢","loud"],["💡","idea bulb"],["🔦","flashlight"],["💰","money bag"],["💵","cash"],["💎","gem diamond"],["🔑","key"],["🗝️","old key"],["🔒","lock"],["🔓","unlock"],["🛡️","shield"],["⚔️","swords"],["🗡️","dagger"],["🏹","bow arrow"],["🔨","hammer"],["🛠️","tools"],["⚙️","gear settings"],["🔧","wrench"],["📌","pin"],["📍","location pin"],["📎","clip"],["✂️","scissors"],["📅","calendar"],["📊","bar chart"],["📈","chart up"],["📉","chart down"],["📜","scroll rules"],["📝","memo note"],["📁","folder"],["💻","laptop"],["🖥️","desktop"],["📱","phone"],["⌚","watch"],["🎵","music note"],["🎶","music"]] },
+    { key: "nature", name: "Nature", icon: "🌿", emojis: [["🌿","herb leaf"],["🍀","clover luck"],["🌱","seedling"],["🌲","tree"],["🌳","tree"],["🌵","cactus"],["🌴","palm"],["🌸","blossom"],["🌹","rose"],["🌺","hibiscus"],["🌻","sunflower"],["🌼","flower"],["💐","bouquet"],["🍁","maple leaf"],["🍂","leaves"],["🌍","earth globe"],["🌙","moon"],["☀️","sun"],["⛅","cloud sun"],["☁️","cloud"],["🌧️","rain"],["⛈️","storm"],["❄️","snow"],["🌊","wave water"],["🐶","dog"],["🐱","cat"],["🦊","fox"],["🐺","wolf"],["🐉","dragon"],["🦁","lion"],["🐻","bear"],["🦅","eagle"]] },
+    { key: "food", name: "Food & Drink", icon: "🍕", emojis: [["🍎","apple"],["🍕","pizza"],["🍔","burger"],["🍟","fries"],["🌭","hotdog"],["🍿","popcorn"],["🍩","donut"],["🍪","cookie"],["🎂","cake birthday"],["🍰","cake"],["🧁","cupcake"],["🍫","chocolate"],["🍬","candy"],["🍭","lollipop"],["🍺","beer"],["🍻","beers cheers"],["🥤","drink soda"],["☕","coffee"],["🍷","wine"],["🍸","cocktail"],["🥂","champagne cheers"],["🍒","cherry"],["🍓","strawberry"],["🍉","watermelon"],["🍇","grapes"],["🌮","taco"]] },
+    { key: "travel", name: "Travel & Places", icon: "🚀", emojis: [["🚀","rocket launch"],["🛸","ufo"],["✈️","plane"],["🚁","helicopter"],["🚗","car"],["🏎️","race car"],["🏍️","motorcycle"],["⛵","sailboat"],["🚤","speedboat"],["🗺️","map"],["🧭","compass"],["🏝️","island"],["🏔️","mountain"],["🌋","volcano"],["🏕️","camp"],["🏰","castle"],["🗼","tower"],["🎡","ferris wheel"],["🎢","roller coaster"],["⛺","tent"],["🌐","globe web"]] },
+    { key: "activity", name: "Activity & Sports", icon: "⚽", emojis: [["⚽","soccer football"],["🏀","basketball"],["🏈","football"],["⚾","baseball"],["🎾","tennis"],["🏐","volleyball"],["🎱","8ball pool"],["🥊","boxing"],["🎣","fishing"],["🎸","guitar"],["🎹","piano"],["🥁","drums"],["🎤","mic sing"],["🎧","headphones"],["🎬","movie film"],["🏆","trophy"],["🎯","target"],["🏹","archery"],["🎳","bowling"],["🛹","skateboard"],["⛳","golf"]] },
+  ];
+  let _ebEmojiPanel = null, _ebEmojiAnchor = null;
+  // NOTE: the codebase already has a separate openEmojiPicker/closeEmojiPicker
+  // (Role Menus, input-target based). These are DISTINCT names on purpose — do
+  // not rename them back or they'll collide (function declarations hoist).
+  function ebEmojiPickerClose() {
+    if (!_ebEmojiPanel) return;
+    _ebEmojiPanel.remove(); _ebEmojiPanel = null; _ebEmojiAnchor = null;
+    document.removeEventListener("mousedown", _ebEmojiOutside, true);
+    document.removeEventListener("keydown", _ebEmojiKeydown, true);
+    window.removeEventListener("scroll", ebEmojiPickerClose, true);
+  }
+  function _ebEmojiOutside(e) { if (_ebEmojiPanel && !_ebEmojiPanel.contains(e.target) && !(e.target.closest && e.target.closest(".eb-emoji-trigger"))) ebEmojiPickerClose(); }
+  function _ebEmojiKeydown(e) { if (e.key === "Escape") ebEmojiPickerClose(); }
+  function ebEmojiPickerOpen(anchor, current, onPick) {
+    ebEmojiPickerClose();
+    const grid = h("div", { class: "eb-emoji-grid" });
+    function renderGrid(filter) {
+      clear(grid);
+      const f = (filter || "").trim().toLowerCase();
+      EMOJI_CATS.forEach((c) => {
+        const matches = c.emojis.filter(([e, kw]) => !f || (kw + " " + e).toLowerCase().indexOf(f) !== -1);
+        if (!matches.length) return;
+        grid.append(h("div", { class: "eb-emoji-cat-h", "data-cat": c.key }, c.name));
+        const row = h("div", { class: "eb-emoji-cat-grid" });
+        matches.forEach(([e]) => row.append(h("button", { type: "button", class: "eb-emoji-cell" + (e === current ? " sel" : ""), title: e, onclick: () => { onPick(e); ebEmojiPickerClose(); } }, e)));
+        grid.append(row);
+      });
+      if (!grid.children.length) grid.append(h("div", { class: "eb-emoji-empty" }, "No emoji found"));
+    }
+    const search = h("input", { class: "eb-emoji-search", type: "text", placeholder: "Search emoji…", spellcheck: "false" });
+    search.addEventListener("input", () => renderGrid(search.value));
+    const cats = h("div", { class: "eb-emoji-cats" }, ...EMOJI_CATS.map((c) => h("button", { type: "button", class: "eb-emoji-cat-btn", title: c.name, onclick: () => { const head = grid.querySelector('[data-cat="' + c.key + '"]'); if (head) head.scrollIntoView({ block: "start" }); } }, c.icon)));
+    const foot = h("div", { class: "eb-emoji-foot" },
+      h("input", { class: "eb-emoji-custom", type: "text", placeholder: "Custom: <:name:id>", value: /^<a?:/.test(current || "") ? current : "", onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); onPick(e.target.value.trim()); ebEmojiPickerClose(); } } }),
+      h("button", { type: "button", class: "eb-emoji-clear", onclick: () => { onPick(""); ebEmojiPickerClose(); } }, "Clear"));
+    const panel = h("div", { class: "eb-emoji-pop" }, search, cats, grid, foot);
+    document.body.appendChild(panel);
+    renderGrid("");
+    const r = anchor.getBoundingClientRect();
+    const pw = 300, ph = panel.offsetHeight || 340;
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8));
+    let top = r.bottom + 6;
+    if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 6);
+    panel.style.left = left + "px"; panel.style.top = top + "px";
+    _ebEmojiPanel = panel; _ebEmojiAnchor = anchor;
+    try { search.focus(); } catch (_) {}
+    setTimeout(() => {
+      document.addEventListener("mousedown", _ebEmojiOutside, true);
+      document.addEventListener("keydown", _ebEmojiKeydown, true);
+      window.addEventListener("scroll", ebEmojiPickerClose, true);
+    }, 0);
+  }
+  // An emoji-input control: a trigger button that opens the picker. get/set bind
+  // the model; onChange runs after a pick (re-render). Works in canvas + form.
+  function ebEmojiField(get, set, onChange) {
+    const disp = (v) => /^<a?:/.test(v || "") ? "🔣" : (v || "🙂");
+    const cur = get() || "";
+    const trigger = h("button", { type: "button", class: "eb-emoji-trigger" + (cur ? "" : " empty"), title: "Pick an emoji", "aria-label": "Pick an emoji" }, disp(cur));
+    trigger.onclick = (ev) => {
+      ev.stopPropagation();
+      if (_ebEmojiPanel && _ebEmojiAnchor === trigger) { ebEmojiPickerClose(); return; }
+      ebEmojiPickerOpen(trigger, get() || "", (v) => { set(v); trigger.textContent = disp(v); trigger.classList.toggle("empty", !v); if (onChange) onChange(); });
+    };
+    return h("span", { class: "eb-emoji-field" }, trigger);
+  }
+
   function userAvatar(u) {
     if (u.avatar) return h("div", { class: "dash-avatar" }, h("img", { src: `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128`, alt: "" }));
     return h("div", { class: "dash-avatar" }, (u.username || "U").charAt(0).toUpperCase());
@@ -885,7 +962,7 @@
   const EB_LIMITS = { content: 2000, title: 256, description: 4096, footer: 2048, authorName: 256, fieldName: 256, fieldValue: 1024, fields: 25, total: 6000, embeds: 10, rows: 5, buttonsPerRow: 5, options: 25, placeholder: 150, optLabel: 100, optValue: 100, optDesc: 100, label: 80 };
   const EB_PRESET_COLORS = ["#e23b2e", "#f5851f", "#ffcc4d", "#2ecc71", "#3498db", "#9b59b6", "#e91e63", "#1abc9c", "#34495e", "#95a5a6", "#000000", "#ffffff"];
   const EB_BTN_STYLES = [["primary", "Primary"], ["secondary", "Secondary"], ["success", "Success"], ["danger", "Danger"], ["link", "Link"]];
-  const EB_ACTION_TYPES = [["none", "Nothing"], ["info_embed", "Show info embed"], ["text", "Send text reply"], ["give_role", "Give role"], ["remove_role", "Remove role"], ["toggle_role", "Toggle role"], ["open_ticket", "Open ticket"], ["custom", "Custom action"]];
+  const EB_ACTION_TYPES = [["none", "Nothing"], ["info_embed", "Show info embed"], ["text", "Send text reply"], ["give_role", "Give role"], ["remove_role", "Remove role"], ["toggle_role", "Toggle role"]];
 
   function ebBlankEmbed() { return { title: "", url: "", description: "", color: "#e23b2e", timestamp: null, author: { name: "", url: "", icon_url: "" }, thumbnail: { url: "" }, image: { url: "" }, footer: { text: "", icon_url: "" }, fields: [] }; }
   function ebEmbedEmpty(e) { return !s2(e.title) && !s2(e.description) && !(e.fields || []).length && !s2(e.image && e.image.url) && !s2(e.thumbnail && e.thumbnail.url) && !s2(e.author && e.author.name) && !s2(e.footer && e.footer.text); }
@@ -1164,7 +1241,7 @@
               h("div", { class: "eb-btn-grid" },
                 field("Label", textInput(b.label, (v) => { b.label = v; syncPreview(); })),
                 field("Style", h("select", { class: "eb-select", onchange: (ev) => { b.style = ev.target.value; renderAll(); } }, ...EB_BTN_STYLES.map(([v, l]) => h("option", { value: v, selected: (b.style || "secondary") === v ? true : null }, l)))),
-                field("Emoji", textInput(b.emoji, (v) => { b.emoji = v; syncPreview(); }, "😀 or <:n:id>")),
+                field("Emoji", ebEmojiField(() => b.emoji, (v) => { b.emoji = v; }, () => syncPreview())),
                 b.style === "link" ? field("URL", urlInput(b.url, (v) => { b.url = v; syncPreview(); })) : field("Custom ID", textInput(b.custom_id, (v) => { b.custom_id = v; syncPreview(); }, "my_button_id"))
               ),
               h("div", { class: "eb-btn-row-foot" },
@@ -1214,7 +1291,7 @@
                 field("Label", textInput(o.label, (v) => { o.label = v; syncPreview(); })),
                 field("Value", textInput(o.value, (v) => { o.value = v; syncPreview(); })),
                 field("Description", textInput(o.description, (v) => { o.description = v; syncPreview(); })),
-                field("Emoji", textInput(o.emoji, (v) => { o.emoji = v; syncPreview(); }))
+                field("Emoji", ebEmojiField(() => o.emoji, (v) => { o.emoji = v; }, () => syncPreview()))
               ),
               h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: o.default ? true : null, onchange: (ev) => { o.default = ev.target.checked; syncPreview(); } }), h("span", null, "Selected by default")),
               h("div", { class: "eb-action" },
@@ -1491,7 +1568,7 @@
         const pop = ebPop(key, (p) => p.append(
           h("div", { class: "eb-cv-pop-lbl" }, "Style"),
           h("div", { class: "eb-cv-styles" }, ...EB_BTN_STYLES.map(([v, l]) => h("button", { type: "button", class: "eb-cv-style " + v + ((b.style || "secondary") === v ? " sel" : ""), title: l, onclick: () => { b.style = v; cvRerender(); } }))),
-          h("label", { class: "eb-cv-lbl" }, "Emoji", h("input", { class: "eb-cv-in", type: "text", value: b.emoji || "", placeholder: "😀 or <:n:id>", oninput: (ev) => { b.emoji = ev.target.value; cvSync(); } })),
+          h("label", { class: "eb-cv-lbl" }, "Emoji", ebEmojiField(() => b.emoji, (v) => { b.emoji = v; }, () => cvRerender())),
           b.style === "link"
             ? h("label", { class: "eb-cv-lbl" }, "Link URL", h("input", { class: "eb-cv-in", type: "url", value: b.url || "", placeholder: "https://…", oninput: (ev) => { b.url = ev.target.value; cvSync(); } }))
             : h("label", { class: "eb-cv-lbl" }, "Custom ID", h("input", { class: "eb-cv-in", type: "text", value: b.custom_id || "", placeholder: "my_button_id", oninput: (ev) => { b.custom_id = ev.target.value; cvSync(); } })),
@@ -1521,7 +1598,7 @@
         o.action = o.action || { type: "none", ephemeral: true };
         const optKey = "opt:" + ri + ":" + oi;
         list.append(h("div", { class: "eb-d-option eb-cv-opt" },
-          h("input", { class: "eb-cv-emoji", type: "text", value: o.emoji || "", placeholder: "🙂", title: "Emoji", oninput: (ev) => { o.emoji = ev.target.value; cvSync(); } }),
+          ebEmojiField(() => o.emoji, (v) => { o.emoji = v; }, () => cvRerender()),
           h("div", { class: "eb-d-opt-text" },
             ebEditable("eb-d-opt-label", () => o.label, (v) => { o.label = v; }, { tag: "div", label: "Option label", ph: "Option label", max: EB_LIMITS.optLabel }),
             ebEditable("eb-d-opt-desc", () => o.description, (v) => { o.description = v; }, { tag: "div", label: "Option description", ph: "Description (optional)", max: EB_LIMITS.optDesc })),
@@ -1543,9 +1620,21 @@
       const eph = () => h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: act.ephemeral !== false ? true : null, onchange: (ev) => { act.ephemeral = ev.target.checked; cvSync(); } }), h("span", null, "Only the clicker sees it"));
       if (act.type === "text") out.push(h("label", { class: "eb-cv-lbl" }, "Reply text", h("input", { class: "eb-cv-in", type: "text", value: act.text || "", oninput: (ev) => { act.text = ev.target.value; cvSync(); } })), eph());
       else if (act.type === "give_role" || act.type === "remove_role" || act.type === "toggle_role") out.push(h("label", { class: "eb-cv-lbl" }, "Role", h("select", { class: "eb-cv-sel", onchange: (ev) => { act.roleId = ev.target.value; cvSync(); } }, h("option", { value: "" }, "Select a role…"), ...roles.map((rl) => h("option", { value: rl.id, selected: act.roleId === rl.id ? true : null }, rl.name)))), eph());
-      else if (act.type === "custom") out.push(h("label", { class: "eb-cv-lbl" }, "Custom action ID", h("input", { class: "eb-cv-in", type: "text", value: act.customActionId || "", oninput: (ev) => { act.customActionId = ev.target.value; cvSync(); } })), eph());
-      else if (act.type === "info_embed") out.push(h("div", { class: "eb-cv-note" }, "Configure the info-embed reply in Advanced settings."));
-      else if (act.type === "open_ticket") out.push(h("div", { class: "eb-cv-note" }, "Opens a ticket (needs a Ticket Panel)."), eph());
+      else if (act.type === "info_embed") {
+        // Edit the reply embed right here (no detour to Advanced settings).
+        act.embed = act.embed || { title: "", description: "", color: "#5865f2", image: { url: "" }, footer: { text: "" } };
+        const e2 = act.embed;
+        out.push(
+          h("div", { class: "eb-cv-pop-lbl" }, "Reply embed"),
+          h("label", { class: "eb-cv-lbl" }, "Title", h("input", { class: "eb-cv-in", type: "text", value: e2.title || "", oninput: (ev) => { e2.title = ev.target.value; cvSync(); } })),
+          h("label", { class: "eb-cv-lbl" }, "Description", h("textarea", { class: "eb-cv-in", rows: 2, oninput: (ev) => { e2.description = ev.target.value; cvSync(); } }, e2.description || "")),
+          h("div", { class: "eb-cv-grid2" },
+            h("label", { class: "eb-cv-lbl" }, "Colour", h("input", { class: "eb-cv-color", type: "color", value: /^#[0-9a-f]{6}$/i.test(e2.color || "") ? e2.color : "#5865f2", oninput: (ev) => { e2.color = ev.target.value; cvSync(); } })),
+            h("label", { class: "eb-cv-lbl" }, "Footer", h("input", { class: "eb-cv-in", type: "text", value: (e2.footer && e2.footer.text) || "", oninput: (ev) => { (e2.footer = e2.footer || {}).text = ev.target.value; cvSync(); } }))),
+          h("label", { class: "eb-cv-lbl" }, "Image URL", h("input", { class: "eb-cv-in", type: "url", value: (e2.image && e2.image.url) || "", placeholder: "https://…", oninput: (ev) => { (e2.image = e2.image || {}).url = ev.target.value; cvSync(); } })),
+          eph()
+        );
+      }
       return out;
     }
     function ebEmbedSettings(p, e) {

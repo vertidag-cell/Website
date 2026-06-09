@@ -909,6 +909,31 @@
 .dash-next-preview .eb-cv-field-tools { position: absolute; top: 2px; right: 2px; display: flex; gap: 3px; opacity: 0; transition: opacity .12s; }
 .dash-next-preview .eb-cv-field:hover .eb-cv-field-tools, .dash-next-preview .eb-cv-field:focus-within .eb-cv-field-tools { opacity: 1; }
 
+/* ---- Emoji picker (button/option emoji fields) ---- */
+.dash-next-preview .eb-emoji-field { display: inline-flex; }
+.dash-next-preview .eb-emoji-trigger { font-size: 1.15rem; line-height: 1; min-width: 40px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: #1e1f22; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; cursor: pointer; padding: 0 6px; }
+.dash-next-preview .eb-emoji-trigger:hover { border-color: #5865f2; }
+.dash-next-preview .eb-emoji-trigger.empty { opacity: 0.55; }
+.dash-next-preview .eb-emoji-trigger:focus-visible { outline: 2px solid #5865f2; outline-offset: 1px; }
+.dash-next-preview .eb-emoji-pop { position: fixed; z-index: 1200; width: 300px; height: 332px; display: flex; flex-direction: column; background: #2b2d31; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; box-shadow: 0 24px 56px -14px rgba(0, 0, 0, 0.75); padding: 8px; }
+.dash-next-preview .eb-emoji-search { font: inherit; font-size: 0.85rem; color: #dbdee1; background: #1e1f22; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 7px 10px; margin-bottom: 6px; }
+.dash-next-preview .eb-emoji-search:focus { outline: none; border-color: #5865f2; }
+.dash-next-preview .eb-emoji-cats { display: flex; gap: 1px; margin-bottom: 6px; }
+.dash-next-preview .eb-emoji-cat-btn { font-size: 1.05rem; line-height: 1; background: transparent; border: 0; border-radius: 6px; padding: 4px; cursor: pointer; opacity: 0.65; flex: 1; }
+.dash-next-preview .eb-emoji-cat-btn:hover { opacity: 1; background: rgba(255, 255, 255, 0.06); }
+.dash-next-preview .eb-emoji-grid { overflow-y: auto; flex: 1; }
+.dash-next-preview .eb-emoji-cat-h { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #949ba4; padding: 6px 2px 3px; position: sticky; top: 0; background: #2b2d31; }
+.dash-next-preview .eb-emoji-cat-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; margin-bottom: 4px; }
+.dash-next-preview .eb-emoji-cell { font-size: 1.2rem; line-height: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; border-radius: 6px; cursor: pointer; padding: 0; }
+.dash-next-preview .eb-emoji-cell:hover { background: rgba(88, 101, 242, 0.32); }
+.dash-next-preview .eb-emoji-cell.sel { background: rgba(88, 101, 242, 0.45); }
+.dash-next-preview .eb-emoji-empty { color: #949ba4; font-size: 0.82rem; text-align: center; padding: 24px; }
+.dash-next-preview .eb-emoji-foot { display: flex; gap: 6px; margin-top: 6px; }
+.dash-next-preview .eb-emoji-custom { flex: 1; min-width: 0; font: inherit; font-size: 0.76rem; color: #dbdee1; background: #1e1f22; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 6px 8px; }
+.dash-next-preview .eb-emoji-custom:focus { outline: none; border-color: #5865f2; }
+.dash-next-preview .eb-emoji-clear { font: inherit; font-size: 0.76rem; color: #b5bac1; background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+.dash-next-preview .eb-emoji-clear:hover { color: #fff; border-color: #5865f2; }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }
