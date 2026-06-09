@@ -3531,6 +3531,7 @@
       if (mod.name === "polls") return renderPollsCanvas(content, mod, m.values);
       if (mod.name === "moderation") return renderModerationCanvas(content, mod, m.values);
       if (mod.name === "pets") return renderPetsCanvas(content, mod, m.values);
+      if (mod.name === "credits") return renderCreditsCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4355,6 +4356,67 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "A pet card members see")),
       device, topbar, lbSection, tip, statusBox, mcSaveBar(mod, content, () => pv, saveBtn, statusBox)));
+  }
+
+  // Credits as a live-preview canvas: a balance card + a credits-log feed, with
+  // access (public lookups / staff roles) and expiry controls.
+  function renderCreditsCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, publicBalance: false, adminRoleIds: [], defaultExpiryDays: 0, logChannelId: "" }, values || {});
+    mv.adminRoleIds = Array.isArray(mv.adminRoleIds) ? mv.adminRoleIds.slice() : [];
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const username = state.user?.username || "member";
+
+    // ---- Live preview: balance card + credits log ----
+    const device = h("div", { class: "eb-discord credit-preview" });
+    function drawPreview() {
+      clear(device);
+      const expiry = (mv.defaultExpiryDays | 0) > 0 ? ("Credits expire " + mv.defaultExpiryDays + " days after they're earned") : "Credits never expire";
+      device.append(h("div", { class: "eb-embed credit-card", style: { borderColor: "#faa61a" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "credit-head" },
+            h("div", { class: "credit-ico", "aria-hidden": "true" }, "💰"),
+            h("div", { class: "credit-meta" }, h("div", { class: "credit-label" }, "Balance"), h("div", { class: "credit-owner" }, "@" + username))),
+          h("div", { class: "credit-amount" }, "1,250", h("span", { class: "credit-unit" }, "credits")),
+          h("div", { class: "credit-expiry" }, expiry))));
+      device.append(h("div", { class: "eb-embed credit-log", style: { borderColor: "rgba(255,255,255,0.1)" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "credit-log-title" }, "📜 Credits log"),
+          h("div", { class: "credit-hrow" }, h("span", { class: "credit-sign plus" }, "+250"), h("span", { class: "credit-desc" }, "Weekly leaderboard reward"), h("span", { class: "credit-time" }, "2h ago")),
+          h("div", { class: "credit-hrow" }, h("span", { class: "credit-sign minus" }, "−100"), h("span", { class: "credit-desc" }, "Redeemed: VIP role"), h("span", { class: "credit-time" }, "yesterday")),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Logged to #" + (chName(mv.logChannelId) || "credits-log"))))));
+    }
+    drawPreview();
+
+    // ---- Top bar: history log channel + enabled ----
+    const logCh = renderChannelSelect("credit-logch", "logChannelId", state.channels || [], mv.logChannelId);
+    logCh.classList.add("w-select");
+    logCh.addEventListener("change", () => { mv.logChannelId = logCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), logCh),
+      mcSwitch("Credits enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const accessSection = mcSection("Access",
+      h("div", { class: "mc-switch-row" }, mcSwitch("Anyone can look up balances", () => mv.publicBalance === true, (v) => { mv.publicBalance = v; markDirty(); })),
+      mcField("Who can grant or remove credits", mcChips("role", () => mv.adminRoleIds, (a) => { mv.adminRoleIds = a; }, markDirty, { empty: "Server admins only", add: "+ Add a staff role" })));
+
+    const expirySection = mcSection("Expiry",
+      h("div", { class: "mc-grid" },
+        mcField("Default expiry (days)", mcNumber(() => mv.defaultExpiryDays, (v) => { mv.defaultExpiryDays = v; drawPreview(); markDirty(); }, { min: 0, max: 365 }), "0 = credits never expire")));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Staff grant credits with ", h("code", null, "/credits give"), " and members spend them on rewards. Every change is posted to the log channel above."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What members see for /balance")),
+      device, topbar, accessSection, expirySection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
   /** Mark the form as dirty/clean by comparing live values to baseline. */
@@ -6298,10 +6360,23 @@
         },
         values: { enabled: true, showLeaderboard: true, leaderboardChannelId: "3", displayChannelId: "1" },
       },
+      credits: {
+        module: {
+          name: "credits", label: "Credits", tier: "premium", description: "In-server credits with expiry, history, role-gated reward integrations.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "publicBalance", type: "boolean", label: "Public balance lookups" },
+            { key: "adminRoleIds", type: "roles", label: "Admin/staff roles" },
+            { key: "defaultExpiryDays", type: "integer", label: "Default expiry (days, 0=lifetime)" },
+            { key: "logChannelId", type: "channel", label: "History log channel" },
+          ],
+        },
+        values: { enabled: true, publicBalance: true, adminRoleIds: ["22"], defaultExpiryDays: 30, logChannelId: "3" },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];

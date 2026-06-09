@@ -1091,6 +1091,24 @@
 .dash-next-preview .pet-bar > i { display: block; height: 100%; border-radius: 999px; transition: width .4s cubic-bezier(.22, 1, .36, 1); }
 .dash-next-preview .pet-lb { margin-top: 12px; }
 
+/* ---- Credits canvas (balance card + credits-log feed) ---- */
+.dash-next-preview .credit-preview { margin-bottom: 14px; }
+.dash-next-preview .credit-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.dash-next-preview .credit-ico { width: 48px; height: 48px; flex: none; display: grid; place-items: center; font-size: 1.6rem; background: rgba(250, 166, 26, 0.14); border-radius: 14px; }
+.dash-next-preview .credit-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dsc-text-muted); }
+.dash-next-preview .credit-owner { font-size: 0.88rem; color: #f2f3f5; }
+.dash-next-preview .credit-amount { display: flex; align-items: baseline; gap: 8px; font-size: 1.9rem; font-weight: 800; color: #fff; line-height: 1; }
+.dash-next-preview .credit-unit { font-size: 0.85rem; font-weight: 500; color: var(--dsc-text-muted); }
+.dash-next-preview .credit-expiry { margin-top: 8px; font-size: 0.78rem; color: var(--dsc-text-faint); }
+.dash-next-preview .credit-log { margin-top: 12px; }
+.dash-next-preview .credit-log-title { font-weight: 700; color: #fff; margin-bottom: 8px; }
+.dash-next-preview .credit-hrow { display: flex; align-items: center; gap: 10px; padding: 3px 0; font-size: 0.88rem; }
+.dash-next-preview .credit-sign { min-width: 52px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dash-next-preview .credit-sign.plus { color: #57f287; }
+.dash-next-preview .credit-sign.minus { color: #f0626a; }
+.dash-next-preview .credit-desc { color: #dbdee1; flex: 1; min-width: 0; }
+.dash-next-preview .credit-time { margin-left: auto; color: var(--dsc-text-faint); font-size: 0.78rem; white-space: nowrap; }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }
