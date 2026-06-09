@@ -54,6 +54,53 @@ export default {
       return new Response("Not found", { status: 404 });
     }
 
+    // Private dashboard preview gate — mirrors functions/_middleware.js so the
+    // preview is never served ungated regardless of which deploy path is live.
+    // Secret lives in PREVIEW_PASS (Worker env/secret), never in the bundle.
+    const lower = path.toLowerCase();
+    if (lower === "/dashboard-next" || lower === "/dashboard-next.html") {
+      const gate = requirePreviewAuth(request, env);
+      if (gate) return gate;
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
+
+// Returns a 401/503 Response to short-circuit, or null when authorized.
+function requirePreviewAuth(request, env) {
+  const expected = env && env.PREVIEW_PASS;
+  const expectedUser = (env && env.PREVIEW_USER) || "admin";
+  if (!expected) {
+    return new Response(
+      "Dashboard preview is locked. Set the PREVIEW_PASS environment variable on the Worker to enable it.",
+      { status: 503, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+  const header = request.headers.get("Authorization") || "";
+  if (header.startsWith("Basic ")) {
+    let decoded = "";
+    try { decoded = atob(header.slice(6)); } catch { decoded = ""; }
+    const sep = decoded.indexOf(":");
+    const user = sep >= 0 ? decoded.slice(0, sep) : "";
+    const pass = sep >= 0 ? decoded.slice(sep + 1) : "";
+    if (timingSafeEqual(user, expectedUser) && timingSafeEqual(pass, expected)) {
+      return null;
+    }
+  }
+  return new Response("Authentication required.", {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="Arkoris Dashboard Preview", charset="UTF-8"',
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+function timingSafeEqual(a, b) {
+  a = String(a); b = String(b);
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return result === 0;
+}

@@ -1,0 +1,57 @@
+/*
+ * Arkoris — Dashboard PREVIEW override layer
+ * ------------------------------------------------------------
+ * Loaded ONLY by dashboard-next.html, AFTER styles.css. This is the
+ * sandbox for the dashboard redesign: put every new/changed style
+ * for the next dashboard UI here so the live dashboard (styles.css)
+ * is never touched until we deliberately merge.
+ *
+ * SCOPING RULE: every selector in this file must start with
+ * `.dash-next-preview` (the <body> class on the preview page). The
+ * file only loads on the preview page anyway, but scoping keeps the
+ * merge-back diff obvious and prevents accidental global overrides.
+ *
+ * Right now this file is intentionally near-empty: the preview is a
+ * pixel-identical clone of the live dashboard. We start changing the
+ * UI here as we iterate.
+ */
+
+/* --- Persistent "private preview" badge -------------------------------------
+   A small, non-interactive marker so you can never confuse the preview with
+   the live dashboard. pointer-events:none keeps it from blocking clicks. */
+.dash-next-preview::after {
+  content: "PRIVATE PREVIEW";
+  position: fixed;
+  z-index: 2147483000;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 12px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #fff;
+  background: linear-gradient(180deg, #ef4444, #dc2626);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.45);
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 560px) {
+  .dash-next-preview::after {
+    right: 8px;
+    bottom: 8px;
+    padding: 5px 9px;
+    font-size: 0.58rem;
+  }
+}
+
+/* ============================================================================
+   REDESIGN WORK STARTS BELOW — add scoped overrides here, e.g.:
+
+   .dash-next-preview .dash-sidebar { ... }
+   .dash-next-preview .dash-layout  { ... }
+
+   ============================================================================ */
