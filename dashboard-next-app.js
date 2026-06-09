@@ -162,7 +162,6 @@
     payments:     "creditCard",
     staffPay:     "wallet",
     hype:         "flame",
-    giveaways:    "gift",
     events:       "calendar",
     branding:     "palette",
     serverTemplates: "template",
@@ -797,7 +796,8 @@
     if (!state.modules) {
       try {
         const m = await data.modules();
-        state.modules = m.modules || [];
+        // Giveaways is intentionally hidden from the dashboard (still usable via /giveaway in Discord).
+        state.modules = (m.modules || []).filter((mod) => mod.name !== "giveaways");
       } catch (e) {
         return renderTabError(root, e);
       }
@@ -855,7 +855,7 @@
       // Discord Server
       welcome: "discord", autoRoles: "discord", roleMenus: "discord", xp: "discord",
       hype: "discord", credits: "discord", polls: "discord", moderation: "discord",
-      pets: "discord", events: "discord", giveaways: "discord",
+      pets: "discord", events: "discord",
       // Tickets & Staff
       tickets: "tickets", staffPay: "tickets",
       // ARK Integration
@@ -2040,7 +2040,6 @@
     { id: "payments",    label: "Payments",    emoji: "💳", module: "payments",      flag: "payments",   tier: "premium" },
     { id: "staffPay",    label: "Staff Pay",   emoji: "💷", module: "staffPay",      flag: "staffPay",   tier: "premium" },
     { id: "hype",        label: "Hype System", emoji: "🔥", module: "hype",          flag: "hype",       tier: "premium" },
-    { id: "giveaways",   label: "Giveaways",   emoji: "🎉", module: "giveaways",     flag: null,         tier: "premium" },
     { id: "events",      label: "Events",      emoji: "📋", module: "events",        flag: null,         tier: "premium" },
     { id: "branding",    label: "Branding",    emoji: "🎨", module: "branding",      flag: "branding",   tier: "premium" },
     { id: "suggestions", label: "Suggestions", emoji: "🔔", module: null,            flag: null,         comingSoon: true },
@@ -2059,7 +2058,6 @@
     payments:    "Accept PayPal payments securely.",
     staffPay:    "Pay your staff automatically.",
     hype:        "Build hype and engage your community.",
-    giveaways:   "Run community giveaways.",
     events:      "Dino, Number & Vault credit events.",
     branding:    "Customize bot text, colors and more.",
     suggestions: "Collect member suggestions.",
@@ -2068,7 +2066,7 @@
 
   // Setup Hub "mark as done" persistence. Flagged categories use the backend
   // override (it syncs with Discord /setup + the overview ring). The handful of
-  // flagless categories (polls, giveaways, events, suggestions, sticky) have no
+  // flagless categories (polls, events, suggestions, sticky) have no
   // backend flag to store against, so their manual "done" lives in localStorage,
   // keyed per guild.
   function hubLocalKey(gid) { return `arkoris:setupDone:${gid}`; }
@@ -3534,7 +3532,6 @@
       if (mod.name === "credits") return renderCreditsCanvas(content, mod, m.values);
       if (mod.name === "hype") return renderHypeCanvas(content, mod, m.values);
       if (mod.name === "events") return renderEventsCanvas(content, mod, m.values);
-      if (mod.name === "giveaways") return renderGiveawaysCanvas(content, mod, m.values);
       if (mod.name === "tickets") return renderTicketsCanvas(content, mod, m.values);
       if (mod.name === "staffPay") return renderStaffPayCanvas(content, mod, m.values);
       if (mod.name === "payments") return renderPaymentsCanvas(content, mod, m.values);
@@ -3623,11 +3620,6 @@
       { name: "Basic",      fields: ["enabled", "modLogChannelId", "modRoleIds"] },
       { name: "URL filter", fields: ["urlFilterEnabled", "whitelistDomains"] },
       { name: "Auto-action",fields: ["maxWarnings"] },
-    ],
-    giveaways: [
-      { name: "Basic",   fields: ["enabled", "defaultChannelId"] },
-      { name: "Hosts",   fields: ["allowedRoleIds"] },
-      { name: "Logging", fields: ["logChannelId"] },
     ],
     autoRoles: [
       { name: "Basic", fields: ["enabled", "roleIds", "ignoreBots"] },
@@ -4603,65 +4595,6 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Pick an event type to preview")),
       tabs, device, topbar, whereSection, rewardHost, tip, statusBox,
-      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
-  }
-
-  // Giveaways as a live-preview canvas: a Discord giveaway embed with an Enter
-  // button; controls are the default channel, host roles, and log channel.
-  function renderGiveawaysCanvas(content, mod, values) {
-    const mv = Object.assign({ enabled: false, defaultChannelId: "", allowedRoleIds: [], logChannelId: "" }, values || {});
-    mv.allowedRoleIds = Array.isArray(mv.allowedRoleIds) ? mv.allowedRoleIds.slice() : [];
-    const baseline = JSON.stringify(mv);
-    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
-
-    const statusBox = h("div");
-    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
-    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
-    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
-    const username = state.user?.username || "host";
-
-    // ---- Live preview: a giveaway embed ----
-    const device = h("div", { class: "eb-discord giveaway-preview" });
-    function drawPreview() {
-      clear(device);
-      device.append(h("div", { class: "eb-embed giveaway-card", style: { borderColor: "#eb459e" } },
-        h("div", { class: "eb-embed-inner" },
-          h("div", { class: "gw-banner" }, "🎉 GIVEAWAY 🎉"),
-          h("div", { class: "gw-prize" }, "Nitro Classic — 1 month"),
-          h("div", { class: "gw-meta" },
-            h("span", { class: "gw-chip" }, "🏆 1 winner"),
-            h("span", { class: "gw-chip" }, "⏰ Ends in 2 days"),
-            h("span", { class: "gw-chip" }, "🎟️ 47 entries")),
-          h("div", { class: "gw-host" }, "Hosted by ", h("span", { class: "w-mention" }, "@" + username)),
-          h("div", { class: "gw-enter" }, "🎉 Enter"),
-          h("div", { class: "eb-e-footer" }, h("span", null, "Posted in #" + (chName(mv.defaultChannelId) || "giveaways"))))));
-    }
-    drawPreview();
-
-    // ---- Top bar: default channel + enabled ----
-    const defCh = renderChannelSelect("gw-defch", "defaultChannelId", state.channels || [], mv.defaultChannelId);
-    defCh.classList.add("w-select");
-    defCh.addEventListener("change", () => { mv.defaultChannelId = defCh.value; drawPreview(); markDirty(); });
-    const topbar = h("div", { class: "w-topbar" },
-      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), defCh),
-      mcSwitch("Giveaways enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
-
-    const hostSection = mcSection("Who can host giveaways",
-      mcChips("role", () => mv.allowedRoleIds, (a) => { mv.allowedRoleIds = a; }, markDirty, { empty: "Server admins only", add: "+ Add a host role" }));
-
-    const logCh = renderChannelSelect("gw-logch", "logChannelId", state.channels || [], mv.logChannelId);
-    logCh.classList.add("mc-select");
-    logCh.addEventListener("change", () => { mv.logChannelId = logCh.value; markDirty(); });
-    const logSection = mcSection("Logging",
-      mcField("Giveaway log channel", logCh, "Winners and re-rolls are recorded here"));
-
-    const tip = h("div", { class: "w-tip" },
-      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
-      h("div", null, "Hosts run ", h("code", null, "/giveaway"), " to start one. Members enter with a single click and Arkoris draws winners fairly when the timer ends."));
-
-    content.append(h("div", { class: "dash-card w-canvas" },
-      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "A giveaway members can enter")),
-      device, topbar, hostSection, logSection, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
@@ -6692,7 +6625,7 @@
       { name: "polls", label: "Polls", tier: "free" }, { name: "moderation", label: "Moderation", tier: "free" },
       { name: "pets", label: "Pets", tier: "free" }, { name: "credits", label: "Credits", tier: "free" },
       { name: "hype", label: "Hype", tier: "premium" }, { name: "events", label: "Events", tier: "premium" },
-      { name: "giveaways", label: "Giveaways", tier: "premium" }, { name: "tickets", label: "Tickets", tier: "premium" },
+      { name: "tickets", label: "Tickets", tier: "premium" },
       { name: "staffPay", label: "Staff Pay", tier: "premium" }, { name: "ark", label: "ARK Management", tier: "premium" },
       { name: "logs", label: "Logs", tier: "free" }, { name: "payments", label: "Payments", tier: "premium" },
       { name: "branding", label: "Branding", tier: "premium" }, { name: "serverTemplates", label: "Server Templates", tier: "premium" },
@@ -6701,7 +6634,7 @@
     data.modules = async () => ({ modules: MOCK_MODULES });
     // Mutable so ?mock= "Mark as done" visibly updates the Setup Hub. Includes
     // credits/hype so those flagged cards are testable as to-do + markable.
-    const mockBaseFlags = { welcome: true, autoRoles: true, roleMenus: false, tickets: true, staffPay: false, branding: true, ark: true, payments: false, events: true, xp: true, moderation: false, pets: false, giveaways: false, credits: false, hype: false };
+    const mockBaseFlags = { welcome: true, autoRoles: true, roleMenus: false, tickets: true, staffPay: false, branding: true, ark: true, payments: false, events: true, xp: true, moderation: false, pets: false, credits: false, hype: false };
     const mockOverrides = {};
     const mockStatus = () => {
       const flags = Object.assign({}, mockBaseFlags);
@@ -6903,18 +6836,6 @@
         },
         values: { enabled: true, announceChannelId: "3", trackChannelId: "1", pingRoleId: "20", allowedRoleIds: ["22"], dinoBase: 50, dinoBump: 5, dinoPer: 25, numberBase: 30, numberBump: 2, numberPer: 100, vaultBase: 100, vaultBump: 10, vaultPer: 50 },
       },
-      giveaways: {
-        module: {
-          name: "giveaways", label: "Giveaways", tier: "premium", description: "Community giveaways with role gating.",
-          fields: [
-            { key: "enabled", type: "boolean", label: "Enabled" },
-            { key: "defaultChannelId", type: "channel", label: "Default channel" },
-            { key: "allowedRoleIds", type: "roles", label: "Allowed host roles" },
-            { key: "logChannelId", type: "channel", label: "Giveaway log channel" },
-          ],
-        },
-        values: { enabled: true, defaultChannelId: "3", allowedRoleIds: ["22"], logChannelId: "4" },
-      },
       tickets: {
         module: {
           name: "tickets", label: "Tickets", tier: "premium", description: "Forum-based support tickets, staff workflows, transcripts.",
@@ -6962,7 +6883,7 @@
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", giveaways: "giveaways", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];

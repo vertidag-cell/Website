@@ -1140,15 +1140,6 @@
 .dash-next-preview .event-prize-sub { font-size: 0.78rem; color: var(--dsc-text-muted); }
 .dash-next-preview .event-foot-line { margin-top: 10px; font-size: 0.8rem; color: var(--dsc-text-faint); }
 
-/* ---- Giveaways canvas (giveaway embed + Enter button) ---- */
-.dash-next-preview .giveaway-preview { margin-bottom: 14px; }
-.dash-next-preview .gw-banner { font-weight: 800; letter-spacing: 0.04em; color: #eb459e; font-size: 0.92rem; margin-bottom: 6px; }
-.dash-next-preview .gw-prize { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 12px; }
-.dash-next-preview .gw-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.dash-next-preview .gw-chip { font-size: 0.8rem; color: #dbdee1; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--dsc-line); padding: 3px 10px; border-radius: 999px; }
-.dash-next-preview .gw-host { font-size: 0.85rem; color: var(--dsc-text-muted); }
-.dash-next-preview .gw-enter { display: inline-block; margin-top: 12px; background: var(--dsc-blurple); color: #fff; font-weight: 600; font-size: 0.9rem; padding: 9px 18px; border-radius: 8px; }
-
 /* ---- Tickets canvas (support panel + staff-flow line) ---- */
 .dash-next-preview .ticket-preview { margin-bottom: 14px; }
 .dash-next-preview .ticket-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.05rem; color: #fff; margin-bottom: 6px; }
