@@ -3488,6 +3488,9 @@
         if (mod.name === "logs") return loadAudit(content);
       }
 
+      // Welcome → live-preview canvas (edit the message in the Discord preview).
+      if (mod.name === "welcome") return renderWelcomeCanvas(content, mod, m.values);
+
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
 
@@ -3759,6 +3762,98 @@
       h("div", { class: "dc-embed-footer" }, `${guildName}`)
     );
     return shell;
+  }
+
+  // Welcome module as a live-preview canvas (like the Embed Builder): the title
+  // and message are edited IN the styled Discord message; channel / colour /
+  // image / toggles are compact controls right under it.
+  function renderWelcomeCanvas(content, mod, values) {
+    const wv = Object.assign({ enabled: true, channelId: "", title: "", message: "", mentionUser: true, embedColor: "#dc2626", imageUrl: "" }, values || {});
+    const baseline = JSON.stringify(wv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, wv))));
+
+    const guildName = (state.guilds.find((g) => g.id === state.selectedGuildId)?.name) || "your server";
+    const username = state.user?.username || "newmember";
+    const statusBox = h("div");
+
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(wv) === baseline; }
+
+    const plainOK = (() => { try { const d = document.createElement("div"); d.contentEditable = "plaintext-only"; return d.contentEditable === "plaintext-only"; } catch { return false; } })();
+    function wEdit(cls, key, ph, multiline) {
+      const el = h("div", { class: "w-edit " + cls });
+      el.contentEditable = plainOK ? "plaintext-only" : "true";
+      el.spellcheck = false;
+      if (ph) el.setAttribute("data-ph", ph);
+      el.textContent = wv[key] || "";
+      el.addEventListener("input", () => { wv[key] = (el.innerText || "").replace(/\n$/, ""); markDirty(); });
+      el.addEventListener("paste", (ev) => { ev.preventDefault(); const t = (ev.clipboardData || window.clipboardData).getData("text") || ""; try { document.execCommand("insertText", false, t); } catch (_) { el.textContent += t; } });
+      if (!multiline) el.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); el.blur(); } });
+      return el;
+    }
+
+    // The editable Discord welcome message.
+    const mentionLine = h("div", { class: "w-mention" }, "@" + username);
+    const imageEl = h("img", { class: "dc-embed-image", alt: "", onerror: "this.style.display='none'" });
+    const shell = h("div", { class: "dc-embed-shell w-canvas-embed", style: { ["--dc-color"]: /^#[0-9a-f]{6}$/i.test(wv.embedColor) ? wv.embedColor : "#dc2626" } },
+      h("div", { class: "dc-embed-bot" }, h("div", { class: "dc-embed-bot-avatar" }), h("div", { class: "dc-embed-bot-name" }, "Arkoris"), h("span", { class: "dc-embed-bot-tag" }, "APP")),
+      mentionLine,
+      wEdit("dc-embed-title w-title", "title", "Welcome to {server}!", false),
+      wEdit("dc-embed-desc w-desc", "message", "Glad you're here {user}! Read the rules and say hi.", true),
+      imageEl,
+      h("div", { class: "dc-embed-footer" }, guildName)
+    );
+    function syncMention() { mentionLine.style.display = wv.mentionUser !== false ? "" : "none"; }
+    function syncImage() { if (/^https:\/\//i.test(wv.imageUrl || "")) { imageEl.src = wv.imageUrl; imageEl.style.display = ""; } else { imageEl.style.display = "none"; } }
+    syncMention(); syncImage();
+
+    // Compact controls under the message.
+    const chSel = renderChannelSelect("w-channel", "channelId", state.channels || [], wv.channelId);
+    chSel.classList.add("w-input");
+    chSel.addEventListener("change", () => { wv.channelId = chSel.value; markDirty(); });
+    const enabledCb = h("input", { type: "checkbox", checked: wv.enabled !== false ? true : null });
+    enabledCb.addEventListener("change", () => { wv.enabled = enabledCb.checked; markDirty(); });
+    const colorIn = h("input", { type: "color", class: "w-color", value: /^#[0-9a-f]{6}$/i.test(wv.embedColor) ? wv.embedColor : "#dc2626" });
+    colorIn.addEventListener("input", () => { wv.embedColor = colorIn.value; shell.style.setProperty("--dc-color", colorIn.value); markDirty(); });
+    const imgIn = h("input", { type: "url", class: "w-input", value: wv.imageUrl || "", placeholder: "https://… image URL (optional)" });
+    imgIn.addEventListener("input", () => { wv.imageUrl = imgIn.value; markDirty(); });
+    imgIn.addEventListener("change", syncImage);
+    imgIn.addEventListener("blur", syncImage);
+    const mentionCb = h("input", { type: "checkbox", checked: wv.mentionUser !== false ? true : null });
+    mentionCb.addEventListener("change", () => { wv.mentionUser = mentionCb.checked; syncMention(); markDirty(); });
+
+    const controls = h("div", { class: "w-controls" },
+      h("label", { class: "w-ctrl" }, h("span", { class: "w-ctrl-lbl" }, "Post welcomes to"), chSel),
+      h("label", { class: "w-ctrl" }, h("span", { class: "w-ctrl-lbl" }, "Image URL"), imgIn),
+      h("label", { class: "w-ctrl w-ctrl-row" }, h("span", { class: "w-ctrl-lbl" }, "Accent colour"), colorIn),
+      h("label", { class: "w-ctrl w-ctrl-check" }, enabledCb, h("span", null, "Welcome enabled")),
+      h("label", { class: "w-ctrl w-ctrl-check" }, mentionCb, h("span", null, "Mention the new member"))
+    );
+
+    const tip = h("div", { class: "dash-tip" },
+      (() => { const i = h("span", { class: "tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, h("strong", null, "Tip: "), "Type ", h("code", null, "{user}"), " to mention the new member and ", h("code", null, "{server}"), " for the server name — they're filled in when someone joins."));
+
+    const resetBtn = h("button", { type: "button", class: "btn btn-ghost", onclick: () => doResetModule(mod, content) }, "Reset to default");
+    const bar = h("div", { class: "dash-sticky-actions" }, saveBtn, resetBtn, h("span", { class: "dash-unsaved" }, h("span", { class: "dot" }), "Unsaved changes"), h("div", { class: "filler" }), h("span", { style: { fontSize: "0.78rem", color: "var(--dash-muted-2)" } }, mod.tier === "premium" ? "Premium" : "Free", " module"));
+    saveBtn.addEventListener("click", async () => {
+      saveBtn.disabled = true; saveBtn.textContent = "Saving…";
+      try {
+        await data.saveModule(state.selectedGuildId, mod.name, wv);
+        toast("success", `${mod.label} saved`);
+        const stat = document.getElementById("dash-save-status"); if (stat) { stat.classList.add("show"); setTimeout(() => stat.classList.remove("show"), 1800); }
+        loadModule(content, mod.name);
+      } catch (e) {
+        saveBtn.textContent = "Save changes"; saveBtn.disabled = false;
+        if (e.code === 403 && e.data && e.data.error === "premium_required") { statusBox.append(notice("warn", "Premium required", (e.data && e.data.message) || "Activate Premium with /subscribe in Discord.")); return; }
+        toast("error", e.message || "Save failed");
+        statusBox.append(notice("error", "Save failed", e.message));
+      }
+    });
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live welcome message"), h("span", { class: "w-canvas-hint" }, "Click the title or text to edit it")),
+      shell, controls, tip, statusBox, bar));
   }
 
   /** Mark the form as dirty/clean by comparing live values to baseline. */

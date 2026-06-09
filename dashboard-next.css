@@ -949,6 +949,28 @@
 .dash-next-preview .eb-tpl-row-name { flex: 1; min-width: 0; font-weight: 600; color: var(--dsc-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dash-next-preview .eb-tpl-row-acts { display: flex; gap: 6px; flex: none; }
 
+/* ---- Welcome module: live-preview canvas (edit the message in place) ---- */
+.dash-next-preview .w-canvas { max-width: 640px; }
+.dash-next-preview .w-canvas-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.dash-next-preview .w-canvas-label { font-weight: 700; color: var(--dsc-text); }
+.dash-next-preview .w-canvas-hint { font-size: 0.78rem; color: var(--dsc-text-muted); }
+.dash-next-preview .w-canvas-embed { margin-bottom: 16px; }
+.dash-next-preview .w-mention { color: #c9cdfb; margin-bottom: 6px; font-size: 0.86rem; }
+.dash-next-preview .w-edit { cursor: text; border-radius: 4px; outline: none; transition: box-shadow .1s ease, background .1s ease; }
+.dash-next-preview .w-edit:hover { box-shadow: inset 0 0 0 1px rgba(88, 101, 242, 0.4); }
+.dash-next-preview .w-edit:focus { box-shadow: inset 0 0 0 2px var(--dsc-blurple); background: rgba(88, 101, 242, 0.08); }
+.dash-next-preview .w-edit:empty::before { content: attr(data-ph); opacity: 0.5; font-style: italic; pointer-events: none; }
+.dash-next-preview .w-desc { white-space: pre-wrap; }
+.dash-next-preview .w-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 14px; }
+.dash-next-preview .w-ctrl { display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; color: var(--dsc-text-body); }
+.dash-next-preview .w-ctrl-lbl { font-size: 0.74rem; font-weight: 600; color: var(--dsc-text-muted); }
+.dash-next-preview .w-ctrl-check { flex-direction: row; align-items: center; gap: 8px; cursor: pointer; }
+.dash-next-preview .w-ctrl-row { flex-direction: row; align-items: center; justify-content: space-between; }
+.dash-next-preview .w-input { font: inherit; font-size: 0.85rem; color: var(--dsc-text); background: var(--dsc-bg-raise); border: 1px solid var(--dsc-line); border-radius: 7px; padding: 8px 10px; }
+.dash-next-preview .w-input:focus { outline: none; border-color: var(--dsc-blurple); }
+.dash-next-preview .w-color { width: 52px; height: 30px; padding: 0; border: 1px solid var(--dsc-line); border-radius: 6px; background: none; cursor: pointer; }
+@media (max-width: 560px) { .dash-next-preview .w-controls { grid-template-columns: 1fr; } }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }
