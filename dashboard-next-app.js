@@ -3586,10 +3586,11 @@
       { name: "Rewards",                fields: ["rewardsMode", "rewardType", "reward1stCredits", "reward2ndCredits", "reward3rdCredits", "reward1stEggs", "reward2ndEggs", "reward3rdEggs"] },
     ],
     hype: [
-      { name: "Basic",              fields: ["enabled", "rewardChannelId"] },
-      { name: "Name / tag triggers",fields: ["tagKeywords", "creditAmount", "creditExpiryDays"] },
-      { name: "Reward role",        fields: ["rewardRoleId"] },
-      { name: "Other triggers",     fields: ["rewardInvites", "rewardBoosts", "preventDuplicates"] },
+      { name: "Branding",      fields: ["brand_name"] },
+      { name: "Name reward",   fields: ["name_enabled", "name_keywords", "name_credits", "name_channel_id", "name_cooldown_hours", "name_role_id"] },
+      { name: "Tag reward",    fields: ["tag_enabled", "tag_keywords", "tag_credits", "tag_channel_id", "tag_cooldown_hours", "tag_role_id", "tag_guild_id"] },
+      { name: "Invite reward", fields: ["invite_enabled", "invite_credits", "invite_channel_id"] },
+      { name: "Boost reward",  fields: ["boost_channel_id"] },
     ],
     events: [
       { name: "Basic",        fields: ["enabled", "announceChannelId", "trackChannelId"] },
