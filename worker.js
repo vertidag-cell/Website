@@ -54,13 +54,14 @@ export default {
       return new Response("Not found", { status: 404 });
     }
 
-    // Private dashboard preview gate — mirrors functions/_middleware.js so the
-    // preview is never served ungated regardless of which deploy path is live.
-    // Secret lives in PREVIEW_PASS (Worker env/secret), never in the bundle.
+    // Dashboard preview — mirrors functions/_middleware.js. The password gate is
+    // currently DISABLED (re-prompt on every Discord-login round-trip was too
+    // annoying). Page is reachable by URL but noindex + robots-blocked, and real
+    // data still needs Discord login. To re-enable: uncomment requirePreviewAuth.
     const lower = path.toLowerCase();
     if (lower === "/dashboard-next" || lower === "/dashboard-next.html") {
-      const gate = requirePreviewAuth(request, env);
-      if (gate) return gate;
+      // const gate = requirePreviewAuth(request, env);
+      // if (gate) return gate;
       return noStore(await env.ASSETS.fetch(request)); // never cache the preview page
     }
     if (lower === "/dashboard-next-app.js" || lower === "/dashboard-next.css") {

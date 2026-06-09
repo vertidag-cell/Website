@@ -18,24 +18,20 @@ export async function onRequest(context) {
     return Response.redirect('https://arkoris.net' + url.pathname + url.search, 301);
   }
 
-  // --- Private dashboard preview gate ----------------------------------------
-  // The redesigned dashboard lives at /dashboard-next.html. It must never be
-  // openable by the public, so we require HTTP Basic Auth here at the edge —
-  // the page's HTML is not served at all without the password. The secret
-  // lives in the PREVIEW_PASS environment variable (Pages project → Settings →
-  // Environment variables), NEVER in the shipped bundle. Optional PREVIEW_USER
-  // overrides the username (default "admin").
+  // --- Dashboard preview --------------------------------------------------
+  // The redesigned dashboard lives at /dashboard-next.html. The HTTP Basic Auth
+  // password gate is currently DISABLED (the re-prompt on every Discord-login
+  // round-trip was too annoying while iterating). The page is reachable by URL,
+  // but it's still noindex + robots-disallowed, and the real dashboard data
+  // requires Discord login (OAuth-gated backend) — so no server data is exposed,
+  // only the in-progress redesign UI / mock screens.
   //
-  // Only the preview *page* is gated. Shared assets (styles.css, config.js,
-  // dashboard-next-app.js, …) stay public exactly as before — they contain no
-  // secrets and are useless without the gated HTML shell, and gating only the
-  // page avoids Basic-Auth realm/scope issues with sub-resources.
+  // To RE-ENABLE the password: uncomment the requirePreviewAuth() lines below
+  // (the helper is still defined further down) and set PREVIEW_PASS on the Pages
+  // project. We still serve the page no-store so deploys always show fresh.
   if (isPreviewPage(url.pathname)) {
-    const gate = requirePreviewAuth(context.request, context.env);
-    if (gate) return gate; // 401 challenge, or 503 if PREVIEW_PASS isn't set
-    // Authed: serve the page but NEVER cache it. Static assets here ship with
-    // Cache-Control: public, max-age=14400 (4h), which made the preview HTML
-    // stick to old ?v= asset refs between deploys. no-store kills that.
+    // const gate = requirePreviewAuth(context.request, context.env);
+    // if (gate) return gate;
     return noStore(await context.next());
   }
   // Preview-only JS/CSS: public, but also no-store so we never serve a stale
