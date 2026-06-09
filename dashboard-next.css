@@ -121,6 +121,18 @@
   --dash-red-tint: rgba(88, 101, 242, 0.12);
   --dash-shadow-glow: 0 0 0 1px rgba(88, 101, 242, 0.22), 0 10px 32px rgba(0, 0, 0, 0.42);
 
+  /* The "PREMIUM REWORK LAYER" ember/iron tokens (orange / red / green) drive the
+     dashboard background glows, scrollbars, .btn-primary, and the whole Embed
+     Builder. Remap them to blurple so the warm glow + embed builder match. */
+  --ember: #5865f2;
+  --ember-2: #8b93f2;
+  --ember-glow: rgba(88, 101, 242, 0.32);
+  --iron: #5865f2;
+  --iron-2: #8b93f2;
+  --glow-iron: rgba(88, 101, 242, 0.32);
+  --grad-iron: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+  --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 18px 44px -16px rgba(88, 101, 242, 0.32);
+
   background-color: var(--dsc-page);
   /* Kill the site's green radial-gradient body wash (background-color alone
      doesn't override background-image). This is the source of the lingering
@@ -695,3 +707,15 @@
   color: #aab2f7;
 }
 .dash-next-preview .dash-status-pill.ok .pill-dot { background: var(--dsc-blurple); }
+
+/* The ember layer hardcodes a red/orange scrollbar gradient (not via tokens).
+   Neutralize it to blurple on the preview. */
+.dash-next-preview ::-webkit-scrollbar-thumb,
+.dash-next-preview::-webkit-scrollbar-thumb {
+  background: rgba(88, 101, 242, 0.38);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.dash-next-preview ::-webkit-scrollbar-thumb:hover,
+.dash-next-preview::-webkit-scrollbar-thumb:hover { background: rgba(88, 101, 242, 0.55); background-clip: padding-box; }
+.dash-next-preview, .dash-next-preview * { scrollbar-color: rgba(88, 101, 242, 0.5) transparent; }
