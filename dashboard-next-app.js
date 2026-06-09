@@ -1578,7 +1578,7 @@
           h("label", { class: "eb-cv-lbl" }, "Emoji", ebEmojiField(() => b.emoji, (v) => { b.emoji = v; }, () => cvRerender())),
           b.style === "link"
             ? h("label", { class: "eb-cv-lbl" }, "Link URL", h("input", { class: "eb-cv-in", type: "url", value: b.url || "", placeholder: "https://…", oninput: (ev) => { b.url = ev.target.value; cvSync(); } }))
-            : h("label", { class: "eb-cv-lbl" }, "Custom ID", h("input", { class: "eb-cv-in", type: "text", value: b.custom_id || "", placeholder: "my_button_id", oninput: (ev) => { b.custom_id = ev.target.value; cvSync(); } })),
+            : h("label", { class: "eb-cv-lbl" }, "Custom ID (auto from label)", h("input", { class: "eb-cv-in", type: "text", value: b.custom_id || "", placeholder: ebAutoId(b.label, "button"), oninput: (ev) => { b.custom_id = ev.target.value; cvSync(); } })),
           h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: b.disabled ? true : null, onchange: (ev) => { b.disabled = ev.target.checked; cvRerender(); } }), h("span", null, "Disabled")),
           h("button", { type: "button", class: "eb-cv-del", onclick: () => { row.buttons.splice(bi, 1); if (!row.buttons.length) eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "Delete button")));
         r.append(h("div", { class: "eb-cv-btn-wrap" }, btnEl, pop));
@@ -1594,7 +1594,7 @@
         ebEditable("eb-d-select-ph", () => row.placeholder, (v) => { row.placeholder = v; }, { tag: "span", label: "Dropdown placeholder", ph: "Make a selection", max: EB_LIMITS.placeholder }),
         h("button", { type: "button", class: "eb-cv-gear", title: "Menu settings", onclick: (e) => { e.stopPropagation(); ebPopToggle(key); } }, "▾")));
       wrap.append(ebPop(key, (p) => p.append(
-        h("label", { class: "eb-cv-lbl" }, "Custom ID", h("input", { class: "eb-cv-in", type: "text", value: row.custom_id || "", placeholder: "my_select_id", oninput: (ev) => { row.custom_id = ev.target.value; cvSync(); } })),
+        h("label", { class: "eb-cv-lbl" }, "Custom ID (auto from placeholder)", h("input", { class: "eb-cv-in", type: "text", value: row.custom_id || "", placeholder: ebAutoId(row.placeholder, "menu"), oninput: (ev) => { row.custom_id = ev.target.value; cvSync(); } })),
         h("div", { class: "eb-cv-grid2" },
           h("label", { class: "eb-cv-lbl" }, "Min values", h("input", { class: "eb-cv-in", type: "number", min: 0, max: 25, value: row.min_values == null ? 1 : row.min_values, oninput: (ev) => { row.min_values = parseInt(ev.target.value, 10) || 0; cvSync(); } })),
           h("label", { class: "eb-cv-lbl" }, "Max values", h("input", { class: "eb-cv-in", type: "number", min: 1, max: 25, value: row.max_values == null ? 1 : row.max_values, oninput: (ev) => { row.max_values = parseInt(ev.target.value, 10) || 1; cvSync(); } }))),
@@ -1798,11 +1798,38 @@
   }
 
   /* Embed builder model (de)serialisation + validation + tiny markdown */
+  // Auto custom_id from a label/placeholder so users never have to type one.
+  function ebAutoId(text, fallback) {
+    const slug = String(text || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80);
+    return slug || fallback;
+  }
+  function ebUniqId(used, base, fallback) {
+    let id = ebAutoId(base, fallback), cand = id, n = 2;
+    while (used.has(cand)) { cand = (id + "_" + n).slice(0, 100); n++; }
+    used.add(cand);
+    return cand;
+  }
+  // Fill in any missing button/select custom_id from its label/placeholder
+  // (unique within the message). Manual ids are kept; link buttons need none.
+  function ebSerializeComponents(components) {
+    const used = new Set();
+    components.forEach((row) => {
+      if (row.type === "buttons") (row.buttons || []).forEach((b) => { if (b.style !== "link" && s2(b.custom_id)) used.add(b.custom_id); });
+      else if (row.type === "select" && s2(row.custom_id)) used.add(row.custom_id);
+    });
+    return components.map((row) => {
+      if (row.type === "buttons") {
+        return Object.assign({}, row, { buttons: (row.buttons || []).map((b, i) => b.style === "link" ? b : Object.assign({}, b, { custom_id: s2(b.custom_id) ? b.custom_id : ebUniqId(used, b.label, "button_" + (i + 1)) })) });
+      }
+      if (row.type === "select") return Object.assign({}, row, { custom_id: s2(row.custom_id) ? row.custom_id : ebUniqId(used, row.placeholder, "menu") });
+      return row;
+    });
+  }
   function serializeModel(eb) {
     return {
       content: eb.content || "", allowedMentions: eb.allowedMentions || "default",
       embeds: (eb.embeds || []).map((e) => ({ title: e.title || "", url: e.url || "", description: e.description || "", color: e.color || "", timestamp: e.timestamp || null, author: { name: (e.author || {}).name || "", url: (e.author || {}).url || "", icon_url: (e.author || {}).icon_url || "" }, thumbnail: { url: (e.thumbnail || {}).url || "" }, image: { url: (e.image || {}).url || "" }, footer: { text: (e.footer || {}).text || "", icon_url: (e.footer || {}).icon_url || "" }, fields: (e.fields || []).map((f) => ({ name: f.name || "", value: f.value || "", inline: !!f.inline })) })),
-      components: (eb.components || []),
+      components: ebSerializeComponents(eb.components || []),
     };
   }
   function applyModel(eb, m) {
@@ -1834,11 +1861,12 @@
         (row.buttons || []).forEach((b, j) => {
           if (!s2(b.label) && !s2(b.emoji)) errs.push(`Row ${i + 1} button ${j + 1}: needs a label or emoji.`);
           if (b.style === "link") { if (!/^https?:\/\//i.test(b.url || "")) errs.push(`Row ${i + 1} button ${j + 1}: link needs http(s) URL.`); }
-          else if (!s2(b.custom_id)) errs.push(`Row ${i + 1} button ${j + 1}: needs a custom ID.`);
-          else if (ids.has(b.custom_id)) errs.push(`Duplicate custom ID “${b.custom_id}”.`); else ids.add(b.custom_id);
+          // custom_id is auto-derived from the label on send; only flag a clash
+          // between two MANUALLY-set ids.
+          else if (s2(b.custom_id)) { if (ids.has(b.custom_id)) errs.push(`Duplicate custom ID “${b.custom_id}”.`); else ids.add(b.custom_id); }
         });
       } else if (row.type === "select") {
-        if (!s2(row.custom_id)) errs.push(`Row ${i + 1}: select needs a custom ID.`); else if (ids.has(row.custom_id)) errs.push(`Duplicate custom ID “${row.custom_id}”.`); else ids.add(row.custom_id);
+        if (s2(row.custom_id)) { if (ids.has(row.custom_id)) errs.push(`Duplicate custom ID “${row.custom_id}”.`); else ids.add(row.custom_id); }
         if (!(row.options || []).length) errs.push(`Row ${i + 1}: select needs an option.`);
         if ((row.options || []).length > EB_LIMITS.options) errs.push(`Row ${i + 1}: max ${EB_LIMITS.options} options.`);
         const minV = row.min_values == null ? 1 : row.min_values, maxV = row.max_values == null ? 1 : row.max_values;
