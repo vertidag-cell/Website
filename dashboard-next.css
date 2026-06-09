@@ -17,19 +17,26 @@
  */
 
 /* --- Persistent "private preview" badge -------------------------------------
-   A small, non-interactive marker so you can never confuse the preview with
-   the live dashboard. pointer-events:none keeps it from blocking clicks. */
-.dash-next-preview::after {
-  content: "PRIVATE PREVIEW";
+   Rendered as a REAL <div class="dash-preview-badge"> element in the page, NOT
+   a body::after pseudo-element. styles.css uses body::before / body::after for
+   full-screen background effects (a 60vmax glow + a fixed gradient layer), so a
+   pseudo-element badge on the body merges with those rules and inherits their
+   60vmax size — which my border-radius:999px then renders as a giant circle.
+   A dedicated element with explicit sizing sidesteps that collision entirely.
+   pointer-events:none keeps it from blocking clicks. */
+.dash-preview-badge {
   position: fixed;
+  inset: auto 12px 12px auto; /* bottom-right; explicit so nothing is inherited */
   z-index: 2147483000;
-  right: 12px;
-  bottom: 12px;
+  width: auto;
+  height: auto;
   padding: 6px 12px;
   font-family: Inter, system-ui, sans-serif;
   font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.12em;
+  line-height: 1;
+  white-space: nowrap;
   color: #fff;
   background: linear-gradient(180deg, #ef4444, #dc2626);
   border: 1px solid rgba(255, 255, 255, 0.22);
@@ -40,9 +47,8 @@
 }
 
 @media (max-width: 560px) {
-  .dash-next-preview::after {
-    right: 8px;
-    bottom: 8px;
+  .dash-preview-badge {
+    inset: auto 8px 8px auto;
     padding: 5px 9px;
     font-size: 0.58rem;
   }

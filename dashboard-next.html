@@ -16,9 +16,13 @@
          override file is scoped under body.dash-next-preview so it can never
          affect the live dashboard. Bump ?v=N when you change either file. -->
     <link rel="stylesheet" href="styles.css?v=58" />
-    <link rel="stylesheet" href="dashboard-next.css?v=1" />
+    <link rel="stylesheet" href="dashboard-next.css?v=2" />
   </head>
   <body class="dash-next-preview">
+    <!-- Private-preview marker. A real element (not a body pseudo-element) so it
+         can't collide with styles.css's body::before/::after background layers.
+         Sits outside #dashboard-root so the dashboard SPA never removes it. -->
+    <div class="dash-preview-badge" aria-hidden="true">PRIVATE PREVIEW</div>
     <header class="navbar">
       <div class="container nav-inner">
         <a class="brand" href="index.html">
