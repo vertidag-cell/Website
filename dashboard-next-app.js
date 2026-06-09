@@ -4982,7 +4982,7 @@
       values: { enabled: true, channelId: "2", title: "Welcome to the server!", message: "Hey {user}, glad you're here — check the rules and have fun!", mentionUser: true, embedColor: "#5865f2", imageUrl: "" },
     });
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
