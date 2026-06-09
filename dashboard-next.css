@@ -827,6 +827,86 @@
    editability discoverable on a populated embed. */
 @media (hover: none) { .dash-next-preview .eb-editable { box-shadow: inset 0 0 0 1px rgba(88, 101, 242, 0.20); } }
 
+/* ---- Canvas-first editor: the live preview is the primary editing surface, the
+   form folds into a collapsible Advanced panel, components are editable inline. ---- */
+/* .dash-content is a single-auto-column grid, so it shrinks to the tab's
+   intrinsic width. The canvas embed is intrinsically narrow (~430px), so force
+   the column to fill the available width and let the canvas center within it. */
+.dash-next-preview .dash-content { grid-template-columns: minmax(0, 1fr); }
+.dash-next-preview .eb-split.eb-canvas-mode { display: block; width: 100%; }
+.dash-next-preview .eb-canvas-mode .eb-preview-col { position: static; max-width: 760px; margin: 0 auto; }
+.dash-next-preview .eb-canvas-mode .eb-preview { box-shadow: none; }
+.dash-next-preview .eb-advanced { max-width: 760px; margin: 16px auto 0; border: 1px solid var(--dsc-line); border-radius: var(--dsc-radius); background: var(--dsc-bg-raise); overflow: hidden; }
+.dash-next-preview .eb-advanced > summary { cursor: pointer; padding: 12px 16px; font-size: 0.83rem; font-weight: 600; color: var(--dsc-text-muted); list-style: none; }
+.dash-next-preview .eb-advanced > summary::-webkit-details-marker { display: none; }
+.dash-next-preview .eb-advanced > summary:hover { color: var(--dsc-text); }
+.dash-next-preview .eb-advanced[open] > summary { border-bottom: 1px solid var(--dsc-line); }
+.dash-next-preview .eb-advanced .eb-editor { padding: 14px 16px; }
+.dash-next-preview .eb-discord.eb-editing { min-height: 150px; }
+
+/* "Add" chips (+ Embed / + Buttons / + Menu / + Field / + Option) */
+.dash-next-preview .eb-cv-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.dash-next-preview .eb-add-chip { font: inherit; font-size: 0.8rem; font-weight: 600; color: #b5bac1; background: rgba(255, 255, 255, 0.04); border: 1px dashed rgba(255, 255, 255, 0.18); border-radius: 8px; padding: 7px 12px; cursor: pointer; transition: border-color .12s, color .12s, background .12s; }
+.dash-next-preview .eb-add-chip:hover { color: #fff; border-color: #5865f2; background: rgba(88, 101, 242, 0.12); }
+.dash-next-preview .eb-add-chip.sm { padding: 4px 9px; font-size: 0.74rem; }
+.dash-next-preview .eb-cv-addfield { margin-top: 6px; }
+.dash-next-preview .eb-add-chip:focus-visible { outline: 2px solid #5865f2; outline-offset: 2px; }
+
+/* Per-element controls: gear (settings), delete handles */
+.dash-next-preview .eb-cv-gear, .dash-next-preview .eb-cv-rowdel, .dash-next-preview .eb-cv-optdel, .dash-next-preview .eb-cv-field-tog { font: inherit; font-size: 0.72rem; line-height: 1; color: #b5bac1; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 6px; padding: 4px 6px; cursor: pointer; transition: color .12s, border-color .12s, background .12s; }
+.dash-next-preview .eb-cv-gear:hover, .dash-next-preview .eb-cv-field-tog:hover { color: #fff; border-color: #5865f2; }
+.dash-next-preview .eb-cv-field-tog.on { color: #fff; border-color: #5865f2; background: rgba(88, 101, 242, 0.22); }
+.dash-next-preview .eb-cv-rowdel:hover, .dash-next-preview .eb-cv-optdel:hover { color: #f5a9ac; border-color: rgba(218, 55, 60, 0.6); background: rgba(218, 55, 60, 0.14); }
+.dash-next-preview .eb-cv-gear:focus-visible, .dash-next-preview .eb-cv-rowdel:focus-visible, .dash-next-preview .eb-cv-optdel:focus-visible, .dash-next-preview .eb-cv-field-tog:focus-visible { outline: 2px solid #5865f2; outline-offset: 1px; }
+
+/* Embed tools — top-right, on hover/focus */
+.dash-next-preview .eb-embed { position: relative; }
+.dash-next-preview .eb-cv-embed-tools { position: absolute; top: 7px; right: 7px; display: flex; gap: 4px; opacity: 0; transition: opacity .12s; z-index: 3; }
+.dash-next-preview .eb-embed:hover .eb-cv-embed-tools, .dash-next-preview .eb-embed:focus-within .eb-cv-embed-tools { opacity: 1; }
+
+/* Inline control popover */
+.dash-next-preview .eb-cv-pop { display: none; margin: 8px 0 4px; padding: 11px; background: #1e1f22; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; max-width: 360px; text-align: left; }
+.dash-next-preview .eb-cv-pop.open { display: block; }
+.dash-next-preview .eb-cv-pop-lbl { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #949ba4; margin-bottom: 7px; }
+.dash-next-preview .eb-cv-lbl { display: flex; flex-direction: column; gap: 3px; font-size: 0.71rem; color: #b5bac1; margin-bottom: 9px; }
+.dash-next-preview .eb-cv-in, .dash-next-preview .eb-cv-sel { font: inherit; font-size: 0.82rem; color: #dbdee1; background: #2b2d31; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 5px; padding: 6px 8px; width: 100%; }
+.dash-next-preview .eb-cv-in:focus, .dash-next-preview .eb-cv-sel:focus { outline: none; border-color: #5865f2; }
+.dash-next-preview .eb-cv-color { width: 52px; height: 30px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 5px; background: none; cursor: pointer; }
+.dash-next-preview .eb-cv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dash-next-preview .eb-cv-check { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: #b5bac1; margin-bottom: 9px; cursor: pointer; }
+.dash-next-preview .eb-cv-note { font-size: 0.72rem; color: #949ba4; margin-bottom: 9px; line-height: 1.4; }
+.dash-next-preview .eb-cv-del { font: inherit; font-size: 0.76rem; font-weight: 600; color: #f5a9ac; background: rgba(218, 55, 60, 0.12); border: 1px solid rgba(218, 55, 60, 0.35); border-radius: 6px; padding: 7px 10px; cursor: pointer; width: 100%; }
+.dash-next-preview .eb-cv-del:hover { background: rgba(218, 55, 60, 0.2); }
+
+/* Button style swatches */
+.dash-next-preview .eb-cv-styles { display: flex; gap: 6px; margin-bottom: 9px; }
+.dash-next-preview .eb-cv-style { width: 28px; height: 22px; border-radius: 5px; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.dash-next-preview .eb-cv-style.sel { border-color: #fff; }
+.dash-next-preview .eb-cv-style.primary { background: #5865f2; }
+.dash-next-preview .eb-cv-style.secondary { background: #4e5058; }
+.dash-next-preview .eb-cv-style.success { background: #248046; }
+.dash-next-preview .eb-cv-style.danger { background: #da373c; }
+.dash-next-preview .eb-cv-style.link { background: #4e5058; }
+
+/* Editable buttons + dropdowns in the canvas */
+.dash-next-preview .eb-cv-row { align-items: flex-start; }
+.dash-next-preview .eb-cv-btn-wrap { display: inline-flex; flex-direction: column; gap: 0; }
+.dash-next-preview .eb-d-btn.eb-cv-btn { display: inline-flex; align-items: center; gap: 4px; cursor: text; }
+.dash-next-preview .eb-d-btn-label { min-width: 20px; }
+.dash-next-preview .eb-d-btn .eb-cv-gear { background: rgba(0, 0, 0, 0.22); border-color: rgba(255, 255, 255, 0.2); padding: 2px 4px; }
+.dash-next-preview .eb-cv-selwrap { position: relative; max-width: 460px; }
+.dash-next-preview .eb-d-select .eb-cv-gear { margin-left: auto; }
+.dash-next-preview .eb-cv-opts { display: block; background: #2b2d31; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 5px; margin-top: 6px; }
+.dash-next-preview .eb-cv-opt { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 5px; }
+.dash-next-preview .eb-cv-opt:hover { background: rgba(255, 255, 255, 0.03); }
+.dash-next-preview .eb-cv-opt .eb-d-opt-text { flex: 1; min-width: 0; }
+.dash-next-preview .eb-cv-emoji { width: 40px; text-align: center; font: inherit; background: #1e1f22; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 5px; padding: 5px; color: #dbdee1; }
+.dash-next-preview .eb-cv-emoji:focus { outline: none; border-color: #5865f2; }
+.dash-next-preview .eb-d-opt-label, .dash-next-preview .eb-d-opt-desc { min-width: 40px; }
+.dash-next-preview .eb-cv-field { position: relative; }
+.dash-next-preview .eb-cv-field-tools { position: absolute; top: 2px; right: 2px; display: flex; gap: 3px; opacity: 0; transition: opacity .12s; }
+.dash-next-preview .eb-cv-field:hover .eb-cv-field-tools, .dash-next-preview .eb-cv-field:focus-within .eb-cv-field-tools { opacity: 1; }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }

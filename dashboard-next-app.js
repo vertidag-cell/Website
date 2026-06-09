@@ -958,20 +958,28 @@
       )
     );
 
-    const split = h("div", { class: "eb-split" });
-    editorEl = h("div", { class: "eb-editor" });
+    // Canvas-first layout: the live editor IS the preview (edit in place); the
+    // full form collapses into an "Advanced settings" panel for the deep config
+    // (channel/send, info-embed replies, exact values, templates).
+    const split = h("div", { class: "eb-split eb-canvas-mode" });
     const previewCol = h("div", { class: "eb-preview-col" });
     previewEl = h("div", { class: "eb-preview" });
     previewCol.append(
       h("div", { class: "eb-preview-head" },
-        h("span", { class: "eb-preview-label" }, "Live preview"),
-        h("span", { class: "eb-preview-hint" }, "Click any text to edit it here")
+        h("span", { class: "eb-preview-label" }, "Live editor"),
+        h("span", { class: "eb-preview-hint" }, "Click any text to edit · ⚙ for settings · + to add")
       ),
       previewEl
     );
     validEl = h("div", { class: "eb-valid" });
     previewCol.append(validEl);
-    split.append(editorEl, previewCol);
+    editorEl = h("div", { class: "eb-editor" });
+    const advanced = h("details", { class: "eb-advanced" },
+      h("summary", { class: "eb-advanced-sum" }, "⚙ Advanced settings — channel & send, dropdown actions, templates, exact values"),
+      editorEl
+    );
+    advanced.addEventListener("toggle", () => { if (advanced.open) renderEditor(); });
+    split.append(previewCol, advanced);
     page.append(split);
 
     // ---- render fns ----
@@ -1348,6 +1356,14 @@
       return el;
     }
 
+    // Canvas re-render helpers: cvSync = value-only change (keeps caret/focus on
+    // the active control), cvRerender = structural change (rebuild the canvas).
+    function cvSync() { renderValidation(); scheduleAutosave(); }
+    function cvRerender() { renderPreview(); renderValidation(); scheduleAutosave(); }
+    function ebNewButton() { return { label: "Button", style: "primary", custom_id: "", url: "", emoji: "", disabled: false }; }
+    function ebNewOption(n) { return { label: "Option", value: "value_" + n, description: "", emoji: "", default: false, action: { type: "none", ephemeral: true } }; }
+    function ebNewSelect() { return { type: "select", custom_id: "", placeholder: "Choose…", min_values: 1, max_values: 1, disabled: false, options: [ebNewOption(1)] }; }
+
     function renderPreview() {
       clear(previewEl);
       const device = h("div", { class: "eb-discord eb-editing" });
@@ -1355,14 +1371,29 @@
       device.append(ebEditable("eb-msg-content", () => eb.content, (v) => { eb.content = v; }, { label: "Message text above the embed", ph: "Message text above the embed (optional)", markdown: true, multiline: true, max: EB_LIMITS.content }));
       // The active embed always renders (so an empty one can be built inline);
       // any other embeds render only once they have content.
-      eb.embeds.forEach((e, i) => { if (!ebEmbedEmpty(e) || i === eb.activeEmbed) device.append(ebPreviewEmbed(e, true)); });
-      eb.components.forEach((row) => device.append(ebPreviewComponentRow(row)));
+      eb.embeds.forEach((e, i) => { if (!ebEmbedEmpty(e) || i === eb.activeEmbed) device.append(ebPreviewEmbed(e, true, i)); });
+      eb.components.forEach((row, ri) => device.append(ebPreviewComponentRow(row, ri)));
+      // "Add" affordances — build the whole message from the canvas, no form.
+      const add = h("div", { class: "eb-cv-add" });
+      if (eb.embeds.length < EB_LIMITS.embeds) add.append(h("button", { type: "button", class: "eb-add-chip", onclick: () => { eb.embeds.push(ebBlankEmbed()); eb.activeEmbed = eb.embeds.length - 1; cvRerender(); } }, "+ Embed"));
+      if (eb.components.length < EB_LIMITS.rows) {
+        add.append(h("button", { type: "button", class: "eb-add-chip", onclick: () => { eb.components.push({ type: "buttons", buttons: [ebNewButton()] }); cvRerender(); } }, "+ Buttons"));
+        add.append(h("button", { type: "button", class: "eb-add-chip", onclick: () => { eb.components.push(ebNewSelect()); cvRerender(); } }, "+ Menu"));
+      }
+      device.append(add);
       previewEl.append(device);
     }
-    function ebPreviewEmbed(e, editable) {
+    function ebPreviewEmbed(e, editable, i) {
       const col = /^#[0-9a-f]{6}$/i.test(e.color || "") ? e.color : "#e23b2e";
       const box = h("div", { class: "eb-embed", style: { borderColor: col } });
       const inner = h("div", { class: "eb-embed-inner" });
+
+      // Embed tools (settings + delete) — top-right, shown on hover/focus.
+      if (editable) {
+        box.append(h("div", { class: "eb-cv-embed-tools" },
+          h("button", { type: "button", class: "eb-cv-gear", title: "Embed settings (colour, images, timestamp)", onclick: (ev) => { ev.stopPropagation(); ebPopToggle("embed:" + i); } }, "⚙"),
+          h("button", { type: "button", class: "eb-cv-rowdel", title: "Delete embed", onclick: () => { eb.embeds.splice(i, 1); if (!eb.embeds.length) eb.embeds.push(ebBlankEmbed()); eb.activeEmbed = Math.max(0, Math.min(eb.activeEmbed, eb.embeds.length - 1)); eb._openPop = null; cvRerender(); } }, "✕")));
+      }
 
       // Author
       if (editable) {
@@ -1389,19 +1420,25 @@
       }
 
       // Fields
-      const showFields = editable ? (e.fields || []) : (e.fields || []).filter((f) => s2(f.name) || s2(f.value));
-      if (showFields.length) {
+      if (editable) {
         const fg = h("div", { class: "eb-e-fields" });
-        showFields.forEach((f) => {
-          if (editable) {
-            fg.append(h("div", { class: `eb-e-field ${f.inline ? "inline" : ""}` },
-              ebEditable("eb-e-field-name", () => f.name, (v) => { f.name = v; }, { label: "Field name", ph: "Field name", markdown: true, max: EB_LIMITS.fieldName }),
-              ebEditable("eb-e-field-val", () => f.value, (v) => { f.value = v; }, { label: "Field value", ph: "Field value", markdown: true, multiline: true, max: EB_LIMITS.fieldValue })));
-          } else {
-            fg.append(h("div", { class: `eb-e-field ${f.inline ? "inline" : ""}` }, h("div", { class: "eb-e-field-name", html: ebMarkdown(f.name) }), h("div", { class: "eb-e-field-val", html: ebMarkdown(f.value) })));
-          }
+        (e.fields || []).forEach((f, fi) => {
+          fg.append(h("div", { class: "eb-e-field " + (f.inline ? "inline" : "") + " eb-cv-field" },
+            ebEditable("eb-e-field-name", () => f.name, (v) => { f.name = v; }, { label: "Field name", ph: "Field name", markdown: true, max: EB_LIMITS.fieldName }),
+            ebEditable("eb-e-field-val", () => f.value, (v) => { f.value = v; }, { label: "Field value", ph: "Field value", markdown: true, multiline: true, max: EB_LIMITS.fieldValue }),
+            h("div", { class: "eb-cv-field-tools" },
+              h("button", { type: "button", class: "eb-cv-field-tog" + (f.inline ? " on" : ""), title: "Toggle inline layout", onclick: () => { f.inline = !f.inline; cvRerender(); } }, "⇆"),
+              h("button", { type: "button", class: "eb-cv-optdel", title: "Remove field", onclick: () => { e.fields.splice(fi, 1); cvRerender(); } }, "✕"))));
         });
         inner.append(fg);
+        if ((e.fields || []).length < EB_LIMITS.fields) inner.append(h("button", { type: "button", class: "eb-add-chip sm eb-cv-addfield", onclick: () => { e.fields = e.fields || []; e.fields.push({ name: "Field name", value: "Field value", inline: false }); cvRerender(); } }, "+ Field"));
+      } else {
+        const showFields = (e.fields || []).filter((f) => s2(f.name) || s2(f.value));
+        if (showFields.length) {
+          const fg = h("div", { class: "eb-e-fields" });
+          showFields.forEach((f) => fg.append(h("div", { class: `eb-e-field ${f.inline ? "inline" : ""}` }, h("div", { class: "eb-e-field-name", html: ebMarkdown(f.name) }), h("div", { class: "eb-e-field-val", html: ebMarkdown(f.value) }))));
+          inner.append(fg);
+        }
       }
 
       if (s2(e.image && e.image.url)) inner.append(h("img", { class: "eb-e-image", src: e.image.url, onerror: "this.style.display='none'" }));
@@ -1424,23 +1461,103 @@
 
       box.append(inner);
       if (s2(e.thumbnail && e.thumbnail.url)) { box.classList.add("has-thumb"); inner.append(h("img", { class: "eb-e-thumb", src: e.thumbnail.url, onerror: "this.style.display='none'" })); }
+      if (editable) box.append(ebPop("embed:" + i, (p) => ebEmbedSettings(p, e)));
       return box;
     }
-    function ebPreviewComponentRow(row) {
-      const r = h("div", { class: "eb-comp-preview-row" });
-      if (row.type === "buttons") { (row.buttons || []).forEach((b) => r.append(h("button", { type: "button", class: `eb-d-btn ${b.style || "secondary"} ${b.disabled ? "disabled" : ""}`, disabled: true }, s2(b.emoji) ? b.emoji + " " : "", b.label || (b.style === "link" ? "Link" : "Button")))); return r; }
-      // interactive select — click to open, click an option to test its action
-      const closed = h("div", { class: `eb-d-select ${row.disabled ? "disabled" : ""}` }, h("span", null, row.placeholder || "Make a selection"), h("span", { class: "eb-d-select-chev" }, "▾"));
-      const list = h("div", { class: "eb-d-options", style: { display: "none" } });
-      (row.options || []).forEach((o) => {
-        if (!s2(o.label)) return;
-        list.append(h("div", { class: "eb-d-option", onclick: () => { list.style.display = "none"; showTestResult(o); } },
-          s2(o.emoji) ? h("span", { class: "eb-d-opt-emoji" }, o.emoji) : null,
-          h("div", { class: "eb-d-opt-text" }, h("div", { class: "eb-d-opt-label" }, o.label), s2(o.description) ? h("div", { class: "eb-d-opt-desc" }, o.description) : null)));
+    function ebPreviewComponentRow(row, ri) {
+      if (row.type === "buttons") return ebEditButtonsRow(row, ri);
+      if (row.type === "select") return ebEditSelectRow(row, ri);
+      return h("div");
+    }
+    // Inline control popover, opened by a gear. Its open/closed state lives in
+    // eb._openPop (keyed) so a canvas rerender re-opens the same one.
+    function ebPopToggle(key) { eb._openPop = (eb._openPop === key) ? null : key; cvRerender(); }
+    function ebPop(key, buildBody) {
+      const pop = h("div", { class: "eb-cv-pop" });
+      if (eb._openPop === key) { pop.classList.add("open"); buildBody(pop); }
+      return pop;
+    }
+    function ebEditButtonsRow(row, ri) {
+      const r = h("div", { class: "eb-comp-preview-row eb-cv-row" });
+      (row.buttons || []).forEach((b, bi) => {
+        const key = "btn:" + ri + ":" + bi;
+        const btnEl = h("div", { class: "eb-d-btn " + (b.style || "secondary") + (b.disabled ? " disabled" : "") + " eb-cv-btn" });
+        if (s2(b.emoji)) btnEl.append(h("span", { class: "eb-d-btn-emoji" }, b.emoji + " "));
+        btnEl.append(ebEditable("eb-d-btn-label", () => b.label, (v) => { b.label = v; }, { tag: "span", label: "Button label", ph: "Button", max: EB_LIMITS.label }));
+        btnEl.append(h("button", { type: "button", class: "eb-cv-gear", title: "Button settings", onclick: (e) => { e.stopPropagation(); ebPopToggle(key); } }, "▾"));
+        const pop = ebPop(key, (p) => p.append(
+          h("div", { class: "eb-cv-pop-lbl" }, "Style"),
+          h("div", { class: "eb-cv-styles" }, ...EB_BTN_STYLES.map(([v, l]) => h("button", { type: "button", class: "eb-cv-style " + v + ((b.style || "secondary") === v ? " sel" : ""), title: l, onclick: () => { b.style = v; cvRerender(); } }))),
+          h("label", { class: "eb-cv-lbl" }, "Emoji", h("input", { class: "eb-cv-in", type: "text", value: b.emoji || "", placeholder: "😀 or <:n:id>", oninput: (ev) => { b.emoji = ev.target.value; cvSync(); } })),
+          b.style === "link"
+            ? h("label", { class: "eb-cv-lbl" }, "Link URL", h("input", { class: "eb-cv-in", type: "url", value: b.url || "", placeholder: "https://…", oninput: (ev) => { b.url = ev.target.value; cvSync(); } }))
+            : h("label", { class: "eb-cv-lbl" }, "Custom ID", h("input", { class: "eb-cv-in", type: "text", value: b.custom_id || "", placeholder: "my_button_id", oninput: (ev) => { b.custom_id = ev.target.value; cvSync(); } })),
+          h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: b.disabled ? true : null, onchange: (ev) => { b.disabled = ev.target.checked; cvRerender(); } }), h("span", null, "Disabled")),
+          h("button", { type: "button", class: "eb-cv-del", onclick: () => { row.buttons.splice(bi, 1); if (!row.buttons.length) eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "Delete button")));
+        r.append(h("div", { class: "eb-cv-btn-wrap" }, btnEl, pop));
       });
-      if (!row.disabled) closed.onclick = () => { list.style.display = list.style.display === "none" ? "block" : "none"; };
-      r.append(h("div", { class: "eb-d-select-wrap" }, closed, list));
+      if ((row.buttons || []).length < EB_LIMITS.buttonsPerRow) r.append(h("button", { type: "button", class: "eb-add-chip sm", title: "Add button", onclick: () => { row.buttons = row.buttons || []; row.buttons.push(ebNewButton()); cvRerender(); } }, "+"));
+      r.append(h("button", { type: "button", class: "eb-cv-rowdel", title: "Delete this row", onclick: () => { eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "✕"));
       return r;
+    }
+    function ebEditSelectRow(row, ri) {
+      const key = "sel:" + ri;
+      const wrap = h("div", { class: "eb-d-select-wrap eb-cv-selwrap" });
+      wrap.append(h("div", { class: "eb-d-select " + (row.disabled ? "disabled" : "") },
+        ebEditable("eb-d-select-ph", () => row.placeholder, (v) => { row.placeholder = v; }, { tag: "span", label: "Dropdown placeholder", ph: "Make a selection", max: EB_LIMITS.placeholder }),
+        h("button", { type: "button", class: "eb-cv-gear", title: "Menu settings", onclick: (e) => { e.stopPropagation(); ebPopToggle(key); } }, "▾")));
+      wrap.append(ebPop(key, (p) => p.append(
+        h("label", { class: "eb-cv-lbl" }, "Custom ID", h("input", { class: "eb-cv-in", type: "text", value: row.custom_id || "", placeholder: "my_select_id", oninput: (ev) => { row.custom_id = ev.target.value; cvSync(); } })),
+        h("div", { class: "eb-cv-grid2" },
+          h("label", { class: "eb-cv-lbl" }, "Min values", h("input", { class: "eb-cv-in", type: "number", min: 0, max: 25, value: row.min_values == null ? 1 : row.min_values, oninput: (ev) => { row.min_values = parseInt(ev.target.value, 10) || 0; cvSync(); } })),
+          h("label", { class: "eb-cv-lbl" }, "Max values", h("input", { class: "eb-cv-in", type: "number", min: 1, max: 25, value: row.max_values == null ? 1 : row.max_values, oninput: (ev) => { row.max_values = parseInt(ev.target.value, 10) || 1; cvSync(); } }))),
+        h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: row.disabled ? true : null, onchange: (ev) => { row.disabled = ev.target.checked; cvRerender(); } }), h("span", null, "Disabled")),
+        h("button", { type: "button", class: "eb-cv-del", onclick: () => { eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "Delete menu"))));
+      const list = h("div", { class: "eb-d-options eb-cv-opts" });
+      (row.options || []).forEach((o, oi) => {
+        o.action = o.action || { type: "none", ephemeral: true };
+        const optKey = "opt:" + ri + ":" + oi;
+        list.append(h("div", { class: "eb-d-option eb-cv-opt" },
+          h("input", { class: "eb-cv-emoji", type: "text", value: o.emoji || "", placeholder: "🙂", title: "Emoji", oninput: (ev) => { o.emoji = ev.target.value; cvSync(); } }),
+          h("div", { class: "eb-d-opt-text" },
+            ebEditable("eb-d-opt-label", () => o.label, (v) => { o.label = v; }, { tag: "div", label: "Option label", ph: "Option label", max: EB_LIMITS.optLabel }),
+            ebEditable("eb-d-opt-desc", () => o.description, (v) => { o.description = v; }, { tag: "div", label: "Option description", ph: "Description (optional)", max: EB_LIMITS.optDesc })),
+          h("button", { type: "button", class: "eb-cv-gear", title: "Option action", onclick: (e) => { e.stopPropagation(); ebPopToggle(optKey); } }, "⚙"),
+          h("button", { type: "button", class: "eb-cv-optdel", title: "Remove option", onclick: () => { row.options.splice(oi, 1); eb._openPop = null; cvRerender(); } }, "✕")));
+        list.append(ebPop(optKey, (p) => p.append(
+          h("label", { class: "eb-cv-lbl" }, "On select → does",
+            h("select", { class: "eb-cv-sel", onchange: (ev) => { o.action.type = ev.target.value; cvRerender(); } }, ...EB_ACTION_TYPES.map(([v, l]) => h("option", { value: v, selected: o.action.type === v ? true : null }, l)))),
+          ...ebOptActionInline(o.action),
+          h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: o.default ? true : null, onchange: (ev) => { o.default = ev.target.checked; cvSync(); } }), h("span", null, "Selected by default")))));
+      });
+      if ((row.options || []).length < EB_LIMITS.options) list.append(h("button", { type: "button", class: "eb-add-chip sm", onclick: () => { row.options = row.options || []; row.options.push(ebNewOption((row.options || []).length + 1)); cvRerender(); } }, "+ Option"));
+      wrap.append(list);
+      wrap.append(h("button", { type: "button", class: "eb-cv-rowdel", title: "Delete this menu", onclick: () => { eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "✕"));
+      return wrap;
+    }
+    function ebOptActionInline(act) {
+      const out = [];
+      const eph = () => h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: act.ephemeral !== false ? true : null, onchange: (ev) => { act.ephemeral = ev.target.checked; cvSync(); } }), h("span", null, "Only the clicker sees it"));
+      if (act.type === "text") out.push(h("label", { class: "eb-cv-lbl" }, "Reply text", h("input", { class: "eb-cv-in", type: "text", value: act.text || "", oninput: (ev) => { act.text = ev.target.value; cvSync(); } })), eph());
+      else if (act.type === "give_role" || act.type === "remove_role" || act.type === "toggle_role") out.push(h("label", { class: "eb-cv-lbl" }, "Role", h("select", { class: "eb-cv-sel", onchange: (ev) => { act.roleId = ev.target.value; cvSync(); } }, h("option", { value: "" }, "Select a role…"), ...roles.map((rl) => h("option", { value: rl.id, selected: act.roleId === rl.id ? true : null }, rl.name)))), eph());
+      else if (act.type === "custom") out.push(h("label", { class: "eb-cv-lbl" }, "Custom action ID", h("input", { class: "eb-cv-in", type: "text", value: act.customActionId || "", oninput: (ev) => { act.customActionId = ev.target.value; cvSync(); } })), eph());
+      else if (act.type === "info_embed") out.push(h("div", { class: "eb-cv-note" }, "Configure the info-embed reply in Advanced settings."));
+      else if (act.type === "open_ticket") out.push(h("div", { class: "eb-cv-note" }, "Opens a ticket (needs a Ticket Panel)."), eph());
+      return out;
+    }
+    function ebEmbedSettings(p, e) {
+      const colorOk = /^#[0-9a-f]{6}$/i.test(e.color || "") ? e.color : "#5865f2";
+      const urlField = (lbl, get, set, rerender) => h("label", { class: "eb-cv-lbl" }, lbl, h("input", { class: "eb-cv-in", type: "url", value: get() || "", placeholder: "https://…", oninput: (ev) => { set(ev.target.value); cvSync(); }, onchange: rerender ? () => cvRerender() : null }));
+      p.append(
+        h("div", { class: "eb-cv-pop-lbl" }, "Embed settings"),
+        h("label", { class: "eb-cv-lbl" }, "Colour", h("input", { class: "eb-cv-color", type: "color", value: colorOk, oninput: (ev) => { e.color = ev.target.value; const bx = p.closest(".eb-embed"); if (bx) bx.style.borderColor = ev.target.value; cvSync(); } })),
+        urlField("Large image URL", () => e.image && e.image.url, (v) => { (e.image = e.image || {}).url = v; }, true),
+        urlField("Thumbnail URL", () => e.thumbnail && e.thumbnail.url, (v) => { (e.thumbnail = e.thumbnail || {}).url = v; }, true),
+        urlField("Author icon URL", () => e.author && e.author.icon_url, (v) => { (e.author = e.author || {}).icon_url = v; }, true),
+        urlField("Footer icon URL", () => e.footer && e.footer.icon_url, (v) => { (e.footer = e.footer || {}).icon_url = v; }, true),
+        urlField("Title link URL", () => e.url, (v) => { e.url = v; }, false),
+        h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: e.timestamp ? true : null, onchange: (ev) => { e.timestamp = ev.target.checked ? new Date().toISOString() : null; cvRerender(); } }), h("span", null, "Show timestamp"))
+      );
     }
     function showTestResult(o) {
       const device = previewEl.querySelector(".eb-discord");
