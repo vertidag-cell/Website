@@ -19,13 +19,15 @@
       : '<div class="srv-icon srv-fallback">' + esc((s.name || "?").slice(0, 1).toUpperCase()) + "</div>";
     var members = s.members ? '<span class="srv-meta">👥 ' + Number(s.members).toLocaleString() + " members</span>" : "";
     var blurb = s.blurb ? '<p class="srv-blurb">' + esc(s.blurb) + "</p>" : "";
-    // Only servers with a real invite get a Join button; the rest show as
-    // private so we never publish a dead link.
+    var prem = s.premium ? '<span class="srv-prem">✦ Premium</span>' : "";
+    // Every listed server has a real invite (the backend drops private ones);
+    // keep a private fallback just in case a stray entry slips through.
     var join = validInvite
       ? '<a class="btn btn-primary srv-join" href="' + esc(s.invite) + '" target="_blank" rel="noopener noreferrer">Join Server</a>'
       : '<span class="srv-join srv-private">🔒 Private — invite only</span>';
     return (
-      '<div class="feature-card srv-card">' +
+      '<div class="feature-card srv-card' + (s.premium ? " premium" : "") + '">' +
+      prem +
       '<div class="srv-head">' + avatar +
       '<div class="srv-id"><h3 class="srv-name">' + esc(s.name) + "</h3>" + members + "</div></div>" +
       blurb +
