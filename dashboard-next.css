@@ -1180,6 +1180,19 @@
 .dash-next-preview .pay-btn.paypal { background: #0070ba; color: #fff; }
 .dash-next-preview .pay-btn.card { background: var(--dsc-bg-raise); border: 1px solid var(--dsc-line); color: var(--dsc-text); }
 
+/* ---- Server Templates canvas (preset channel-tree + role preview) ---- */
+.dash-next-preview .template-preview { margin-bottom: 14px; }
+.dash-next-preview .tpl-card { background: var(--dsc-bg-raise); border: 1px solid var(--dsc-line); border-radius: 12px; padding: 16px; }
+.dash-next-preview .tpl-cols { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; }
+.dash-next-preview .tpl-cat { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dsc-text-faint); margin: 14px 0 4px; }
+.dash-next-preview .tpl-channels .tpl-cat:first-child { margin-top: 0; }
+.dash-next-preview .tpl-ch { color: #dbdee1; font-size: 0.88rem; padding: 3px 0 3px 8px; }
+.dash-next-preview .tpl-roles-lbl { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dsc-text-faint); margin-bottom: 10px; }
+.dash-next-preview .tpl-roles-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.dash-next-preview .tpl-role { font-size: 0.8rem; color: #dbdee1; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--dsc-line); padding: 3px 10px; border-radius: 999px; }
+.dash-next-preview .tpl-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 0.8rem; color: var(--dsc-text-muted); }
+@media (max-width: 520px) { .dash-next-preview .tpl-cols { grid-template-columns: 1fr; gap: 16px; } }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }

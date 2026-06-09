@@ -3538,6 +3538,7 @@
       if (mod.name === "tickets") return renderTicketsCanvas(content, mod, m.values);
       if (mod.name === "staffPay") return renderStaffPayCanvas(content, mod, m.values);
       if (mod.name === "payments") return renderPaymentsCanvas(content, mod, m.values);
+      if (mod.name === "serverTemplates") return renderServerTemplatesCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4850,6 +4851,70 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Click the text to edit your instructions")),
       device, topbar, curSection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Server Templates as a live-preview canvas: a segmented preset selector that
+  // previews the channel tree + roles each template would build.
+  function renderServerTemplatesCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false }, values || {});
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+
+    const TEMPLATES = {
+      gaming: { emoji: "🎮", label: "Gaming", channels: [{ cat: "INFORMATION", items: ["# rules", "# announcements"] }, { cat: "COMMUNITY", items: ["# general", "# clips", "🔊 Game Night"] }], roles: ["Admin", "Moderator", "Member", "Booster"] },
+      support: { emoji: "🛟", label: "Support", channels: [{ cat: "INFO", items: ["# welcome", "# faq"] }, { cat: "SUPPORT", items: ["# open-a-ticket", "# staff-chat"] }], roles: ["Staff", "Support", "Member"] },
+      ark: { emoji: "🦖", label: "ARK Cluster", channels: [{ cat: "CLUSTER", items: ["# server-status", "# rates", "🔊 Tribe VC"] }, { cat: "COMMUNITY", items: ["# general", "# trading", "# bug-reports"] }], roles: ["Admin", "Helper", "Survivor", "Donor"] },
+    };
+    let active = "gaming";
+
+    // ---- Live preview: the channel tree + roles a template builds ----
+    const device = h("div", { class: "template-preview" });
+    function drawPreview() {
+      clear(device);
+      const t = TEMPLATES[active];
+      const chCount = t.channels.reduce((n, c) => n + c.items.length, 0);
+      const channelsCol = h("div", { class: "tpl-channels" });
+      t.channels.forEach((c) => {
+        channelsCol.append(h("div", { class: "tpl-cat" }, c.cat));
+        c.items.forEach((it) => channelsCol.append(h("div", { class: "tpl-ch" }, it)));
+      });
+      const rolesCol = h("div", { class: "tpl-roles" },
+        h("div", { class: "tpl-roles-lbl" }, "Roles"),
+        h("div", { class: "tpl-roles-list" }, ...t.roles.map((r) => h("span", { class: "tpl-role" }, r))));
+      device.append(h("div", { class: "tpl-card" },
+        h("div", { class: "tpl-cols" }, channelsCol, rolesCol),
+        h("div", { class: "tpl-foot" }, "Creates " + chCount + " channels · " + t.roles.length + " roles when applied")));
+    }
+
+    // ---- Segmented template selector ----
+    const tabs = h("div", { class: "ev-tabs" });
+    function renderTabs() {
+      clear(tabs);
+      Object.keys(TEMPLATES).forEach((k) => {
+        const t = TEMPLATES[k];
+        const b = h("button", { type: "button", class: "ev-tab" + (k === active ? " active" : ""), onclick: () => { active = k; renderTabs(); drawPreview(); } }, t.emoji + " " + t.label);
+        if (k === active) b.style.setProperty("--ev-accent", "#5865f2");
+        tabs.append(b);
+      });
+    }
+    drawPreview(); renderTabs();
+
+    const topbar = h("div", { class: "w-topbar" },
+      h("span", { class: "poll-topbar-lbl" }, "Preset channel, role & permission layouts you can apply in one command"),
+      mcSwitch("Server Templates enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Run ", h("code", null, "/setup template"), " in Discord to apply a preset. Arkoris creates the channels, roles and permissions for you — your existing channels are left untouched."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Pick a template to see what it builds")),
+      tabs, device, topbar, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
@@ -6887,10 +6952,17 @@
         },
         values: { enabled: true, defaultCurrency: "GBP", logChannelId: "4", instructions: "Pick a package below and pay with PayPal or card. Your perks are applied automatically once payment clears." },
       },
+      serverTemplates: {
+        module: {
+          name: "serverTemplates", label: "Server Templates", tier: "premium", description: "Apply preset channel/role/permission templates.",
+          fields: [{ key: "enabled", type: "boolean", label: "Enabled" }],
+        },
+        values: { enabled: true },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", giveaways: "giveaways", tickets: "tickets", staffpay: "staffPay", payments: "payments" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", giveaways: "giveaways", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
