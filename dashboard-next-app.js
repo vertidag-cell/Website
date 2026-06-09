@@ -114,6 +114,8 @@
     lock:      'M5 11a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM8 9V7a4 4 0 1 1 8 0v2',
     sparkle:   'M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M15 15l4 4M5 19l4-4M15 9l4-4',
     arrowRight:'M5 12h14M13 5l7 7-7 7',
+    check:     'M20 6L9 17l-5-5',
+    chevron:   'M6 9l6 6 6-6',
     menu:      'M3 6h18M3 12h18M3 18h18',
     user:      'M20 21a8 8 0 1 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10z',
     logout:    'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
@@ -1610,61 +1612,173 @@
     sticky:      "Keep a message pinned to the bottom.",
   };
 
+  // Setup Hub "mark as done" persistence. Flagged categories use the backend
+  // override (it syncs with Discord /setup + the overview ring). The handful of
+  // flagless categories (polls, giveaways, events, suggestions, sticky) have no
+  // backend flag to store against, so their manual "done" lives in localStorage,
+  // keyed per guild.
+  function hubLocalKey(gid) { return `arkoris:setupDone:${gid}`; }
+  function hubLocalDone(gid) {
+    try { return new Set(JSON.parse(localStorage.getItem(hubLocalKey(gid)) || "[]")); }
+    catch { return new Set(); }
+  }
+  function hubSetLocalDone(gid, id, value) {
+    const set = hubLocalDone(gid);
+    if (value) set.add(id); else set.delete(id);
+    try { localStorage.setItem(hubLocalKey(gid), JSON.stringify([...set])); } catch (_) {}
+  }
+
   async function loadSetupHub(content) {
     try {
       const o = await data.overview(state.selectedGuildId);
       const flags = o.setup?.flags || {};
+      const overrides = o.setup?.overrides || {};
       const guild = state.guilds.find((g) => g.id === state.selectedGuildId) || {};
       const isPremium = !!o.premiumActive || (guild.plan && guild.plan !== "free")
         || o.plan === "premium" || o.plan === "monthly" || o.plan === "lifetime";
-      const setup = o.setup || { percent: 0 };
+      const localDone = hubLocalDone(state.selectedGuildId);
       clear(content);
+
+      // Done = auto-detected / backend-overridden (flagged) OR locally marked
+      // (flagless). Manual = something we let the user undo (an explicit mark).
+      const isDone = (cat) => cat.flag ? !!flags[cat.flag] : localDone.has(cat.id);
+      const isManual = (cat) => cat.flag ? !!overrides[cat.flag] : localDone.has(cat.id);
+      const isLocked = (cat) => cat.tier === "premium" && !isPremium;
+      const todo = SETUP_HUB.filter((c) => !isDone(c));
+      const doneCats = SETUP_HUB.filter((c) => isDone(c));
+
+      // Persist a "done" mark (or undo it), then re-render this tab in place.
+      async function markDone(cat, value, btn) {
+        if (btn) btn.disabled = true;
+        let stillConfigured = false;
+        if (cat.flag) {
+          try {
+            const res = await data.setupOverride(state.selectedGuildId, cat.flag, value);
+            // The route returns the fresh setup status. Undo only clears the
+            // manual mark — if the module is genuinely configured in Discord it
+            // stays done, so don't claim we moved it back.
+            if (!value && res && res.flags && res.flags[cat.flag]) stillConfigured = true;
+          } catch (e) { toast("error", "Couldn't update — try again."); if (btn) btn.disabled = false; return; }
+        } else {
+          hubSetLocalDone(state.selectedGuildId, cat.id, value);
+        }
+        if (value) toast("success", `Marked ${cat.label} as done.`);
+        else if (stillConfigured) toast("info", `${cat.label} is still configured in Discord — change it there to move it back.`);
+        else toast("success", `Moved ${cat.label} back to setup.`);
+        // Re-render, then restore keyboard focus — the activated button was just
+        // destroyed, so park focus somewhere sensible (Completed after a mark,
+        // the to-do grid after an undo) instead of dropping it to <body>.
+        await loadSetupHub(content);
+        const tgt = value
+          ? content.querySelector(".dsx-hub-done-head")
+          : content.querySelector(".dsx-hub-card-main");
+        (tgt || content.querySelector(".dsx-hub-done-head") || content.querySelector(".dsx-hub-card-main"))?.focus();
+      }
 
       const wrap = h("div", { class: "dsx-hub" });
 
-      // Header
+      // Header — hub-local tally (counts both backend flags and local marks).
       wrap.append(
         h("header", { class: "dsx-hub-head" },
           h("div", null,
             h("h1", { class: "dsx-hub-title" }, "Setup Hub"),
             h("p", { class: "dsx-hub-sub" },
-              "Configure every Arkoris module. Changes here write to the same place as ",
-              h("code", null, "/setup"), " in Discord.")
+              "What's left to configure. Finished modules move to Completed below — most save straight to the bot, same as ",
+              h("code", null, "/setup"), " in Discord; a few optional extras are remembered only in this browser.")
           ),
-          h("span", { class: "dsx-hub-progress" }, (setup.percent || 0) + "% configured")
+          h("span", { class: "dsx-hub-progress" }, `${doneCats.length} / ${SETUP_HUB.length} set up`)
         )
       );
 
-      // Module card grid
-      const grid = h("div", { class: "dsx-hub-grid" });
-      SETUP_HUB.forEach((cat) => {
-        const configured = cat.flag ? !!flags[cat.flag] : false;
-        const locked = cat.tier === "premium" && !isPremium;
-        const card = h("button", {
-          type: "button",
-          class: "dsx-hub-card" + (locked ? " locked" : ""),
-          onclick: () => {
-            if (cat.comingSoon) { toast("warn", `${cat.label} is configured in Discord via /setup for now.`, 4500); return; }
-            if (cat.module) { state.activeTab = cat.module; render(); }
-          },
-        });
-        const ico = h("span", { class: "dsx-hub-card-ico", "aria-hidden": "true" }); ico.append(iconSvg(TAB_ICONS[cat.module] || "grid"));
-        const cta = h("span", { class: "dsx-enter", "aria-hidden": "true" }); cta.append(iconSvg("arrowRight"));
-        card.append(
-          h("div", { class: "dsx-hub-card-top" },
-            ico,
-            h("div", { class: "dsx-hub-card-badges" },
-              cat.tier === "premium" ? h("span", { class: "dsx-nav-pro" }, "PRO") : null,
-              configured ? h("span", { class: "dsx-hub-card-done" }, "Configured") : null
-            )
-          ),
-          h("div", { class: "dsx-hub-card-name" }, cat.label),
-          h("div", { class: "dsx-hub-card-desc" }, SETUP_HUB_DESC[cat.id] || "Configure this module."),
-          h("span", { class: "dsx-hub-card-cta" }, cat.comingSoon ? "Discord only" : "Configure", cta)
+      // To-do grid (or an all-set state when nothing is left).
+      if (todo.length === 0) {
+        const allset = h("div", { class: "dsx-hub-allset" });
+        const ai = h("span", { class: "dsx-hub-allset-ico", "aria-hidden": "true" }); ai.append(iconSvg("check"));
+        allset.append(ai,
+          h("div", { class: "dsx-hub-allset-title" }, "Everything's set up"),
+          h("div", { class: "dsx-hub-allset-sub" }, "Every module is configured. Reopen one from Completed below if you need to change it.")
         );
-        grid.appendChild(card);
-      });
-      wrap.append(grid);
+        wrap.append(allset);
+      } else {
+        const grid = h("div", { class: "dsx-hub-grid" });
+        todo.forEach((cat) => {
+          const locked = isLocked(cat);
+          const card = h("div", { class: "dsx-hub-card" + (locked ? " locked" : "") });
+          const main = h("button", {
+            type: "button",
+            class: "dsx-hub-card-main",
+            onclick: () => {
+              if (cat.comingSoon) { toast("warn", `${cat.label} is configured in Discord via /setup for now.`, 4500); return; }
+              if (cat.module) { state.activeTab = cat.module; render(); }
+            },
+          });
+          const ico = h("span", { class: "dsx-hub-card-ico", "aria-hidden": "true" }); ico.append(iconSvg(TAB_ICONS[cat.module] || "grid"));
+          const cta = h("span", { class: "dsx-enter", "aria-hidden": "true" }); cta.append(iconSvg("arrowRight"));
+          main.append(
+            h("div", { class: "dsx-hub-card-top" },
+              ico,
+              h("div", { class: "dsx-hub-card-badges" },
+                cat.tier === "premium" ? h("span", { class: "dsx-nav-pro" }, "PRO") : null
+              )
+            ),
+            h("div", { class: "dsx-hub-card-name" }, cat.label),
+            h("div", { class: "dsx-hub-card-desc" }, SETUP_HUB_DESC[cat.id] || "Configure this module."),
+            h("span", { class: "dsx-hub-card-cta" }, cat.comingSoon ? "Discord only" : "Configure", cta)
+          );
+          card.append(main);
+          // "Mark as done" — hidden on locked premium cards (can't use them yet).
+          if (!locked) {
+            const foot = h("div", { class: "dsx-hub-card-foot" });
+            const mark = h("button", { type: "button", class: "dsx-hub-card-mark",
+              onclick: (ev) => markDone(cat, true, ev.currentTarget) });
+            const mi = h("span", { class: "dsx-hub-card-mark-ico", "aria-hidden": "true" }); mi.append(iconSvg("check"));
+            mark.append(mi, "Mark as done");
+            foot.append(mark);
+            card.append(foot);
+          }
+          grid.appendChild(card);
+        });
+        wrap.append(grid);
+      }
+
+      // Completed — collapsed disclosure; configured items live here, out of the way.
+      if (doneCats.length) {
+        const open = !!state._hubDoneOpen;
+        const section = h("div", { class: "dsx-hub-done" + (open ? " open" : "") });
+        const chev = h("span", { class: "dsx-hub-done-chev", "aria-hidden": "true" }); chev.append(iconSvg("chevron"));
+        const head = h("button", { type: "button", class: "dsx-hub-done-head", "aria-expanded": open ? "true" : "false", "aria-controls": "dsx-hub-done-list" },
+          chev, h("span", { class: "dsx-hub-done-head-label" }, `Completed (${doneCats.length})`)
+        );
+        head.onclick = () => {
+          state._hubDoneOpen = !state._hubDoneOpen;
+          const nowOpen = !!state._hubDoneOpen;
+          section.classList.toggle("open", nowOpen);
+          head.setAttribute("aria-expanded", nowOpen ? "true" : "false");
+        };
+        const list = h("div", { class: "dsx-hub-done-list", id: "dsx-hub-done-list" });
+        doneCats.forEach((cat) => {
+          const manual = isManual(cat);
+          const row = h("div", { class: "dsx-hub-done-row" });
+          const jump = h("button", { type: "button", class: "dsx-hub-done-jump",
+            onclick: () => {
+              if (cat.comingSoon || !cat.module) { toast("warn", `${cat.label} is managed in Discord via /setup.`, 4000); return; }
+              state.activeTab = cat.module; render();
+            } });
+          const ck = h("span", { class: "dsx-hub-done-check", "aria-hidden": "true" }); ck.append(iconSvg("check"));
+          jump.append(ck,
+            h("span", { class: "dsx-hub-done-name" }, cat.label),
+            h("span", { class: "dsx-hub-done-state" }, manual ? "Marked done" : "Configured")
+          );
+          row.append(jump);
+          if (manual) {
+            row.append(h("button", { type: "button", class: "dsx-hub-done-undo",
+              title: "Move back to setup", onclick: (ev) => markDone(cat, false, ev.currentTarget) }, "Undo"));
+          }
+          list.append(row);
+        });
+        section.append(head, list);
+        wrap.append(section);
+      }
 
       content.append(wrap);
     } catch (e) { renderTabError(content, e); }
@@ -4889,14 +5003,25 @@
     ];
     state.modules = MOCK_MODULES;
     data.modules = async () => ({ modules: MOCK_MODULES });
+    // Mutable so ?mock= "Mark as done" visibly updates the Setup Hub. Includes
+    // credits/hype so those flagged cards are testable as to-do + markable.
+    const mockBaseFlags = { welcome: true, autoRoles: true, roleMenus: false, tickets: true, staffPay: false, branding: true, ark: true, payments: false, events: true, xp: true, moderation: false, pets: false, giveaways: false, credits: false, hype: false };
+    const mockOverrides = {};
+    const mockStatus = () => {
+      const flags = Object.assign({}, mockBaseFlags);
+      for (const k of Object.keys(mockOverrides)) flags[k] = true;
+      const total = Object.keys(flags).length;
+      const completed = Object.values(flags).filter(Boolean).length;
+      return { percent: Math.round((completed / total) * 100), total, flags, overrides: Object.assign({}, mockOverrides) };
+    };
+    data.setupOverride = async (gid, moduleKey, done) => {
+      if (done) mockOverrides[moduleKey] = true; else delete mockOverrides[moduleKey];
+      return mockStatus(); // mirror the real route, which returns the fresh status
+    };
     data.overview = async () => ({
       guild: { memberCount: 1247 },
       premiumActive: true, plan: "premium", botInstalled: true,
-      setup: {
-        percent: 62, total: 13,
-        flags: { welcome: true, autoRoles: true, roleMenus: false, tickets: true, staffPay: false, branding: true, ark: true, payments: false, events: true, xp: true, moderation: false, pets: false, giveaways: false },
-        overrides: {},
-      },
+      setup: mockStatus(),
     });
     const MOCK_DAYS = ["2026-06-03", "2026-06-04", "2026-06-05", "2026-06-06", "2026-06-07", "2026-06-08", "2026-06-09"];
     const mkS = (vals) => vals.map((v, i) => ({ day: MOCK_DAYS[i], value: v }));
