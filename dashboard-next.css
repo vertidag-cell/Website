@@ -1049,6 +1049,17 @@
 .dash-next-preview .xp-reward-cell .mc-num { width: 96px; }
 .dash-next-preview .xp-reward-unit { font-size: 0.78rem; color: var(--dsc-text-faint); }
 
+/* ---- Polls canvas (Discord poll with live-result bars) ---- */
+.dash-next-preview .poll-preview { margin-bottom: 14px; }
+.dash-next-preview .poll-q { font-weight: 700; color: #fff; font-size: 1rem; margin-bottom: 10px; }
+.dash-next-preview .poll-opt { position: relative; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; background: rgba(255, 255, 255, 0.03); }
+.dash-next-preview .poll-opt-fill { position: absolute; inset: 0 auto 0 0; background: rgba(88, 101, 242, 0.22); border-right: 2px solid var(--dsc-blurple); transition: width .4s cubic-bezier(.22,1,.36,1); }
+.dash-next-preview .poll-opt-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dash-next-preview .poll-opt-label { color: #f2f3f5; font-weight: 500; font-size: 0.9rem; }
+.dash-next-preview .poll-opt-pct { color: #dbdee1; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+.dash-next-preview .poll-foot { color: var(--dsc-text-faint); font-size: 0.78rem; margin-top: 10px; }
+.dash-next-preview .poll-topbar-lbl { font-size: 0.84rem; color: var(--dsc-text-muted); flex: 1; min-width: 160px; }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }

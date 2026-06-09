@@ -3528,6 +3528,7 @@
       if (mod.name === "welcome") return renderWelcomeCanvas(content, mod, m.values);
       if (mod.name === "autoRoles") return renderAutoRolesCanvas(content, mod, m.values);
       if (mod.name === "xp") return renderXpCanvas(content, mod, m.values);
+      if (mod.name === "polls") return renderPollsCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4160,6 +4161,42 @@
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What members see when they level up")),
       device, topbar, rateSection, ignoreSection, weeklySection, rewardSection, tip, statusBox,
       mcSaveBar(mod, content, () => xv, saveBtn, statusBox)));
+  }
+
+  // Polls as a live-preview canvas: a Discord poll with live-result bars; the
+  // editable control is which roles may start a poll.
+  function renderPollsCanvas(content, mod, values) {
+    const pv = Object.assign({ enabled: true, allowedRoleIds: [] }, values || {});
+    pv.allowedRoleIds = Array.isArray(pv.allowedRoleIds) ? pv.allowedRoleIds.slice() : [];
+    const baseline = JSON.stringify(pv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, pv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(pv) === baseline; }
+
+    const opts = [["Ragnarok", 52], ["The Island", 31], ["Aberration", 17]];
+    const poll = h("div", { class: "eb-discord poll-preview" },
+      h("div", { class: "poll-q" }, "📊 Which map should we wipe to next?"),
+      ...opts.map(([label, pct]) => h("div", { class: "poll-opt" },
+        h("div", { class: "poll-opt-fill", style: { width: pct + "%" } }),
+        h("div", { class: "poll-opt-row" }, h("span", { class: "poll-opt-label" }, label), h("span", { class: "poll-opt-pct" }, pct + "%")))),
+      h("div", { class: "poll-foot" }, "47 votes · ends in 22h"));
+
+    const topbar = h("div", { class: "w-topbar" },
+      h("span", { class: "poll-topbar-lbl" }, "Results update live as members vote"),
+      mcSwitch("Polls enabled", () => pv.enabled !== false, (v) => { pv.enabled = v; markDirty(); }));
+
+    const roleSection = mcSection("Who can start a poll",
+      mcChips("role", () => pv.allowedRoleIds, (a) => { pv.allowedRoleIds = a; }, markDirty, { empty: "Everyone can start a poll", add: "+ Allow a role" }));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Hosts run ", h("code", null, "/poll"), " to post one. Leave host roles empty to let anyone start a poll, or restrict it to staff."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "A poll members see in chat")),
+      poll, topbar, roleSection, tip, statusBox, mcSaveBar(mod, content, () => pv, saveBtn, statusBox)));
   }
 
   /** Mark the form as dirty/clean by comparing live values to baseline. */
@@ -6067,10 +6104,20 @@
         },
         values: { enabled: true, xpMin: 5, xpMax: 15, cooldownSec: 60, ignoredChannels: ["6"], ignoredRoles: [], levelUpAnnounce: true, levelUpChannelId: "5", weeklyResetDay: "mon", weeklyChannelId: "3", rewardsMode: "auto", rewardType: "both", reward1stCredits: 500, reward2ndCredits: 250, reward3rdCredits: 100, reward1stEggs: 3, reward2ndEggs: 2, reward3rdEggs: 1 },
       },
+      polls: {
+        module: {
+          name: "polls", label: "Polls", tier: "free", description: "Quick role-gated polls with live results.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "allowedRoleIds", type: "roles", label: "Allowed host roles" },
+          ],
+        },
+        values: { enabled: true, allowedRoleIds: ["22"] },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
