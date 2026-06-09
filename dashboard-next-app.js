@@ -3534,6 +3534,7 @@
       if (mod.name === "credits") return renderCreditsCanvas(content, mod, m.values);
       if (mod.name === "hype") return renderHypeCanvas(content, mod, m.values);
       if (mod.name === "events") return renderEventsCanvas(content, mod, m.values);
+      if (mod.name === "giveaways") return renderGiveawaysCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4598,6 +4599,65 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Pick an event type to preview")),
       tabs, device, topbar, whereSection, rewardHost, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Giveaways as a live-preview canvas: a Discord giveaway embed with an Enter
+  // button; controls are the default channel, host roles, and log channel.
+  function renderGiveawaysCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, defaultChannelId: "", allowedRoleIds: [], logChannelId: "" }, values || {});
+    mv.allowedRoleIds = Array.isArray(mv.allowedRoleIds) ? mv.allowedRoleIds.slice() : [];
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const username = state.user?.username || "host";
+
+    // ---- Live preview: a giveaway embed ----
+    const device = h("div", { class: "eb-discord giveaway-preview" });
+    function drawPreview() {
+      clear(device);
+      device.append(h("div", { class: "eb-embed giveaway-card", style: { borderColor: "#eb459e" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "gw-banner" }, "🎉 GIVEAWAY 🎉"),
+          h("div", { class: "gw-prize" }, "Nitro Classic — 1 month"),
+          h("div", { class: "gw-meta" },
+            h("span", { class: "gw-chip" }, "🏆 1 winner"),
+            h("span", { class: "gw-chip" }, "⏰ Ends in 2 days"),
+            h("span", { class: "gw-chip" }, "🎟️ 47 entries")),
+          h("div", { class: "gw-host" }, "Hosted by ", h("span", { class: "w-mention" }, "@" + username)),
+          h("div", { class: "gw-enter" }, "🎉 Enter"),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Posted in #" + (chName(mv.defaultChannelId) || "giveaways"))))));
+    }
+    drawPreview();
+
+    // ---- Top bar: default channel + enabled ----
+    const defCh = renderChannelSelect("gw-defch", "defaultChannelId", state.channels || [], mv.defaultChannelId);
+    defCh.classList.add("w-select");
+    defCh.addEventListener("change", () => { mv.defaultChannelId = defCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), defCh),
+      mcSwitch("Giveaways enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const hostSection = mcSection("Who can host giveaways",
+      mcChips("role", () => mv.allowedRoleIds, (a) => { mv.allowedRoleIds = a; }, markDirty, { empty: "Server admins only", add: "+ Add a host role" }));
+
+    const logCh = renderChannelSelect("gw-logch", "logChannelId", state.channels || [], mv.logChannelId);
+    logCh.classList.add("mc-select");
+    logCh.addEventListener("change", () => { mv.logChannelId = logCh.value; markDirty(); });
+    const logSection = mcSection("Logging",
+      mcField("Giveaway log channel", logCh, "Winners and re-rolls are recorded here"));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Hosts run ", h("code", null, "/giveaway"), " to start one. Members enter with a single click and Arkoris draws winners fairly when the timer ends."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "A giveaway members can enter")),
+      device, topbar, hostSection, logSection, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
@@ -6585,10 +6645,22 @@
         },
         values: { enabled: true, announceChannelId: "3", trackChannelId: "1", pingRoleId: "20", allowedRoleIds: ["22"], dinoBase: 50, dinoBump: 5, dinoPer: 25, numberBase: 30, numberBump: 2, numberPer: 100, vaultBase: 100, vaultBump: 10, vaultPer: 50 },
       },
+      giveaways: {
+        module: {
+          name: "giveaways", label: "Giveaways", tier: "premium", description: "Community giveaways with role gating.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "defaultChannelId", type: "channel", label: "Default channel" },
+            { key: "allowedRoleIds", type: "roles", label: "Allowed host roles" },
+            { key: "logChannelId", type: "channel", label: "Giveaway log channel" },
+          ],
+        },
+        values: { enabled: true, defaultChannelId: "3", allowedRoleIds: ["22"], logChannelId: "4" },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", giveaways: "giveaways" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
