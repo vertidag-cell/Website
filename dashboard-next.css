@@ -994,6 +994,23 @@
 .dash-next-preview .w-tip code { background: var(--dsc-bg); padding: 1px 5px; border-radius: 4px; color: var(--dsc-text-body); }
 @media (max-width: 560px) { .dash-next-preview .w-topbar, .dash-next-preview .w-appearance { flex-direction: column; align-items: stretch; } }
 
+/* ---- Auto Roles canvas (member-joined preview + editable role pills) ---- */
+.dash-next-preview .ar-preview { margin-bottom: 14px; }
+.dash-next-preview .ar-join { display: flex; align-items: center; gap: 8px; color: #dbdee1; font-size: 0.92rem; }
+.dash-next-preview .ar-join-ico { font-size: 1.15rem; }
+.dash-next-preview .ar-join-name { color: #fff; }
+.dash-next-preview .ar-given-lbl { color: #b5bac1; font-size: 0.8rem; margin: 12px 0 8px; }
+.dash-next-preview .ar-roles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dash-next-preview .ar-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 9px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px; font-size: 0.84rem; color: #fff; }
+.dash-next-preview .ar-chip-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.dash-next-preview .ar-chip-name { font-weight: 500; }
+.dash-next-preview .ar-chip-x { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.12); color: #dbdee1; font-size: 0.62rem; line-height: 1; cursor: pointer; }
+.dash-next-preview .ar-chip-x:hover { background: #da373c; color: #fff; }
+.dash-next-preview .ar-add { font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--dsc-text-muted); background: transparent; border: 1px dashed rgba(255, 255, 255, 0.22); border-radius: 999px; padding: 6px 12px; cursor: pointer; transition: border-color .12s, color .12s; }
+.dash-next-preview .ar-add:hover { color: var(--dsc-text); border-color: rgba(88, 101, 242, 0.5); }
+.dash-next-preview .ar-add:focus { outline: none; border-color: var(--dsc-blurple); }
+.dash-next-preview .ar-empty { color: var(--dsc-text-faint); font-size: 0.82rem; font-style: italic; }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }

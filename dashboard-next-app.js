@@ -3526,6 +3526,7 @@
 
       // Welcome → live-preview canvas (edit the message in the Discord preview).
       if (mod.name === "welcome") return renderWelcomeCanvas(content, mod, m.values);
+      if (mod.name === "autoRoles") return renderAutoRolesCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -3895,6 +3896,87 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live welcome message"), h("span", { class: "w-canvas-hint" }, "Click the title or text to edit")),
       topbar, device, appearance, tip, statusBox, bar));
+  }
+
+  // Shared pill toggle for the module canvases.
+  function mcSwitch(label, getV, setV) {
+    const cb = h("input", { type: "checkbox", checked: getV() ? true : null });
+    cb.addEventListener("change", () => setV(cb.checked));
+    return h("label", { class: "w-switch" }, cb, h("span", { class: "w-sw-track" }, h("span", { class: "w-sw-thumb" })), h("span", { class: "w-sw-label" }, label));
+  }
+  function roleHex(r) { return (r && typeof r.color === "number" && r.color) ? "#" + r.color.toString(16).padStart(6, "0") : "#b9bbbe"; }
+  // Shared module-canvas save bar (Save / Reset + dirty tracking) — wires the
+  // primary button to data.saveModule(av) and re-loads on success.
+  function mcSaveBar(mod, content, getPayload, saveBtn, statusBox) {
+    const resetBtn = h("button", { type: "button", class: "btn btn-ghost", onclick: () => doResetModule(mod, content) }, "Reset to default");
+    saveBtn.addEventListener("click", async () => {
+      saveBtn.disabled = true; saveBtn.textContent = "Saving…";
+      try {
+        await data.saveModule(state.selectedGuildId, mod.name, getPayload());
+        toast("success", `${mod.label} saved`);
+        const stat = document.getElementById("dash-save-status"); if (stat) { stat.classList.add("show"); setTimeout(() => stat.classList.remove("show"), 1800); }
+        loadModule(content, mod.name);
+      } catch (e) {
+        saveBtn.textContent = "Save changes"; saveBtn.disabled = false;
+        if (e.code === 403 && e.data && e.data.error === "premium_required") { statusBox.append(notice("warn", "Premium required", (e.data && e.data.message) || "Activate Premium with /subscribe in Discord.")); return; }
+        toast("error", e.message || "Save failed");
+        statusBox.append(notice("error", "Save failed", e.message));
+      }
+    });
+    return h("div", { class: "dash-sticky-actions" }, saveBtn, resetBtn, h("span", { class: "dash-unsaved" }, h("span", { class: "dot" }), "Unsaved changes"), h("div", { class: "filler" }), h("span", { style: { fontSize: "0.78rem", color: "var(--dash-muted-2)" } }, mod.tier === "premium" ? "Premium" : "Free", " module"));
+  }
+
+  // Auto Roles as a live-preview canvas: a "member joined → gets these roles"
+  // Discord card whose role list is the editable control.
+  function renderAutoRolesCanvas(content, mod, values) {
+    const av = Object.assign({ enabled: false, roleIds: [], ignoreBots: true }, values || {});
+    av.roleIds = Array.isArray(av.roleIds) ? av.roleIds.slice() : [];
+    const baseline = JSON.stringify(av);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, av))));
+
+    const username = state.user?.username || "newmember";
+    const allRoles = (state.roles || []).filter((r) => r.id && r.name !== "@everyone");
+    const roleById = (id) => allRoles.find((r) => r.id === id);
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(av) === baseline; }
+
+    const rolesHost = h("div", { class: "ar-roles" });
+    function renderRoles() {
+      clear(rolesHost);
+      if (!av.roleIds.length) rolesHost.append(h("span", { class: "ar-empty" }, "No roles yet — pick one →"));
+      av.roleIds.forEach((id) => {
+        const r = roleById(id), col = roleHex(r);
+        rolesHost.append(h("span", { class: "ar-chip", style: { borderColor: col } },
+          h("span", { class: "ar-chip-dot", style: { background: col } }),
+          h("span", { class: "ar-chip-name" }, r ? r.name : "unknown role"),
+          h("button", { type: "button", class: "ar-chip-x", title: "Remove role", onclick: () => { av.roleIds = av.roleIds.filter((x) => x !== id); markDirty(); renderRoles(); } }, "✕")));
+      });
+      const remaining = allRoles.filter((r) => !av.roleIds.includes(r.id));
+      if (remaining.length) {
+        const sel = h("select", { class: "ar-add" }, h("option", { value: "" }, "+ Add a role"), ...remaining.map((r) => h("option", { value: r.id }, r.name)));
+        sel.addEventListener("change", () => { if (sel.value) { av.roleIds.push(sel.value); markDirty(); renderRoles(); } });
+        rolesHost.append(sel);
+      }
+    }
+    renderRoles();
+
+    const preview = h("div", { class: "eb-discord ar-preview" },
+      h("div", { class: "ar-join" }, h("span", { class: "ar-join-ico", "aria-hidden": "true" }, "👋"), h("span", null, h("strong", { class: "ar-join-name" }, "@" + username), " just joined the server")),
+      h("div", { class: "ar-given-lbl" }, "Automatically given:"),
+      rolesHost);
+
+    const controls = h("div", { class: "w-appearance" },
+      mcSwitch("Auto roles enabled", () => av.enabled === true, (v) => { av.enabled = v; markDirty(); }),
+      mcSwitch("Skip bot accounts", () => av.ignoreBots !== false, (v) => { av.ignoreBots = v; markDirty(); }));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Every new member gets these roles the instant they join. Keep the Arkoris role ", h("strong", null, "above"), " them in Server Settings or it can't assign them."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Add or remove the roles new members receive")),
+      preview, controls, tip, statusBox, mcSaveBar(mod, content, () => av, saveBtn, statusBox)));
   }
 
   /** Mark the form as dirty/clean by comparing live values to baseline. */
@@ -5770,10 +5852,21 @@
         values: { primaryColor: "#5865f2", footerText: "Velated PVP · Powered by Arkoris", footerIcon: "", thumbnail: "", showTimestamp: true },
       },
       ark: { module: { name: "ark", label: "ARK Server Suite", customUi: true, tier: "premium" }, values: {} },
+      autoRoles: {
+        module: {
+          name: "autoRoles", label: "Auto Roles", tier: "free", description: "Assign roles automatically to new members.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "roleIds", type: "roles", label: "Auto Roles", help: "Roles granted on join." },
+            { key: "ignoreBots", type: "boolean", label: "Skip bot accounts" },
+          ],
+        },
+        values: { enabled: true, roleIds: ["20", "22"], ignoreBots: true },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
