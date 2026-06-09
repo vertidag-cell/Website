@@ -3537,6 +3537,7 @@
       if (mod.name === "giveaways") return renderGiveawaysCanvas(content, mod, m.values);
       if (mod.name === "tickets") return renderTicketsCanvas(content, mod, m.values);
       if (mod.name === "staffPay") return renderStaffPayCanvas(content, mod, m.values);
+      if (mod.name === "payments") return renderPaymentsCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4784,6 +4785,71 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "The monthly summary Arkoris posts")),
       device, topbar, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Payments as a live-preview canvas: a payment panel with inline-editable
+  // instructions + PayPal/card buttons; currency & log channel are controls.
+  function renderPaymentsCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, defaultCurrency: "GBP", logChannelId: "", instructions: "" }, values || {});
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const symbols = { GBP: "£", USD: "$" };
+    const plainOK = (() => { try { const d = document.createElement("div"); d.contentEditable = "plaintext-only"; return d.contentEditable === "plaintext-only"; } catch { return false; } })();
+
+    // ---- Live preview: payment panel (instructions are edited inline) ----
+    const instrEl = h("div", { class: "eb-editable pay-instructions" });
+    instrEl.contentEditable = plainOK ? "plaintext-only" : "true";
+    instrEl.spellcheck = false;
+    instrEl.setAttribute("role", "textbox");
+    instrEl.setAttribute("aria-label", "Payment instructions");
+    instrEl.setAttribute("data-ph", "Payment instructions members see…");
+    instrEl.textContent = mv.instructions || "";
+    instrEl.addEventListener("input", () => { mv.instructions = (instrEl.innerText || "").replace(/\n$/, ""); markDirty(); });
+    instrEl.addEventListener("paste", (ev) => { ev.preventDefault(); const t = (ev.clipboardData || window.clipboardData).getData("text") || ""; try { document.execCommand("insertText", false, t); } catch (_) { instrEl.textContent += t; } });
+
+    const sampleAmt = h("span", { class: "pay-sample-amt" });
+    const logFooter = h("span");
+    const curFooter = h("span");
+    function syncCurrency() { const sym = symbols[mv.defaultCurrency] || "£"; sampleAmt.textContent = sym + "10.00"; curFooter.textContent = "prices in " + (mv.defaultCurrency || "GBP"); }
+    function syncLogFooter() { logFooter.textContent = "Confirmations logged to #" + (chName(mv.logChannelId) || "payments"); }
+    syncCurrency(); syncLogFooter();
+
+    const device = h("div", { class: "eb-discord pay-preview" },
+      h("div", { class: "eb-embed pay-card", style: { borderColor: "#3ba55d" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "pay-head" }, h("span", { class: "pay-emoji", "aria-hidden": "true" }, "💳"), h("span", null, "Payments")),
+          instrEl,
+          h("div", { class: "pay-sample" }, "Starter perks · ", sampleAmt),
+          h("div", { class: "pay-buttons" }, h("div", { class: "pay-btn paypal" }, "PayPal"), h("div", { class: "pay-btn card" }, "Pay by card")),
+          h("div", { class: "eb-e-footer" }, h("span", null, logFooter, " · ", curFooter)))));
+
+    // ---- Top bar: log channel + enabled ----
+    const logCh = renderChannelSelect("pay-logch", "logChannelId", state.channels || [], mv.logChannelId);
+    logCh.classList.add("w-select");
+    logCh.addEventListener("change", () => { mv.logChannelId = logCh.value; syncLogFooter(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), logCh),
+      mcSwitch("Payments enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const curSection = mcSection("Currency",
+      h("div", { class: "mc-grid" },
+        mcField("Default currency", mcSelect(
+          [["GBP", "GBP (£)"], ["USD", "USD ($)"]].map(([value, label]) => ({ value, label })),
+          () => mv.defaultCurrency, (v) => { mv.defaultCurrency = v; syncCurrency(); markDirty(); }))));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Connect PayPal or Stripe with ", h("code", null, "/payments setup"), " in Discord. Members pay from the panel and Arkoris auto-confirms, then logs it to the channel above."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Click the text to edit your instructions")),
+      device, topbar, curSection, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
@@ -6809,10 +6875,22 @@
         },
         values: { enabled: true, forumChannelId: "7" },
       },
+      payments: {
+        module: {
+          name: "payments", label: "Payments", tier: "premium", description: "Per-server PayPal & Stripe payments with auto-confirm.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "defaultCurrency", type: "choice", label: "Default currency" },
+            { key: "logChannelId", type: "channel", label: "Payment log channel" },
+            { key: "instructions", type: "textarea", label: "Payment instructions" },
+          ],
+        },
+        values: { enabled: true, defaultCurrency: "GBP", logChannelId: "4", instructions: "Pick a package below and pay with PayPal or card. Your perks are applied automatically once payment clears." },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", giveaways: "giveaways", tickets: "tickets", staffpay: "staffPay" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", giveaways: "giveaways", tickets: "tickets", staffpay: "staffPay", payments: "payments" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];

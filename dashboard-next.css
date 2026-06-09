@@ -1168,6 +1168,18 @@
 .dash-next-preview .sp-sub { color: var(--dsc-text-faint); font-size: 0.76rem; }
 .dash-next-preview .sp-amt { color: #3ba55d; font-weight: 700; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 
+/* ---- Payments canvas (payment panel + editable instructions) ---- */
+.dash-next-preview .pay-preview { margin-bottom: 14px; }
+.dash-next-preview .pay-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.05rem; color: #fff; margin-bottom: 8px; }
+.dash-next-preview .pay-emoji { font-size: 1.2rem; }
+.dash-next-preview .pay-instructions { font-size: 0.9rem; color: #dbdee1; margin-bottom: 12px; min-height: 1.2em; }
+.dash-next-preview .pay-sample { font-size: 0.82rem; color: var(--dsc-text-muted); margin-bottom: 12px; }
+.dash-next-preview .pay-sample-amt { color: #fff; font-weight: 700; }
+.dash-next-preview .pay-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.dash-next-preview .pay-btn { font-size: 0.85rem; font-weight: 600; padding: 8px 16px; border-radius: 8px; }
+.dash-next-preview .pay-btn.paypal { background: #0070ba; color: #fff; }
+.dash-next-preview .pay-btn.card { background: var(--dsc-bg-raise); border: 1px solid var(--dsc-line); color: var(--dsc-text); }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }
