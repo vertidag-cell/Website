@@ -156,9 +156,7 @@
     polls:        "poll",
     moderation:   "shield",
     xp:           "trophy",
-    pets:         "flag",
     tickets:      "ticket",
-    credits:      "coin",
     payments:     "creditCard",
     staffPay:     "wallet",
     hype:         "flame",
@@ -796,8 +794,8 @@
     if (!state.modules) {
       try {
         const m = await data.modules();
-        // Giveaways is intentionally hidden from the dashboard (still usable via /giveaway in Discord).
-        state.modules = (m.modules || []).filter((mod) => mod.name !== "giveaways");
+        // Modules intentionally hidden from the dashboard (still usable via their Discord commands).
+        state.modules = (m.modules || []).filter((mod) => !["giveaways", "credits", "pets"].includes(mod.name));
       } catch (e) {
         return renderTabError(root, e);
       }
@@ -854,8 +852,8 @@
     const CATEGORY_OF = {
       // Discord Server
       welcome: "discord", autoRoles: "discord", roleMenus: "discord", xp: "discord",
-      hype: "discord", credits: "discord", polls: "discord", moderation: "discord",
-      pets: "discord", events: "discord",
+      hype: "discord", polls: "discord", moderation: "discord",
+      events: "discord",
       // Tickets & Staff
       tickets: "tickets", staffPay: "tickets",
       // ARK Integration
@@ -2036,7 +2034,6 @@
     { id: "polls",       label: "Polls",       emoji: "📊", module: "polls",         flag: null },
     { id: "moderation",  label: "Moderation",  emoji: "🛡️", module: "moderation",   flag: "moderation" },
     { id: "tickets",     label: "Tickets",     emoji: "🎫", module: "tickets",       flag: "tickets",    tier: "premium" },
-    { id: "credits",     label: "Credits",     emoji: "💰", module: "credits",       flag: "credits",    tier: "premium" },
     { id: "payments",    label: "Payments",    emoji: "💳", module: "payments",      flag: "payments",   tier: "premium" },
     { id: "staffPay",    label: "Staff Pay",   emoji: "💷", module: "staffPay",      flag: "staffPay",   tier: "premium" },
     { id: "hype",        label: "Hype System", emoji: "🔥", module: "hype",          flag: "hype",       tier: "premium" },
@@ -2054,7 +2051,6 @@
     polls:       "Run quick role-gated polls.",
     moderation:  "Ban, kick, timeout, URL filter.",
     tickets:     "Manage support tickets easily.",
-    credits:     "In-server credits with expiry.",
     payments:    "Accept PayPal payments securely.",
     staffPay:    "Pay your staff automatically.",
     hype:        "Build hype and engage your community.",
@@ -3462,14 +3458,14 @@
   }
 
   function mapFlagToModule(flag) {
-    const map = { welcome: "welcome", autoRoles: "autoRoles", roleMenus: "roleMenus", population: "population", branding: "branding", payments: "payments", staffPay: "staffPay", hype: "hype", tickets: "tickets", xp: "xp", pets: "pets", credits: "credits", moderation: "moderation" };
+    const map = { welcome: "welcome", autoRoles: "autoRoles", roleMenus: "roleMenus", population: "population", branding: "branding", payments: "payments", staffPay: "staffPay", hype: "hype", tickets: "tickets", xp: "xp", moderation: "moderation" };
     return map[flag] || "overview";
   }
   function prettyName(s) {
     return ({
       welcome: "Welcome", autoRoles: "Auto Roles", roleMenus: "Role Menus", population: "/pop Cluster",
       branding: "Branding", payments: "Payments", staffPay: "Staff Pay", hype: "Hype",
-      tickets: "Tickets", xp: "XP / Leaderboards", pets: "Pets", credits: "Credits", moderation: "Moderation"
+      tickets: "Tickets", xp: "XP / Leaderboards", moderation: "Moderation"
     }[s]) || s;
   }
 
@@ -3528,8 +3524,6 @@
       if (mod.name === "xp") return renderXpCanvas(content, mod, m.values);
       if (mod.name === "polls") return renderPollsCanvas(content, mod, m.values);
       if (mod.name === "moderation") return renderModerationCanvas(content, mod, m.values);
-      if (mod.name === "pets") return renderPetsCanvas(content, mod, m.values);
-      if (mod.name === "credits") return renderCreditsCanvas(content, mod, m.values);
       if (mod.name === "hype") return renderHypeCanvas(content, mod, m.values);
       if (mod.name === "events") return renderEventsCanvas(content, mod, m.values);
       if (mod.name === "tickets") return renderTicketsCanvas(content, mod, m.values);
@@ -3623,15 +3617,6 @@
     ],
     autoRoles: [
       { name: "Basic", fields: ["enabled", "roleIds", "ignoreBots"] },
-    ],
-    pets: [
-      { name: "Basic",    fields: ["enabled"] },
-      { name: "Channels", fields: ["showLeaderboard", "leaderboardChannelId", "displayChannelId"] },
-    ],
-    credits: [
-      { name: "Basic",  fields: ["enabled", "publicBalance"] },
-      { name: "Admin",  fields: ["adminRoleIds"] },
-      { name: "Expiry & logging", fields: ["defaultExpiryDays", "logChannelId"] },
     ],
   };
 
@@ -4295,131 +4280,6 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What lands in your mod-log")),
       device, topbar, modRoleSection, filterSection, warnSection, tip, statusBox,
-      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
-  }
-
-  // Pets as a live-preview canvas: a pet card (level + stat bars) and an
-  // optional Top Pets leaderboard, with the channel + leaderboard controls.
-  function renderPetsCanvas(content, mod, values) {
-    const pv = Object.assign({ enabled: false, showLeaderboard: true, leaderboardChannelId: "", displayChannelId: "" }, values || {});
-    const baseline = JSON.stringify(pv);
-    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, pv))));
-
-    const statusBox = h("div");
-    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
-    function markDirty() { saveBtn.disabled = JSON.stringify(pv) === baseline; }
-    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
-    const username = state.user?.username || "owner";
-    const petBar = (label, pct, color) => h("div", { class: "pet-bar-row" },
-      h("div", { class: "pet-bar-head" }, h("span", { class: "pet-bar-lbl" }, label), h("span", { class: "pet-bar-pct" }, pct + "%")),
-      h("div", { class: "pet-bar" }, h("i", { style: { width: pct + "%", background: color } })));
-
-    // ---- Live preview: pet card + optional leaderboard ----
-    const device = h("div", { class: "eb-discord pet-preview" });
-    function drawPreview() {
-      clear(device);
-      device.append(h("div", { class: "eb-embed pet-card", style: { borderColor: "#57f287" } },
-        h("div", { class: "eb-embed-inner" },
-          h("div", { class: "pet-card-head" },
-            h("div", { class: "pet-avatar", "aria-hidden": "true" }, "🦖"),
-            h("div", { class: "pet-id" },
-              h("div", { class: "pet-name" }, "Rexy ", h("span", { class: "pet-level" }, "Lv 7")),
-              h("div", { class: "pet-owner" }, "@" + username + "'s companion"))),
-          h("div", { class: "pet-bars" }, petBar("Happiness", 86, "#57f287"), petBar("Hunger", 64, "#faa61a")),
-          h("div", { class: "eb-e-footer" }, h("span", null, "Posts in #" + (chName(pv.displayChannelId) || "pet-zone") + " on feed / play")))));
-      if (pv.showLeaderboard !== false) {
-        const rows = [["🥇", "Rexy 🦖", "Lv 7"], ["🥈", "Mittens 🐱", "Lv 6"], ["🥉", "Hopper 🐰", "Lv 5"]];
-        device.append(h("div", { class: "eb-embed xp-lb pet-lb", style: { borderColor: "#f0b232" } },
-          h("div", { class: "eb-embed-inner" },
-            h("div", { class: "xp-lb-title" }, "🏆 Top Pets"),
-            ...rows.map(([m, n, lv]) => h("div", { class: "xp-lb-row" }, h("span", { class: "xp-lb-medal" }, m), h("span", { class: "xp-lb-name" }, n), h("span", { class: "xp-lb-xp" }, lv))),
-            h("div", { class: "eb-e-footer" }, h("span", null, "Updated in #" + (chName(pv.leaderboardChannelId) || "pets"))))));
-      }
-    }
-    drawPreview();
-
-    // ---- Top bar: display channel + Pets enabled ----
-    const dispCh = renderChannelSelect("pet-dispch", "displayChannelId", state.channels || [], pv.displayChannelId);
-    dispCh.classList.add("w-select");
-    dispCh.addEventListener("change", () => { pv.displayChannelId = dispCh.value; drawPreview(); markDirty(); });
-    const topbar = h("div", { class: "w-topbar" },
-      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), dispCh),
-      mcSwitch("Pets enabled", () => pv.enabled === true, (v) => { pv.enabled = v; markDirty(); }));
-
-    const lbCh = renderChannelSelect("pet-lbch", "leaderboardChannelId", state.channels || [], pv.leaderboardChannelId);
-    lbCh.classList.add("mc-select");
-    lbCh.addEventListener("change", () => { pv.leaderboardChannelId = lbCh.value; drawPreview(); markDirty(); });
-    const lbSection = mcSection("Pet leaderboard",
-      h("div", { class: "mc-switch-row" }, mcSwitch("Show the pet leaderboard", () => pv.showLeaderboard !== false, (v) => { pv.showLeaderboard = v; drawPreview(); markDirty(); })),
-      mcField("Leaderboard channel", lbCh));
-
-    const tip = h("div", { class: "w-tip" },
-      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
-      h("div", null, "Members raise a pet with ", h("code", null, "/pet"), " — feeding and playing keeps it happy and levels it up. Pet cards post in the display channel above."));
-
-    content.append(h("div", { class: "dash-card w-canvas" },
-      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "A pet card members see")),
-      device, topbar, lbSection, tip, statusBox, mcSaveBar(mod, content, () => pv, saveBtn, statusBox)));
-  }
-
-  // Credits as a live-preview canvas: a balance card + a credits-log feed, with
-  // access (public lookups / staff roles) and expiry controls.
-  function renderCreditsCanvas(content, mod, values) {
-    const mv = Object.assign({ enabled: false, publicBalance: false, adminRoleIds: [], defaultExpiryDays: 0, logChannelId: "" }, values || {});
-    mv.adminRoleIds = Array.isArray(mv.adminRoleIds) ? mv.adminRoleIds.slice() : [];
-    const baseline = JSON.stringify(mv);
-    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
-
-    const statusBox = h("div");
-    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
-    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
-    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
-    const username = state.user?.username || "member";
-
-    // ---- Live preview: balance card + credits log ----
-    const device = h("div", { class: "eb-discord credit-preview" });
-    function drawPreview() {
-      clear(device);
-      const expiry = (mv.defaultExpiryDays | 0) > 0 ? ("Credits expire " + mv.defaultExpiryDays + " days after they're earned") : "Credits never expire";
-      device.append(h("div", { class: "eb-embed credit-card", style: { borderColor: "#faa61a" } },
-        h("div", { class: "eb-embed-inner" },
-          h("div", { class: "credit-head" },
-            h("div", { class: "credit-ico", "aria-hidden": "true" }, "💰"),
-            h("div", { class: "credit-meta" }, h("div", { class: "credit-label" }, "Balance"), h("div", { class: "credit-owner" }, "@" + username))),
-          h("div", { class: "credit-amount" }, "1,250", h("span", { class: "credit-unit" }, "credits")),
-          h("div", { class: "credit-expiry" }, expiry))));
-      device.append(h("div", { class: "eb-embed credit-log", style: { borderColor: "rgba(255,255,255,0.1)" } },
-        h("div", { class: "eb-embed-inner" },
-          h("div", { class: "credit-log-title" }, "📜 Credits log"),
-          h("div", { class: "credit-hrow" }, h("span", { class: "credit-sign plus" }, "+250"), h("span", { class: "credit-desc" }, "Weekly leaderboard reward"), h("span", { class: "credit-time" }, "2h ago")),
-          h("div", { class: "credit-hrow" }, h("span", { class: "credit-sign minus" }, "−100"), h("span", { class: "credit-desc" }, "Redeemed: VIP role"), h("span", { class: "credit-time" }, "yesterday")),
-          h("div", { class: "eb-e-footer" }, h("span", null, "Logged to #" + (chName(mv.logChannelId) || "credits-log"))))));
-    }
-    drawPreview();
-
-    // ---- Top bar: history log channel + enabled ----
-    const logCh = renderChannelSelect("credit-logch", "logChannelId", state.channels || [], mv.logChannelId);
-    logCh.classList.add("w-select");
-    logCh.addEventListener("change", () => { mv.logChannelId = logCh.value; drawPreview(); markDirty(); });
-    const topbar = h("div", { class: "w-topbar" },
-      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), logCh),
-      mcSwitch("Credits enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
-
-    const accessSection = mcSection("Access",
-      h("div", { class: "mc-switch-row" }, mcSwitch("Anyone can look up balances", () => mv.publicBalance === true, (v) => { mv.publicBalance = v; markDirty(); })),
-      mcField("Who can grant or remove credits", mcChips("role", () => mv.adminRoleIds, (a) => { mv.adminRoleIds = a; }, markDirty, { empty: "Server admins only", add: "+ Add a staff role" })));
-
-    const expirySection = mcSection("Expiry",
-      h("div", { class: "mc-grid" },
-        mcField("Default expiry (days)", mcNumber(() => mv.defaultExpiryDays, (v) => { mv.defaultExpiryDays = v; drawPreview(); markDirty(); }, { min: 0, max: 365 }), "0 = credits never expire")));
-
-    const tip = h("div", { class: "w-tip" },
-      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
-      h("div", null, "Staff grant credits with ", h("code", null, "/credits give"), " and members spend them on rewards. Every change is posted to the log channel above."));
-
-    content.append(h("div", { class: "dash-card w-canvas" },
-      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What members see for /balance")),
-      device, topbar, accessSection, expirySection, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
@@ -6695,7 +6555,6 @@
       { name: "welcome", label: "Welcome", tier: "free" }, { name: "autoRoles", label: "Auto Roles", tier: "free" },
       { name: "roleMenus", label: "Role Menus", tier: "free" }, { name: "xp", label: "XP / Leaderboards", tier: "free" },
       { name: "polls", label: "Polls", tier: "free" }, { name: "moderation", label: "Moderation", tier: "free" },
-      { name: "pets", label: "Pets", tier: "free" }, { name: "credits", label: "Credits", tier: "free" },
       { name: "hype", label: "Hype", tier: "premium" }, { name: "events", label: "Events", tier: "premium" },
       { name: "tickets", label: "Tickets", tier: "premium" },
       { name: "staffPay", label: "Staff Pay", tier: "premium" }, { name: "ark", label: "ARK Management", tier: "premium" },
@@ -6706,7 +6565,7 @@
     data.modules = async () => ({ modules: MOCK_MODULES });
     // Mutable so ?mock= "Mark as done" visibly updates the Setup Hub. Includes
     // credits/hype so those flagged cards are testable as to-do + markable.
-    const mockBaseFlags = { welcome: true, autoRoles: true, roleMenus: false, tickets: true, staffPay: false, branding: true, ark: true, payments: false, events: true, xp: true, moderation: false, pets: false, credits: false, hype: false };
+    const mockBaseFlags = { welcome: true, autoRoles: true, roleMenus: false, tickets: true, staffPay: false, branding: true, ark: true, payments: false, events: true, xp: true, moderation: false, hype: false };
     const mockOverrides = {};
     const mockStatus = () => {
       const flags = Object.assign({}, mockBaseFlags);
@@ -6877,31 +6736,6 @@
         },
         values: { enabled: true, modLogChannelId: "4", modRoleIds: ["22"], urlFilterEnabled: true, whitelistDomains: ["youtube.com", "twitch.tv", "arkoris.net"], maxWarnings: 3 },
       },
-      pets: {
-        module: {
-          name: "pets", label: "Pets", tier: "free", description: "Basic pet system. Advanced features unlock with Premium.",
-          fields: [
-            { key: "enabled", type: "boolean", label: "Enabled" },
-            { key: "showLeaderboard", type: "boolean", label: "Show leaderboard" },
-            { key: "leaderboardChannelId", type: "channel", label: "Leaderboard channel" },
-            { key: "displayChannelId", type: "channel", label: "Pet display channel" },
-          ],
-        },
-        values: { enabled: true, showLeaderboard: true, leaderboardChannelId: "3", displayChannelId: "1" },
-      },
-      credits: {
-        module: {
-          name: "credits", label: "Credits", tier: "premium", description: "In-server credits with expiry, history, role-gated reward integrations.",
-          fields: [
-            { key: "enabled", type: "boolean", label: "Enabled" },
-            { key: "publicBalance", type: "boolean", label: "Public balance lookups" },
-            { key: "adminRoleIds", type: "roles", label: "Admin/staff roles" },
-            { key: "defaultExpiryDays", type: "integer", label: "Default expiry (days, 0=lifetime)" },
-            { key: "logChannelId", type: "channel", label: "History log channel" },
-          ],
-        },
-        values: { enabled: true, publicBalance: true, adminRoleIds: ["22"], defaultExpiryDays: 30, logChannelId: "3" },
-      },
       hype: {
         module: {
           name: "hype", label: "Hype", tier: "premium", description: "Reward name/tag/invite/boost activity with credits.",
@@ -6979,7 +6813,7 @@
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus", rolemenu: "roleMenus" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus", rolemenu: "roleMenus" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
