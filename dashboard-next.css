@@ -1109,6 +1109,22 @@
 .dash-next-preview .credit-desc { color: #dbdee1; flex: 1; min-width: 0; }
 .dash-next-preview .credit-time { margin-left: auto; color: var(--dsc-text-faint); font-size: 0.78rem; white-space: nowrap; }
 
+/* ---- Hype canvas (reward post with live trigger chips) ---- */
+.dash-next-preview .hype-preview { margin-bottom: 14px; }
+.dash-next-preview .hype-head { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+.dash-next-preview .hype-ico { font-size: 1.1rem; }
+.dash-next-preview .hype-msg { color: #dbdee1; font-size: 0.9rem; }
+.dash-next-preview .hype-msg strong { color: #fff; }
+.dash-next-preview .hype-kw { font-family: var(--mono, ui-monospace, monospace); font-size: 0.82rem; color: #eb459e; background: rgba(235, 69, 158, 0.12); padding: 1px 6px; border-radius: 5px; }
+.dash-next-preview .hype-award { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.dash-next-preview .hype-credits { font-weight: 700; color: #57f287; font-size: 0.95rem; }
+.dash-next-preview .hype-role { color: var(--dsc-text-muted); font-size: 0.85rem; }
+.dash-next-preview .hype-triggers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.dash-next-preview .hype-trig { font-size: 0.74rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--dsc-line); }
+.dash-next-preview .hype-trig.on { color: #57f287; border-color: rgba(87, 242, 135, 0.4); background: rgba(87, 242, 135, 0.08); }
+.dash-next-preview .hype-trig.off { color: var(--dsc-text-faint); text-decoration: line-through; opacity: 0.7; }
+.dash-next-preview .mc-switches { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 14px; }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }

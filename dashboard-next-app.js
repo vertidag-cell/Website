@@ -3532,6 +3532,7 @@
       if (mod.name === "moderation") return renderModerationCanvas(content, mod, m.values);
       if (mod.name === "pets") return renderPetsCanvas(content, mod, m.values);
       if (mod.name === "credits") return renderCreditsCanvas(content, mod, m.values);
+      if (mod.name === "hype") return renderHypeCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4416,6 +4417,85 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What members see for /balance")),
       device, topbar, accessSection, expirySection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Reusable single-role <select> bound to model[key] for module canvases.
+  function mcRoleSelect(getV, setV, noneLabel) {
+    const roles = (state.roles || []).filter((r) => r.id && r.name !== "@everyone");
+    const sel = h("select", { class: "mc-select" }, h("option", { value: "" }, noneLabel || "— none —"), ...roles.map((r) => h("option", { value: r.id }, r.name)));
+    sel.value = getV() || "";
+    sel.addEventListener("change", () => setV(sel.value));
+    return sel;
+  }
+
+  // Hype as a live-preview canvas: a "Hype reward" post with live trigger chips,
+  // plus the keyword / reward / anti-abuse controls.
+  function renderHypeCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, rewardChannelId: "", tagKeywords: [], creditAmount: 1, creditExpiryDays: 14, rewardRoleId: "", rewardInvites: true, rewardBoosts: true, preventDuplicates: true }, values || {});
+    mv.tagKeywords = Array.isArray(mv.tagKeywords) ? mv.tagKeywords.slice() : [];
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const roleById = (id) => (state.roles || []).find((r) => r.id === id);
+    const username = state.user?.username || "member";
+
+    // ---- Live preview: a Hype reward post ----
+    const device = h("div", { class: "eb-discord hype-preview" });
+    function drawPreview() {
+      clear(device);
+      const kw = (mv.tagKeywords && mv.tagKeywords[0]) || "[QUICK]";
+      const amt = mv.creditAmount != null ? mv.creditAmount : 1;
+      const role = mv.rewardRoleId ? roleById(mv.rewardRoleId) : null;
+      device.append(h("div", { class: "eb-embed hype-card", style: { borderColor: "#eb459e" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "hype-head" }, h("span", { class: "hype-ico", "aria-hidden": "true" }, "✨"), h("span", null, "Hype reward")),
+          h("div", { class: "hype-msg" }, h("strong", null, "@" + username), " added ", h("code", { class: "hype-kw" }, kw), " to their name"),
+          h("div", { class: "hype-award" },
+            h("span", { class: "hype-credits" }, "+" + amt + " credit" + (amt === 1 ? "" : "s")),
+            role ? h("span", { class: "hype-role" }, "+ @" + role.name) : null),
+          h("div", { class: "hype-triggers" },
+            h("span", { class: "hype-trig on" }, "Name tag"),
+            h("span", { class: "hype-trig" + (mv.rewardInvites !== false ? " on" : " off") }, "Invites"),
+            h("span", { class: "hype-trig" + (mv.rewardBoosts !== false ? " on" : " off") }, "Boosts")),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Posted to #" + (chName(mv.rewardChannelId) || "hype"))))));
+    }
+    drawPreview();
+
+    // ---- Top bar: reward post channel + enabled ----
+    const rewardCh = renderChannelSelect("hype-rewch", "rewardChannelId", state.channels || [], mv.rewardChannelId);
+    rewardCh.classList.add("w-select");
+    rewardCh.addEventListener("change", () => { mv.rewardChannelId = rewardCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), rewardCh),
+      mcSwitch("Hype enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const earnSection = mcSection("What earns hype",
+      mcField("Name / tag keywords", mcKeywords(() => mv.tagKeywords, (a) => { mv.tagKeywords = a; }, () => { markDirty(); drawPreview(); }, { placeholder: "e.g. [QUICK] — Enter to add" }), "Members who put one of these in their name get rewarded"),
+      h("div", { class: "mc-switches" },
+        mcSwitch("Reward server invites", () => mv.rewardInvites !== false, (v) => { mv.rewardInvites = v; drawPreview(); markDirty(); }),
+        mcSwitch("Reward server boosts", () => mv.rewardBoosts !== false, (v) => { mv.rewardBoosts = v; drawPreview(); markDirty(); })));
+
+    const rewardSection = mcSection("Reward",
+      h("div", { class: "mc-grid" },
+        mcField("Credits per detection", mcNumber(() => mv.creditAmount, (v) => { mv.creditAmount = v; drawPreview(); markDirty(); }, { min: 0, max: 1000 })),
+        mcField("Credit expiry (days)", mcNumber(() => mv.creditExpiryDays, (v) => { mv.creditExpiryDays = v; markDirty(); }, { min: 0, max: 365 }), "0 = never expires"),
+        mcField("Bonus role", mcRoleSelect(() => mv.rewardRoleId, (v) => { mv.rewardRoleId = v; drawPreview(); markDirty(); }, "— no bonus role —"))));
+
+    const abuseSection = mcSection("Anti-abuse",
+      h("div", { class: "mc-switch-row" }, mcSwitch("Only reward each member once per trigger", () => mv.preventDuplicates !== false, (v) => { mv.preventDuplicates = v; markDirty(); })));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Arkoris watches member names, invites and boosts. When it spots one of your keywords it hands out credits and posts a thank-you to the channel above."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What posts when someone reps your server")),
+      device, topbar, earnSection, rewardSection, abuseSection, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
@@ -6373,10 +6453,27 @@
         },
         values: { enabled: true, publicBalance: true, adminRoleIds: ["22"], defaultExpiryDays: 30, logChannelId: "3" },
       },
+      hype: {
+        module: {
+          name: "hype", label: "Hype", tier: "premium", description: "Reward name/tag/invite/boost activity with credits.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "rewardChannelId", type: "channel", label: "Reward post channel" },
+            { key: "tagKeywords", type: "keywords", label: "Name/tag keywords" },
+            { key: "creditAmount", type: "integer", label: "Credit per detection" },
+            { key: "creditExpiryDays", type: "integer", label: "Credit expiry (days)" },
+            { key: "rewardRoleId", type: "role", label: "Reward role" },
+            { key: "rewardInvites", type: "boolean", label: "Reward invites" },
+            { key: "rewardBoosts", type: "boolean", label: "Reward boosts" },
+            { key: "preventDuplicates", type: "boolean", label: "Prevent duplicate awards" },
+          ],
+        },
+        values: { enabled: true, rewardChannelId: "3", tagKeywords: ["[QUICK]", "QA"], creditAmount: 5, creditExpiryDays: 14, rewardRoleId: "22", rewardInvites: true, rewardBoosts: true, preventDuplicates: true },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
