@@ -1775,9 +1775,6 @@
       // Each card: value, week-over-week delta, sparkline.
       main.append(renderActivityStatGrid(o, analytics));
 
-      // Analytics chart card
-      if (analytics) main.append(renderAnalyticsCard(analytics));
-
       // Quick actions
       main.append(
         h("div", { class: "dash-card" },
@@ -4873,7 +4870,9 @@
   // locally (npm run dev) without a live session. Harmless in production: the
   // page is password-gated, and this only shows fake data when explicitly asked.
   function maybeRenderMock() {
-    if (!/[?&]mock=1(&|$)/.test(location.search)) return false;
+    const m = location.search.match(/[?&]mock=([a-z0-9]+)/i);
+    if (!m) return false;
+    const mode = m[1].toLowerCase(); // "1" = picker, "overview" = in-server overview
     state.user = { id: "0", username: "previewuser", globalName: "Preview User", avatar: null };
     state.guilds = [
       { id: "100000000000000001", name: "Velated PVP",          icon: null, owner: true,  plan: "premium" },
@@ -4882,6 +4881,47 @@
       { id: "100000000000000004", name: "Ragnarok Raiders",     icon: null, owner: false, plan: "free" },
       { id: "100000000000000005", name: "Genesis Tribe",        icon: null, owner: true,  plan: "monthly" },
     ];
+
+    // Stub the data layer so in-server views render without a backend.
+    const MOCK_MODULES = [
+      { name: "welcome", label: "Welcome", tier: "free" }, { name: "autoRoles", label: "Auto Roles", tier: "free" },
+      { name: "roleMenus", label: "Role Menus", tier: "free" }, { name: "xp", label: "XP / Leaderboards", tier: "free" },
+      { name: "polls", label: "Polls", tier: "free" }, { name: "moderation", label: "Moderation", tier: "free" },
+      { name: "pets", label: "Pets", tier: "free" }, { name: "credits", label: "Credits", tier: "free" },
+      { name: "hype", label: "Hype", tier: "premium" }, { name: "events", label: "Events", tier: "premium" },
+      { name: "giveaways", label: "Giveaways", tier: "premium" }, { name: "tickets", label: "Tickets", tier: "premium" },
+      { name: "staffPay", label: "Staff Pay", tier: "premium" }, { name: "ark", label: "ARK Management", tier: "premium" },
+      { name: "logs", label: "Logs", tier: "free" }, { name: "payments", label: "Payments", tier: "premium" },
+      { name: "branding", label: "Branding", tier: "premium" }, { name: "serverTemplates", label: "Server Templates", tier: "premium" },
+    ];
+    state.modules = MOCK_MODULES;
+    data.modules = async () => ({ modules: MOCK_MODULES });
+    data.overview = async () => ({
+      guild: { memberCount: 1247 },
+      setup: {
+        percent: 62, total: 13,
+        flags: { welcome: true, autoRoles: true, roleMenus: false, tickets: true, staffPay: false, branding: true, ark: true, payments: false, events: true, xp: true, moderation: false, pets: false, giveaways: false },
+        overrides: {},
+      },
+    });
+    data.analytics = async () => ({
+      days: 7, members: 1247, memberSeries: [1180, 1192, 1201, 1210, 1228, 1239, 1247],
+      cards: {
+        messages: { total: 18432, week: 4210, prevWeek: 3870 }, commands: { total: 2304, week: 540, prevWeek: 610 },
+        pop_uses: { total: 892, week: 210, prevWeek: 180 }, voice_joins: { total: 430, week: 96, prevWeek: 88 },
+        welcomes: { total: 312, week: 74, prevWeek: 65 },
+      },
+      series: {
+        messages: [520, 610, 580, 640, 700, 660, 500], commands: [80, 76, 90, 70, 85, 72, 67],
+        voice_joins: [12, 14, 11, 16, 13, 15, 15], welcomes: [9, 11, 10, 12, 11, 10, 11],
+      },
+    });
+    data.audit = async () => ({ entries: [] });
+
+    if (mode === "overview") {
+      state.selectedGuildId = state.guilds[0].id;
+      state.activeTab = "overview";
+    }
     render();
     return true;
   }

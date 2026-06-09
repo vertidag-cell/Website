@@ -64,11 +64,16 @@
    under .dash-next-preview so it only affects the private preview.
    ============================================================================ */
 .dash-next-preview {
-  --dsc-bg-deep: #1e1f22;
-  --dsc-bg: #2b2d31;
-  --dsc-bg-raise: #313338;
-  --dsc-bg-hover: #383a40;
-  --dsc-bg-active: #404249;
+  /* Discord-styled tokens, re-tuned to sit on the site's near-black (#030303)
+     so the preview matches the rest of the UI instead of floating as a gray
+     box. Page is near-black; panels are a subtle dark elevation. */
+  --dsc-page:      #07080a;   /* page background */
+  --dsc-bg-deep:   #07080a;   /* alias kept for older rules */
+  --dsc-bg:        #0e0f12;
+  --dsc-bg-raise:  #16171b;   /* panels, search, seg track, cards */
+  --dsc-bg-hover:  #1f2126;   /* row / control hover */
+  --dsc-bg-active: #282a30;
+  --dsc-line:      rgba(255, 255, 255, 0.07);
   --dsc-text: #f2f3f5;
   --dsc-text-body: #dbdee1;
   --dsc-text-muted: #b5bac1;
@@ -83,29 +88,71 @@
   --dsc-radius-sm: 6px;
   --dsc-radius-icon: 16px;
 
-  background-color: var(--dsc-bg-deep);
+  /* --- Retheme the whole site's shared design tokens for the preview ---------
+     The marketing site + dashboard read green (--red / --accent = #2bff9e) via
+     these variables. Remap them to neutral + blurple HERE so the navbar, footer,
+     buttons, sidebar and overview all recolor in one place. Near-black
+     backgrounds are kept (they already match the Discord surface). */
+  --red: #5865f2;
+  --red-bright: #6b75f5;
+  --red-dark: #4752c4;
+  --red-glow: rgba(88, 101, 242, 0.42);
+  --red-tint: rgba(88, 101, 242, 0.12);
+  --accent: #5865f2;
+  --accent-2: #5865f2;
+  --accent-soft: #6b75f5;
+  --accent-deep: #3c45a5;
+  --glow: rgba(88, 101, 242, 0.40);
+  --glow-soft: rgba(88, 101, 242, 0.16);
+  --accent-tint: rgba(88, 101, 242, 0.10);
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --panel: rgba(255, 255, 255, 0.025);
+  --card-hover: rgba(255, 255, 255, 0.06);
+  --surface: rgba(255, 255, 255, 0.03);   /* was green-tinted; topbar bg */
+  --surface-solid: #16171b;
+
+  /* Dashboard --dash-* tokens: recolor the green accent + glows to blurple.
+     The --dash-bg* backgrounds are already near-black, so they stay. */
+  --dash-red: #5865f2;
+  --dash-red-2: #5865f2;
+  --dash-red-dark: #4752c4;
+  --dash-red-glow: rgba(88, 101, 242, 0.42);
+  --dash-red-tint: rgba(88, 101, 242, 0.12);
+  --dash-shadow-glow: 0 0 0 1px rgba(88, 101, 242, 0.22), 0 10px 32px rgba(0, 0, 0, 0.42);
+
+  background-color: var(--dsc-page);
+  /* Kill the site's green radial-gradient body wash (background-color alone
+     doesn't override background-image). This is the source of the lingering
+     green glow at the top of the preview. */
+  background-image: none !important;
 }
 
 /* Drop the marketing background FX + redundant hero so the dashboard reads as a
-   clean Discord-neutral surface. The PRIVATE PREVIEW badge is a real element
+   clean neutral surface. The PRIVATE PREVIEW badge is a real element
    (.dash-preview-badge), so hiding these body pseudo-layers never touches it. */
 .dash-next-preview::before,
 .dash-next-preview::after { display: none !important; }
 .dash-next-preview .dash-shell { background: transparent; }
 .dash-next-preview .page-hero { display: none; }
 
-/* Tame the marketing navbar so the neon-green CTA + green accent line don't
-   break the Discord-neutral surface. Scoped to the preview; live site untouched.
-   The small green brand logo stays as the one deliberate brand pop. */
-.dash-next-preview .navbar {
-  background: rgba(30, 31, 34, 0.82);
-  border-bottom-color: rgba(0, 0, 0, 0.32);
+/* The marketing navbar carries a green gradient underline (::after) and a green
+   shadow once scrolled. Recolor both so the navbar matches the neutral preview. */
+.dash-next-preview .navbar::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
 }
-.dash-next-preview .navbar .btn-primary {
+.dash-next-preview .navbar.scrolled {
+  box-shadow: 0 1px 0 rgba(88, 101, 242, 0.18), 0 22px 50px -30px rgba(0, 0, 0, 0.95);
+}
+
+/* Primary buttons across the preview follow the blurple accent (covers the
+   navbar CTA + dashboard buttons). The var remap handles most of it; this
+   guarantees the gradient/glow variants recolor too. */
+.dash-next-preview .btn-primary {
   background: var(--dsc-blurple); background-image: none; border-color: transparent;
   color: #fff; box-shadow: none;
 }
-.dash-next-preview .navbar .btn-primary:hover { background: var(--dsc-blurple-hover); }
+.dash-next-preview .btn-primary:hover { background: var(--dsc-blurple-hover); }
 
 /* ---- Picker shell ---- */
 .dsx-picker {
@@ -186,8 +233,8 @@
   flex: 1 1 280px;
   display: flex; align-items: center; gap: 8px;
   height: 40px; padding: 0 12px;
-  background: var(--dsc-bg-deep);
-  border: 1px solid transparent; border-radius: var(--dsc-radius-sm);
+  background: var(--dsc-bg-raise);
+  border: 1px solid var(--dsc-line); border-radius: var(--dsc-radius-sm);
   transition: border-color .15s;
 }
 .dsx-search:focus-within { border-color: var(--dsc-blurple); }
@@ -201,7 +248,7 @@
 .dsx-search-input::placeholder { color: var(--dsc-text-faint); }
 .dsx-seg {
   display: inline-flex; gap: 2px; padding: 3px;
-  background: var(--dsc-bg-deep); border-radius: var(--dsc-radius-sm);
+  background: var(--dsc-bg-raise); border-radius: var(--dsc-radius-sm);
 }
 .dsx-seg-btn {
   border: 0; background: transparent;
@@ -216,7 +263,7 @@
 /* ---- Server list panel ---- */
 .dsx-server-list {
   background: var(--dsc-bg-raise);
-  border: 1px solid rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--dsc-line);
   border-radius: var(--dsc-radius);
   overflow: hidden;
 }
@@ -295,7 +342,7 @@
 .dsx-empty {
   max-width: 460px; margin: 36px auto; padding: 40px 28px; text-align: center;
   background: var(--dsc-bg-raise);
-  border: 1px solid rgba(0, 0, 0, 0.25); border-radius: var(--dsc-radius);
+  border: 1px solid var(--dsc-line); border-radius: var(--dsc-radius);
 }
 .dsx-empty-ico {
   width: 56px; height: 56px; margin: 0 auto 16px;
@@ -338,4 +385,27 @@
   .dsx-server-row, .dsx-add-row { padding: 11px 12px; gap: 12px; }
   .dsx-gicon, .dsx-add-plus { width: 44px !important; height: 44px !important; }
   .dsx-plan { display: none; }
+}
+
+/* ============================================================================
+   IN-SERVER OVERVIEW tweaks (reskinned shell uses the var remap above; these
+   are small structural cleanups on top so the overview reads calm + balanced).
+   ============================================================================ */
+
+/* Balance the activity stat cards into a steady 2x2 instead of a 3 + 1 wrap. */
+.dash-next-preview .dash-stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Premium / Lifetime badges go amber to match the picker (and read as "paid"),
+   instead of the success-green they inherit. Bot-online stays semantic green. */
+.dash-next-preview .dash-status-pill.premium,
+.dash-next-preview .dash-status-pill.lifetime {
+  color: var(--dsc-amber-text);
+  background: rgba(240, 178, 50, 0.14);
+  border-color: rgba(240, 178, 50, 0.30);
+}
+.dash-next-preview .dash-status-pill.premium .pill-dot,
+.dash-next-preview .dash-status-pill.lifetime .pill-dot {
+  background: var(--dsc-amber);
 }
