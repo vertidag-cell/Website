@@ -14,6 +14,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="assets/logo.png?v=2" />
     <link rel="stylesheet" href="styles.css?v=57" />
+    <style>
+      .servers-teaser .highlight-tier { color: var(--accent); }
+      .servers-teaser-avatars { display: flex; align-items: center; flex: 0 0 auto; padding-left: 4px; }
+      .servers-teaser-avatars .srv-av { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--surface); margin-left: -16px; object-fit: cover; background: rgba(43, 255, 158, 0.12); display: grid; place-items: center; font-weight: 800; color: var(--accent); font-size: 1.05rem; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45); }
+      .servers-teaser-avatars .srv-av:first-child { margin-left: 0; }
+      .servers-teaser:hover .servers-teaser-avatars .srv-av { border-color: rgba(43, 255, 158, 0.4); }
+      @media (max-width: 720px) { .servers-teaser-avatars { margin: 0 auto; } }
+    </style>
   </head>
   <body>
     <!-- Navbar -->
@@ -426,6 +434,26 @@
       </div>
     </section>
 
+    <!-- Community directory entry -->
+    <section class="short">
+      <div class="container">
+        <a class="highlight-card servers-teaser" href="servers.html" data-animate>
+          <div class="servers-teaser-avatars" data-servers-avatars aria-hidden="true">
+            <span class="srv-av">V</span>
+            <span class="srv-av">Q</span>
+            <span class="srv-av">A</span>
+            <span class="srv-av">+</span>
+          </div>
+          <div>
+            <div class="highlight-tier">Community Directory</div>
+            <h3>Join a server running Arkoris</h3>
+            <p>Browse <span data-servers-count>the public directory</span> of Discord communities powered by Arkoris — real server logos, one click to jump in.</p>
+          </div>
+          <span class="btn btn-ghost">Browse Servers →</span>
+        </a>
+      </div>
+    </section>
+
     <!-- Final CTA -->
     <section class="cta-section">
       <div class="container">
@@ -507,5 +535,30 @@
 
     <script src="config.js"></script>
     <script src="script.js?v=56"></script>
+    <!-- Community directory teaser — swaps in real server logos + live count. -->
+    <script>
+      (function () {
+        var avWrap = document.querySelector("[data-servers-avatars]");
+        var countEl = document.querySelector("[data-servers-count]");
+        if (!avWrap) return;
+        var base = (window.SITE_CONFIG && window.SITE_CONFIG.backendApiUrl) || "";
+        fetch(base + "/api/servers", { credentials: "omit" })
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(0); })
+          .then(function (d) {
+            var servers = (d && d.servers) || [];
+            if (!servers.length) return;
+            if (countEl) countEl.textContent = servers.length.toLocaleString() + " server" + (servers.length === 1 ? "" : "s");
+            var withIcon = servers.filter(function (s) { return s.icon; }).slice(0, 5);
+            if (!withIcon.length) return;
+            var html = withIcon.map(function (s) {
+              return '<img class="srv-av" src="' + String(s.icon).replace(/["'<>]/g, "") + '" alt="" loading="lazy" width="50" height="50">';
+            }).join("");
+            var extra = servers.length - withIcon.length;
+            if (extra > 0) html += '<span class="srv-av">+' + extra + "</span>";
+            avWrap.innerHTML = html;
+          })
+          .catch(function () { /* keep the static fallback avatars */ });
+      })();
+    </script>
   </body>
 </html>
