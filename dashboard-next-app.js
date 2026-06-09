@@ -670,23 +670,25 @@
     );
     root.append(mobileBar);
 
-    // Top bar — clean status row
-    const topbar = h("div", { class: "dash-userbar" });
-    topbar.append(
-      h("button", { type: "button", class: "btn btn-ghost", "aria-label": "Back to server picker",
-        onclick: () => { state.selectedGuildId = null; render(); } }, "← Servers"),
-      guild ? guildIcon(guild) : userAvatar(state.user),
-      h("div", { class: "who" },
-        h("div", { class: "who-name" }, guild?.name || "Loading…"),
-        h("div", { class: "who-sub" },
-          (state.user.globalName || state.user.username),
-          guild?.id ? h("span", { style: { marginLeft: "8px", color: "var(--dash-muted-2)" } }, "· " + guild.id.slice(-6)) : null
-        )
+    // Top bar — Discord-style header (.dsx-topbar)
+    const premium = plan === "premium" || plan === "monthly" || plan === "lifetime";
+    const planLabel = plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
+    const back = h("button", { type: "button", class: "dsx-topbar-back", "aria-label": "Back to servers",
+      onclick: () => { state.selectedGuildId = null; render(); } });
+    back.append((() => { const i = h("span", { class: "dsx-back-ico", "aria-hidden": "true" }); i.append(iconSvg("arrowRight")); return i; })(), "Servers");
+    const logout = h("button", { type: "button", class: "dsx-icon-btn", title: "Log out", "aria-label": "Log out", onclick: handleLogout });
+    logout.append(iconSvg("logout"));
+    const topbar = h("div", { class: "dsx-topbar" },
+      back,
+      dscGuildIcon(guild || {}, 30),
+      h("div", { class: "dsx-topbar-id" },
+        h("div", { class: "dsx-topbar-name" }, guild?.name || "Loading…"),
+        h("div", { class: "dsx-topbar-sub" },
+          h("span", { class: "dsx-status" }, h("span", { class: "dsx-dot online" }), "Bot online"))
       ),
-      h("div", { id: "dash-save-status", class: "dash-save-status" }, "Saved ✓"),
-      h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Bot Online"),
-      planPill(plan),
-      btn("Log out", { kind: "btn-ghost", onclick: handleLogout })
+      h("span", { class: "dsx-plan" + (premium ? " premium" : "") }, planLabel),
+      h("div", { id: "dash-save-status", class: "dsx-save" }, "Saved"),
+      logout
     );
     root.append(topbar);
 
@@ -1758,51 +1760,148 @@
     clear(content);
     content.append(renderOverviewSkeleton());
     try {
-      // Overview + analytics in parallel. Analytics is best-effort —
-      // if it fails the page still renders with the rest.
+      const guild = state.guilds.find((g) => g.id === state.selectedGuildId) || {};
+      // Overview + analytics in parallel. Analytics is best-effort.
       const [o, analytics] = await Promise.all([
         data.overview(state.selectedGuildId),
         data.analytics(state.selectedGuildId, 7).catch(() => null),
       ]);
       clear(content);
-
-      // Two-column shell: overview content on the left, a live cluster-
-      // population rail on the right (reuses the hub-shell/hub-rail layout).
-      const main = h("div", { class: "hub-main" });
-      const rail = h("aside", { class: "hub-rail" });
-
-      // Activity stat grid — real numbers from the analytics endpoint.
-      // Each card: value, week-over-week delta, sparkline.
-      main.append(renderActivityStatGrid(o, analytics));
-
-      // Quick actions
-      main.append(
-        h("div", { class: "dash-card" },
-          h("h3", null, "Quick actions"),
-          h("p", null, "Jump straight into the configuration you need most."),
-          h("div", { class: "dash-quick-actions" },
-            renderQuickAction("welcome",   "hand",     "Configure Welcome",  "Greet new members with a custom embed."),
-            renderQuickAction("roleMenus", "masks",    "Role Menus",         "Build dropdown / button role panels."),
-            renderQuickAction("tickets",   "ticket",   "Tickets",            "Forum-based support tickets."),
-            renderQuickAction("staffPay",  "wallet",   "Staff Pay",          "Per-role pay amounts + tiers."),
-            renderQuickAction("events",    "calendar", "Events",             "Dino / Number / Vault credit events."),
-            renderQuickAction("branding",  "palette",  "Branding",           "Customize the bot's embed look.")
-          )
-        )
-      );
-
-      // Setup progress (ring + checklist) — mirrors the mockup's
-      // "Bot Setup Progress" panel.
-      main.append(renderSetupProgressCard(o));
-
-      // Recent audit (preview, last 6)
-      main.append(renderRecentAuditCard());
-
-      // Right rail — live cluster population (top 5 by game / platform).
-      rail.append(renderLivePopPanel());
-
-      content.append(h("div", { class: "hub-shell" }, main, rail));
+      // Rebuilt Discord-native overview (.dsx-ov-*): a health hero, a compact
+      // weekly-activity row, quick actions, and recent activity. No old
+      // .dash-card / .hub-shell / stat-grid / ring / pop-rail.
+      content.append(h("div", { class: "dsx-ov" },
+        renderOvHealth(o, guild),
+        renderOvStats(analytics),
+        renderOvActions(),
+        renderOvActivity()
+      ));
     } catch (e) { renderTabError(content, e); }
+  }
+
+  // Health-at-a-glance hero: identity + status + setup progress + CTA.
+  function renderOvHealth(o, guild) {
+    const setup = o.setup || {};
+    const pct = Math.max(0, Math.min(100, Math.round(setup.percent || 0)));
+    const members = (o.guild && o.guild.memberCount != null) ? o.guild.memberCount : null;
+    const plan = guild.plan || "free";
+    const premium = plan === "premium" || plan === "monthly" || plan === "lifetime";
+    const planLabel = plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
+
+    const bar = h("div", { class: "dsx-ovh-bar" }, h("span", { style: { width: "0%" } }));
+    requestAnimationFrame(() => setTimeout(() => { if (bar.firstChild) bar.firstChild.style.width = pct + "%"; }, 80));
+
+    return h("section", { class: "dsx-ov-health" },
+      h("div", { class: "dsx-ovh-main" },
+        dscGuildIcon(guild, 56),
+        h("div", { class: "dsx-ovh-id" },
+          h("div", { class: "dsx-ovh-name" }, guild.name || "Your server"),
+          h("div", { class: "dsx-ovh-meta" },
+            h("span", { class: "dsx-status" }, h("span", { class: "dsx-dot online" }), "Bot online"),
+            h("span", { class: "dsx-sep", "aria-hidden": "true" }, "·"),
+            h("span", null, members != null ? fmtNum(members) + " members" : "Members syncing")
+          )
+        ),
+        h("span", { class: "dsx-plan" + (premium ? " premium" : "") }, planLabel)
+      ),
+      h("div", { class: "dsx-ovh-setup" },
+        h("div", { class: "dsx-ovh-setup-head" },
+          h("span", null, "Setup progress"),
+          h("strong", null, pct + "%")
+        ),
+        bar
+      ),
+      h("button", { type: "button", class: "dsx-btn dsx-btn-primary",
+        onclick: () => { state.activeTab = "setup-hub"; render(); } },
+        pct >= 100 ? "Review setup" : "Continue setup")
+    );
+  }
+
+  // Compact weekly activity (no big cards / sparklines).
+  function renderOvStats(analytics) {
+    const cards = (analytics && analytics.cards) || {};
+    const mk = (label, c) => {
+      c = c || {};
+      const tile = h("div", { class: "dsx-ov-stat" },
+        h("div", { class: "dsx-ov-stat-v" }, fmtNum(c.week || 0)),
+        h("div", { class: "dsx-ov-stat-l" }, label)
+      );
+      if (typeof c.week === "number" && typeof c.prevWeek === "number") {
+        const d = c.week - c.prevWeek;
+        tile.append(h("div", { class: "dsx-ov-stat-d " + (d >= 0 ? "up" : "down") },
+          (d >= 0 ? "▲ " : "▼ ") + fmtNum(Math.abs(d))));
+      }
+      return tile;
+    };
+    return h("section", { class: "dsx-ov-stats" },
+      mk("Messages this week", cards.messages),
+      mk("Commands this week", cards.commands),
+      mk("/pop uses this week", cards.pop_uses)
+    );
+  }
+
+  // Quick actions to configure (the user's stated priority).
+  function renderOvActions() {
+    const items = [
+      ["welcome",   "hand",     "Welcome",    "Greet new members"],
+      ["roleMenus", "masks",    "Role Menus", "Dropdown / button roles"],
+      ["tickets",   "ticket",   "Tickets",    "Support tickets"],
+      ["staffPay",  "wallet",   "Staff Pay",  "Per-role pay amounts"],
+      ["events",    "calendar", "Events",     "Dino / vault credit events"],
+      ["branding",  "palette",  "Branding",   "Customize embed look"],
+    ];
+    const grid = h("div", { class: "dsx-ov-actions" });
+    items.forEach(([tab, ico, name, desc]) => {
+      const icowrap = h("span", { class: "dsx-action-ico" }); icowrap.append(iconSvg(ico));
+      const arrow = h("span", { class: "dsx-enter", "aria-hidden": "true" }); arrow.append(iconSvg("arrowRight"));
+      grid.append(h("button", { type: "button", class: "dsx-action",
+        onclick: () => { state.activeTab = tab; render(); }, "aria-label": "Configure " + name },
+        icowrap,
+        h("div", { class: "dsx-action-body" },
+          h("div", { class: "dsx-action-name" }, name),
+          h("div", { class: "dsx-action-desc" }, desc)
+        ),
+        arrow
+      ));
+    });
+    return h("section", { class: "dsx-ov-section" },
+      h("h2", { class: "dsx-ov-h" }, "Quick actions"),
+      grid
+    );
+  }
+
+  const OV_ACTION_LABELS = { module_save: "Saved settings", module_reset: "Reset module", panel_post: "Posted a panel", quick_setup: "Ran quick setup", paypal_save: "Saved PayPal", paypal_test: "Tested PayPal", login: "Signed in" };
+  // Recent activity — compact list with empty state.
+  function renderOvActivity() {
+    const host = h("div", { class: "dsx-ov-activity" },
+      h("div", { class: "dsx-ov-act-skel" }), h("div", { class: "dsx-ov-act-skel" }), h("div", { class: "dsx-ov-act-skel" }));
+    data.audit(state.selectedGuildId).then((a) => {
+      clear(host);
+      const entries = (a.entries || []).slice(0, 6);
+      if (!entries.length) {
+        host.append(h("div", { class: "dsx-ov-empty" }, "No recent changes yet. Edits you make here will show up."));
+        return;
+      }
+      entries.forEach((e) => {
+        host.append(h("div", { class: "dsx-act-row" },
+          h("span", { class: "dsx-act-dot " + (e.ok ? "ok" : "fail") }),
+          h("span", { class: "dsx-act-label" }, OV_ACTION_LABELS[e.action] || e.action),
+          h("span", { class: "dsx-act-target" }, e.target || ""),
+          h("span", { class: "dsx-act-time" }, fmtAuditTime(e.ts))
+        ));
+      });
+    }).catch(() => {
+      clear(host);
+      host.append(h("div", { class: "dsx-ov-empty" }, "Activity unavailable right now."));
+    });
+    return h("section", { class: "dsx-ov-section" },
+      h("h2", { class: "dsx-ov-h" }, "Recent activity"),
+      host
+    );
+  }
+  function fmtAuditTime(ts) {
+    try { return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
+    catch (e) { return ""; }
   }
 
   /** Live cluster-population panel for the Overview right rail. Pulls the
