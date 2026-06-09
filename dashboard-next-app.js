@@ -4091,12 +4091,12 @@
     }
     drawPreview();
 
-    // ---- Top bar: level-up channel + XP enabled ----
+    // ---- Top bar: enabled (the two channels live in their own sections) ----
     const lvlCh = renderChannelSelect("xp-lvlch", "levelUpChannelId", state.channels || [], xv.levelUpChannelId);
-    lvlCh.classList.add("w-select");
+    lvlCh.classList.add("mc-select");
     lvlCh.addEventListener("change", () => { xv.levelUpChannelId = lvlCh.value; drawPreview(); markDirty(); });
     const topbar = h("div", { class: "w-topbar" },
-      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), lvlCh),
+      h("span", { class: "poll-topbar-lbl" }, "Chatting earns XP — level-ups and the weekly leaderboard post to the channels below"),
       mcSwitch("XP enabled", () => xv.enabled === true, (v) => { xv.enabled = v; markDirty(); }));
 
     // ---- XP rate ----
@@ -4104,7 +4104,12 @@
       mcField("XP per message — min", mcNumber(() => xv.xpMin, (v) => { xv.xpMin = v; markDirty(); }, { min: 1, max: 100 })),
       mcField("XP per message — max", mcNumber(() => xv.xpMax, (v) => { xv.xpMax = v; markDirty(); }, { min: 1, max: 200 })),
       mcField("Cooldown", mcNumber(() => xv.cooldownSec, (v) => { xv.cooldownSec = v; markDirty(); }, { min: 0, max: 600 }), "seconds between earns"));
-    const rateSection = mcSection("How XP is earned", rateGrid,
+    const rateSection = mcSection("How XP is earned", rateGrid);
+
+    // ---- Level-up announcements (its own channel, separate from the weekly board) ----
+    const levelSection = mcSection("Level-up announcements",
+      h("div", { class: "mc-grid" },
+        mcField("Level-up channel", lvlCh, "Where level-up messages are posted")),
       h("div", { class: "mc-switch-row" }, mcSwitch("Announce level-ups", () => xv.levelUpAnnounce !== false, (v) => { xv.levelUpAnnounce = v; drawPreview(); markDirty(); })));
 
     // ---- Ignored channels / roles ----
@@ -4122,7 +4127,7 @@
         mcField("Reset day", mcSelect(
           [["mon", "Monday"], ["tue", "Tuesday"], ["wed", "Wednesday"], ["thu", "Thursday"], ["fri", "Friday"], ["sat", "Saturday"], ["sun", "Sunday"]].map(([value, label]) => ({ value, label })),
           () => xv.weeklyResetDay, (v) => { xv.weeklyResetDay = v; drawPreview(); markDirty(); })),
-        mcField("Leaderboard channel", weeklyCh)));
+        mcField("Weekly leaderboard channel", weeklyCh)));
 
     // ---- Weekly rewards (conditional detail) ----
     const rewardHost = h("div", { class: "xp-rewards-host" });
@@ -4161,7 +4166,7 @@
 
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What members see when they level up")),
-      device, topbar, rateSection, ignoreSection, weeklySection, rewardSection, tip, statusBox,
+      device, topbar, rateSection, levelSection, ignoreSection, weeklySection, rewardSection, tip, statusBox,
       mcSaveBar(mod, content, () => xv, saveBtn, statusBox)));
   }
 
