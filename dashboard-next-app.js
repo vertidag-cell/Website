@@ -4959,8 +4959,30 @@
       { ts: "2026-05-17T18:12:01Z", ok: true,  action: "panel_post",  target: "roleMenus" },
       { ts: "2026-05-17T17:49:46Z", ok: false, action: "paypal_test", target: "payments" },
     ] });
+    // Module-form stubs (for ?mock=welcome etc.)
+    data.channels = async () => ({ channels: [
+      { id: "1", name: "general", type: 0 }, { id: "2", name: "welcome", type: 0 },
+      { id: "3", name: "announcements", type: 0 }, { id: "4", name: "mod-logs", type: 0 },
+    ] });
+    data.categories = async () => ({ categories: [{ id: "10", name: "INFORMATION" }, { id: "11", name: "COMMUNITY" }] });
+    data.roles = async () => ({ roles: [{ id: "20", name: "Member" }, { id: "21", name: "Admin" }, { id: "22", name: "Staff" }] });
+    data.module = async () => ({
+      module: {
+        name: "welcome", label: "Welcome", description: "Greet new members with a custom embed when they join.", tier: "free",
+        fields: [
+          { key: "enabled", type: "boolean", label: "Enabled", help: "Turn welcome messages on or off." },
+          { key: "channelId", type: "channel", label: "Welcome channel", help: "Where greetings are posted." },
+          { key: "title", type: "text", label: "Embed title", max: 256 },
+          { key: "message", type: "textarea", label: "Message", help: "Use {user} to mention the new member.", max: 2000 },
+          { key: "mentionUser", type: "boolean", label: "Mention the new member" },
+          { key: "embedColor", type: "hex", label: "Embed color" },
+          { key: "imageUrl", type: "image-url", label: "Image URL" },
+        ],
+      },
+      values: { enabled: true, channelId: "2", title: "Welcome to the server!", message: "Hey {user}, glad you're here — check the rules and have fun!", mentionUser: true, embedColor: "#5865f2", imageUrl: "" },
+    });
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];

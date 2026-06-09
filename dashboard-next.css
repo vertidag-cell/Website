@@ -681,3 +681,17 @@
 .dsx-hub-card:hover .dsx-hub-card-cta { color: var(--dsc-text); }
 .dsx-hub-card-cta .dsx-enter svg { width: 15px; height: 15px; }
 @media (max-width: 600px) { .dsx-hub-grid { grid-template-columns: 1fr; } }
+
+/* ---- Module forms: the .dash-form structure + live Discord preview are kept
+   (they're already cohesive via the token remap); just stomp the two remaining
+   hardcoded greens — the hero icon tile and the "Configured" status pill. ---- */
+.dash-next-preview .dash-module-hero-ico {
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.18), rgba(88, 101, 242, 0.04));
+  border-color: rgba(88, 101, 242, 0.35);
+}
+.dash-next-preview .dash-status-pill.ok {
+  background: rgba(88, 101, 242, 0.12);
+  border-color: rgba(88, 101, 242, 0.30);
+  color: #aab2f7;
+}
+.dash-next-preview .dash-status-pill.ok .pill-dot { background: var(--dsc-blurple); }
