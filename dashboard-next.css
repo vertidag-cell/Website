@@ -934,6 +934,15 @@
 .dash-next-preview .eb-emoji-clear { font: inherit; font-size: 0.76rem; color: #b5bac1; background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
 .dash-next-preview .eb-emoji-clear:hover { color: #fff; border-color: #5865f2; }
 
+/* Canvas allowed-mentions control + Templates modal (Advanced panel removed) */
+.dash-next-preview .eb-cv-mentions { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; }
+.dash-next-preview .eb-cv-mentions-lbl { font-size: 0.75rem; font-weight: 600; color: #b5bac1; }
+.dash-next-preview .eb-cv-mentions .eb-cv-sel { width: auto; }
+.dash-next-preview .eb-tpl-modal { display: flex; flex-direction: column; gap: 8px; max-height: 52vh; overflow-y: auto; }
+.dash-next-preview .eb-tpl-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--dsc-bg-raise); border: 1px solid var(--dsc-line); border-radius: 8px; }
+.dash-next-preview .eb-tpl-row-name { flex: 1; min-width: 0; font-weight: 600; color: var(--dsc-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-next-preview .eb-tpl-row-acts { display: flex; gap: 6px; flex: none; }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }

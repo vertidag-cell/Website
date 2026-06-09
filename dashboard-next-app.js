@@ -219,10 +219,13 @@
     _ebEmojiPanel.remove(); _ebEmojiPanel = null; _ebEmojiAnchor = null;
     document.removeEventListener("mousedown", _ebEmojiOutside, true);
     document.removeEventListener("keydown", _ebEmojiKeydown, true);
-    window.removeEventListener("scroll", ebEmojiPickerClose, true);
+    window.removeEventListener("scroll", _ebEmojiScroll, true);
   }
   function _ebEmojiOutside(e) { if (_ebEmojiPanel && !_ebEmojiPanel.contains(e.target) && !(e.target.closest && e.target.closest(".eb-emoji-trigger"))) ebEmojiPickerClose(); }
   function _ebEmojiKeydown(e) { if (e.key === "Escape") ebEmojiPickerClose(); }
+  // Close only when the PAGE scrolls (anchor moves), NOT when the user scrolls
+  // the emoji grid itself to browse.
+  function _ebEmojiScroll(e) { const t = e.target; if (_ebEmojiPanel && !(t && t.nodeType === 1 && _ebEmojiPanel.contains(t))) ebEmojiPickerClose(); }
   function ebEmojiPickerOpen(anchor, current, onPick) {
     ebEmojiPickerClose();
     const grid = h("div", { class: "eb-emoji-grid" });
@@ -259,7 +262,7 @@
     setTimeout(() => {
       document.addEventListener("mousedown", _ebEmojiOutside, true);
       document.addEventListener("keydown", _ebEmojiKeydown, true);
-      window.addEventListener("scroll", ebEmojiPickerClose, true);
+      window.addEventListener("scroll", _ebEmojiScroll, true);
     }, 0);
   }
   // An emoji-input control: a trigger button that opens the picker. get/set bind
@@ -1030,6 +1033,7 @@
           btn("⤒ Export", { kind: "btn-ghost", onclick: ebExport }),
           btn("⧉ Copy JSON", { kind: "btn-ghost", onclick: ebCopyJson }),
           btn("💾 Save template", { kind: "btn-secondary", onclick: ebSaveTemplate }),
+          btn("📁 Templates", { kind: "btn-ghost", onclick: ebOpenTemplatesModal }),
           btn("📨 Post embed", { kind: "btn-primary eb-post-btn", onclick: ebOpenPost })
         )
       )
@@ -1050,13 +1054,11 @@
     );
     validEl = h("div", { class: "eb-valid" });
     previewCol.append(validEl);
+    // Everything is edited in the live canvas — there is no separate form panel.
+    // editorEl is created but NOT shown; it only keeps renderEditor()/renderAll()
+    // safe no-ops (they still target it harmlessly off-screen).
     editorEl = h("div", { class: "eb-editor" });
-    const advanced = h("details", { class: "eb-advanced" },
-      h("summary", { class: "eb-advanced-sum" }, "⚙ Advanced settings — channel & send, dropdown actions, templates, exact values"),
-      editorEl
-    );
-    advanced.addEventListener("toggle", () => { if (advanced.open) renderEditor(); });
-    split.append(previewCol, advanced);
+    split.append(previewCol);
     page.append(split);
 
     // ---- render fns ----
@@ -1461,6 +1463,11 @@
         add.append(h("button", { type: "button", class: "eb-add-chip", onclick: () => { eb.components.push(ebNewSelect()); cvRerender(); } }, "+ Menu"));
       }
       device.append(add);
+      // Allowed-mentions (who actually gets pinged) — small inline control.
+      device.append(h("div", { class: "eb-cv-mentions" },
+        h("span", { class: "eb-cv-mentions-lbl" }, "Pings"),
+        h("select", { class: "eb-cv-sel", onchange: (ev) => { eb.allowedMentions = ev.target.value; cvSync(); } },
+          ...[["default", "Respect roles/users"], ["none", "Suppress all mentions"], ["roles", "Allow role mentions"], ["users", "Allow user mentions"], ["all", "Allow @everyone / @here"]].map(([v, l]) => h("option", { value: v, selected: v === (eb.allowedMentions || "default") ? true : null }, l)))));
       previewEl.append(device);
     }
     function ebPreviewEmbed(e, editable, i) {
@@ -1646,6 +1653,7 @@
         urlField("Large image URL", () => e.image && e.image.url, (v) => { (e.image = e.image || {}).url = v; }, true),
         urlField("Thumbnail URL", () => e.thumbnail && e.thumbnail.url, (v) => { (e.thumbnail = e.thumbnail || {}).url = v; }, true),
         urlField("Author icon URL", () => e.author && e.author.icon_url, (v) => { (e.author = e.author || {}).icon_url = v; }, true),
+        urlField("Author link URL", () => e.author && e.author.url, (v) => { (e.author = e.author || {}).url = v; }, false),
         urlField("Footer icon URL", () => e.footer && e.footer.icon_url, (v) => { (e.footer = e.footer || {}).icon_url = v; }, true),
         urlField("Title link URL", () => e.url, (v) => { e.url = v; }, false),
         h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: e.timestamp ? true : null, onchange: (ev) => { e.timestamp = ev.target.checked ? new Date().toISOString() : null; cvRerender(); } }), h("span", null, "Show timestamp"))
@@ -1701,6 +1709,25 @@
       catch (e) { toast("error", ebErr(e) || "Could not save template"); }
     }
     function ebLoadTemplate(t) { applyModel(eb, { content: t.messageContent, allowedMentions: t.allowedMentions, embeds: t.embedJson, components: t.componentsJson }); eb.templateId = t.id; eb._name = t.name; renderAll(); syncPreview(); toast("success", `Loaded “${t.name}”`); }
+    // Saved templates, in a modal (the Advanced form is gone — everything lives
+    // in the canvas + the action bar).
+    function ebOpenTemplatesModal() {
+      const body = h("div", { class: "eb-tpl-modal" });
+      let closeModal = function () {};
+      function renderList() {
+        clear(body);
+        if (!templates.length) { body.append(h("div", { class: "eb-empty" }, "No templates yet. Build an embed and hit “Save template”.")); return; }
+        templates.forEach((t) => {
+          body.append(h("div", { class: "eb-tpl-row" },
+            h("span", { class: "eb-tpl-row-name" }, t.name),
+            h("div", { class: "eb-tpl-row-acts" },
+              btn("Apply", { kind: "btn-secondary", onclick: () => { ebLoadTemplate(t); closeModal(); } }),
+              btn("Delete", { kind: "btn-ghost", onclick: async () => { await ebDeleteTemplate(t); renderList(); } }))));
+        });
+      }
+      renderList();
+      closeModal = ebModal("Templates", body, [{ label: "Close", kind: "btn-ghost" }]);
+    }
     async function ebDuplicateTemplate(t) {
       try { const r = await data.embTplCreate(gid, { name: t.name + " (copy)", category: t.category, payload: { content: t.messageContent, allowedMentions: t.allowedMentions, embeds: t.embedJson, components: t.componentsJson } }); if (r && r.template) { templates.unshift(r.template); renderEditor(); toast("success", "Duplicated"); } }
       catch (e) { toast("error", "Could not duplicate"); }
