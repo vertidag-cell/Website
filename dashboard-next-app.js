@@ -3527,6 +3527,7 @@
       // Welcome → live-preview canvas (edit the message in the Discord preview).
       if (mod.name === "welcome") return renderWelcomeCanvas(content, mod, m.values);
       if (mod.name === "autoRoles") return renderAutoRolesCanvas(content, mod, m.values);
+      if (mod.name === "xp") return renderXpCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -3977,6 +3978,188 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Add or remove the roles new members receive")),
       preview, controls, tip, statusBox, mcSaveBar(mod, content, () => av, saveBtn, statusBox)));
+  }
+
+  // ---- Shared module-canvas field helpers (reused by every module canvas) ----
+  function mcField(label, control, hint) {
+    return h("label", { class: "mc-field" },
+      h("span", { class: "mc-field-lbl" }, label),
+      control,
+      hint ? h("span", { class: "mc-hint" }, hint) : null);
+  }
+  function mcNumber(getV, setV, opts) {
+    opts = opts || {};
+    const inp = h("input", { type: "number", class: "mc-num" });
+    if (opts.min != null) inp.min = String(opts.min);
+    if (opts.max != null) inp.max = String(opts.max);
+    inp.value = String(getV());
+    const clamp = (n) => { if (isNaN(n)) n = opts.min != null ? opts.min : 0; if (opts.min != null && n < opts.min) n = opts.min; if (opts.max != null && n > opts.max) n = opts.max; return n; };
+    inp.addEventListener("input", () => { const n = parseInt(inp.value, 10); if (!isNaN(n)) setV(clamp(n)); });
+    inp.addEventListener("blur", () => { const n = clamp(parseInt(inp.value, 10)); inp.value = String(n); setV(n); });
+    return inp;
+  }
+  function mcSelect(options, getV, setV) {
+    const sel = h("select", { class: "mc-select" }, ...options.map((o) => h("option", { value: o.value }, o.label)));
+    sel.value = String(getV());
+    sel.addEventListener("change", () => setV(sel.value));
+    return sel;
+  }
+  function mcSection(label, ...kids) {
+    return h("div", { class: "mc-section" }, label ? h("div", { class: "mc-section-lbl" }, label) : null, ...kids);
+  }
+  // Channel/role chip multi-select (e.g. "don't earn XP here"). kind: 'channel'|'role'.
+  function mcChips(kind, getIds, setIds, markDirty, opts) {
+    opts = opts || {};
+    const host = h("div", { class: "ar-roles mc-chips" });
+    const pool = kind === "role"
+      ? (state.roles || []).filter((r) => r.id && r.name !== "@everyone")
+      : (state.channels || []).filter((c) => c && c.name);
+    const byId = (id) => pool.find((x) => x.id === id);
+    function draw() {
+      clear(host);
+      const ids = getIds();
+      if (!ids.length && opts.empty) host.append(h("span", { class: "ar-empty" }, opts.empty));
+      ids.forEach((id) => {
+        const item = byId(id);
+        const col = kind === "role" ? roleHex(item) : "#8b8d91";
+        host.append(h("span", { class: "ar-chip", style: { borderColor: col } },
+          kind === "role"
+            ? h("span", { class: "ar-chip-dot", style: { background: col } })
+            : h("span", { class: "mc-chip-hash" }, "#"),
+          h("span", { class: "ar-chip-name" }, item ? item.name : "unknown"),
+          h("button", { type: "button", class: "ar-chip-x", title: "Remove", onclick: () => { setIds(getIds().filter((x) => x !== id)); markDirty(); draw(); } }, "✕")));
+      });
+      const remaining = pool.filter((x) => !getIds().includes(x.id));
+      if (remaining.length) {
+        const sel = h("select", { class: "ar-add" }, h("option", { value: "" }, opts.add || "+ Add"), ...remaining.map((x) => h("option", { value: x.id }, (kind === "channel" ? "#" : "") + x.name)));
+        sel.addEventListener("change", () => { if (sel.value) { setIds(getIds().concat([sel.value])); markDirty(); draw(); } });
+        host.append(sel);
+      }
+    }
+    draw();
+    return host;
+  }
+
+  // XP & Leaderboards as a live-preview canvas: a level-up announcement +
+  // weekly leaderboard preview, with the XP-shaping + reward controls below.
+  function renderXpCanvas(content, mod, values) {
+    const xv = Object.assign({
+      enabled: false, xpMin: 5, xpMax: 15, cooldownSec: 60,
+      ignoredChannels: [], ignoredRoles: [],
+      levelUpAnnounce: true, levelUpChannelId: "",
+      weeklyResetDay: "mon", weeklyChannelId: "",
+      rewardsMode: "disabled", rewardType: "none",
+      reward1stCredits: 0, reward2ndCredits: 0, reward3rdCredits: 0,
+      reward1stEggs: 0, reward2ndEggs: 0, reward3rdEggs: 0,
+    }, values || {});
+    xv.ignoredChannels = Array.isArray(xv.ignoredChannels) ? xv.ignoredChannels.slice() : [];
+    xv.ignoredRoles = Array.isArray(xv.ignoredRoles) ? xv.ignoredRoles.slice() : [];
+    const baseline = JSON.stringify(xv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, xv))));
+
+    const username = state.user?.username || "newmember";
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(xv) === baseline; }
+
+    const DAYS = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+
+    // ---- Live preview: level-up bubble + weekly leaderboard embed ----
+    const device = h("div", { class: "eb-discord xp-preview" });
+    function drawPreview() {
+      clear(device);
+      if (xv.levelUpAnnounce !== false) {
+        const where = chName(xv.levelUpChannelId);
+        device.append(h("div", { class: "xp-lvl" },
+          h("span", { class: "xp-lvl-ico", "aria-hidden": "true" }, "🎉"),
+          h("span", { class: "xp-lvl-txt" }, h("strong", { class: "xp-lvl-name" }, "@" + username), " just reached ", h("strong", null, "Level 12"), "!"),
+          where ? h("span", { class: "xp-lvl-ch" }, "#" + where) : null));
+      } else {
+        device.append(h("div", { class: "xp-lvl xp-lvl-off" }, "Level-up announcements are off — members still earn XP silently."));
+      }
+      const rows = [["🥇", "Aria", "4,820"], ["🥈", "Kade", "3,910"], ["🥉", "Nyx", "2,540"]];
+      device.append(h("div", { class: "eb-embed xp-lb", style: { borderColor: "#f0b232" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "xp-lb-title" }, "🏆 Weekly Leaderboard"),
+          ...rows.map(([m, n, xp]) => h("div", { class: "xp-lb-row" },
+            h("span", { class: "xp-lb-medal" }, m), h("span", { class: "xp-lb-name" }, n), h("span", { class: "xp-lb-xp" }, xp + " XP"))),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Resets every " + DAYS[xv.weeklyResetDay || "mon"])))));
+    }
+    drawPreview();
+
+    // ---- Top bar: level-up channel + XP enabled ----
+    const lvlCh = renderChannelSelect("xp-lvlch", "levelUpChannelId", state.channels || [], xv.levelUpChannelId);
+    lvlCh.classList.add("w-select");
+    lvlCh.addEventListener("change", () => { xv.levelUpChannelId = lvlCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), lvlCh),
+      mcSwitch("XP enabled", () => xv.enabled === true, (v) => { xv.enabled = v; markDirty(); }));
+
+    // ---- XP rate ----
+    const rateGrid = h("div", { class: "mc-grid" },
+      mcField("XP per message — min", mcNumber(() => xv.xpMin, (v) => { xv.xpMin = v; markDirty(); }, { min: 1, max: 100 })),
+      mcField("XP per message — max", mcNumber(() => xv.xpMax, (v) => { xv.xpMax = v; markDirty(); }, { min: 1, max: 200 })),
+      mcField("Cooldown", mcNumber(() => xv.cooldownSec, (v) => { xv.cooldownSec = v; markDirty(); }, { min: 0, max: 600 }), "seconds between earns"));
+    const rateSection = mcSection("How XP is earned", rateGrid,
+      h("div", { class: "mc-switch-row" }, mcSwitch("Announce level-ups", () => xv.levelUpAnnounce !== false, (v) => { xv.levelUpAnnounce = v; drawPreview(); markDirty(); })));
+
+    // ---- Ignored channels / roles ----
+    const ignoreSection = mcSection("Where XP doesn't count",
+      h("div", { class: "mc-grid" },
+        mcField("Ignored channels", mcChips("channel", () => xv.ignoredChannels, (a) => { xv.ignoredChannels = a; }, markDirty, { empty: "Every channel earns XP", add: "+ Ignore a channel" })),
+        mcField("Ignored roles", mcChips("role", () => xv.ignoredRoles, (a) => { xv.ignoredRoles = a; }, markDirty, { empty: "Every role earns XP", add: "+ Ignore a role" }))));
+
+    // ---- Weekly leaderboard ----
+    const weeklyCh = renderChannelSelect("xp-weeklych", "weeklyChannelId", state.channels || [], xv.weeklyChannelId);
+    weeklyCh.classList.add("mc-select");
+    weeklyCh.addEventListener("change", () => { xv.weeklyChannelId = weeklyCh.value; markDirty(); });
+    const weeklySection = mcSection("Weekly leaderboard",
+      h("div", { class: "mc-grid" },
+        mcField("Reset day", mcSelect(
+          [["mon", "Monday"], ["tue", "Tuesday"], ["wed", "Wednesday"], ["thu", "Thursday"], ["fri", "Friday"], ["sat", "Saturday"], ["sun", "Sunday"]].map(([value, label]) => ({ value, label })),
+          () => xv.weeklyResetDay, (v) => { xv.weeklyResetDay = v; drawPreview(); markDirty(); })),
+        mcField("Leaderboard channel", weeklyCh)));
+
+    // ---- Weekly rewards (conditional detail) ----
+    const rewardHost = h("div", { class: "xp-rewards-host" });
+    function drawRewards() {
+      clear(rewardHost);
+      if (xv.rewardsMode === "disabled") {
+        rewardHost.append(h("div", { class: "mc-hint mc-hint-block" }, "Set weekly rewards to Manual or Automatic to hand out prizes to the top 3 each week."));
+        return;
+      }
+      rewardHost.append(mcField("Reward type", mcSelect(
+        [["none", "None"], ["credits", "Credits"], ["eggs", "Pet eggs"], ["both", "Credits + eggs"]].map(([value, label]) => ({ value, label })),
+        () => xv.rewardType, (v) => { xv.rewardType = v; markDirty(); drawRewards(); })));
+      const showC = xv.rewardType === "credits" || xv.rewardType === "both";
+      const showE = xv.rewardType === "eggs" || xv.rewardType === "both";
+      if (!showC && !showE) { rewardHost.append(h("div", { class: "mc-hint mc-hint-block" }, "Pick a reward type to set prize amounts.")); return; }
+      const grid = h("div", { class: "xp-rewards" });
+      [["🥇", "1st"], ["🥈", "2nd"], ["🥉", "3rd"]].forEach(([medal, ord]) => {
+        const row = h("div", { class: "xp-reward-row" }, h("span", { class: "xp-reward-place" }, medal + " " + ord));
+        if (showC) row.append(h("span", { class: "xp-reward-cell" }, mcNumber(() => xv["reward" + ord + "Credits"], (v) => { xv["reward" + ord + "Credits"] = v; markDirty(); }, { min: 0, max: 100000 }), h("span", { class: "xp-reward-unit" }, "credits")));
+        if (showE) row.append(h("span", { class: "xp-reward-cell" }, mcNumber(() => xv["reward" + ord + "Eggs"], (v) => { xv["reward" + ord + "Eggs"] = v; markDirty(); }, { min: 0, max: 100 }), h("span", { class: "xp-reward-unit" }, "eggs")));
+        grid.append(row);
+      });
+      rewardHost.append(grid);
+    }
+    drawRewards();
+    const rewardSection = mcSection("Weekly rewards",
+      h("div", { class: "mc-grid" },
+        mcField("Hand out rewards", mcSelect(
+          [["disabled", "Off"], ["manual", "Manual (you approve)"], ["auto", "Automatic"]].map(([value, label]) => ({ value, label })),
+          () => xv.rewardsMode, (v) => { xv.rewardsMode = v; markDirty(); drawRewards(); }))),
+      rewardHost);
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Members earn a random ", h("strong", null, "XP min–max"), " per message, once per cooldown. The weekly board ranks the most active members and resets on your chosen day."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What members see when they level up")),
+      device, topbar, rateSection, ignoreSection, weeklySection, rewardSection, tip, statusBox,
+      mcSaveBar(mod, content, () => xv, saveBtn, statusBox)));
   }
 
   /** Mark the form as dirty/clean by comparing live values to baseline. */
@@ -5813,6 +5996,7 @@
     data.channels = async () => ({ channels: [
       { id: "1", name: "general", type: 0 }, { id: "2", name: "welcome", type: 0 },
       { id: "3", name: "announcements", type: 0 }, { id: "4", name: "mod-logs", type: 0 },
+      { id: "5", name: "level-up", type: 0 }, { id: "6", name: "bot-spam", type: 0 },
     ] });
     data.categories = async () => ({ categories: [{ id: "10", name: "INFORMATION" }, { id: "11", name: "COMMUNITY" }] });
     data.roles = async () => ({ roles: [{ id: "20", name: "Member" }, { id: "21", name: "Admin" }, { id: "22", name: "Staff" }] });
@@ -5863,10 +6047,30 @@
         },
         values: { enabled: true, roleIds: ["20", "22"], ignoreBots: true },
       },
+      xp: {
+        module: {
+          name: "xp", label: "XP & Leaderboards", tier: "free", description: "Message-based XP, levels, weekly leaderboard. No quests.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "xpMin", type: "integer", label: "XP per message — min" },
+            { key: "xpMax", type: "integer", label: "XP per message — max" },
+            { key: "cooldownSec", type: "integer", label: "Cooldown (seconds)" },
+            { key: "ignoredChannels", type: "channels", label: "Ignored channels" },
+            { key: "ignoredRoles", type: "roles", label: "Ignored roles" },
+            { key: "levelUpAnnounce", type: "boolean", label: "Announce level-ups" },
+            { key: "levelUpChannelId", type: "channel", label: "Level-up channel" },
+            { key: "weeklyResetDay", type: "choice", label: "Weekly reset day" },
+            { key: "weeklyChannelId", type: "channel", label: "Weekly leaderboard channel" },
+            { key: "rewardsMode", type: "choice", label: "Weekly rewards" },
+            { key: "rewardType", type: "choice", label: "Reward type" },
+          ],
+        },
+        values: { enabled: true, xpMin: 5, xpMax: 15, cooldownSec: 60, ignoredChannels: ["6"], ignoredRoles: [], levelUpAnnounce: true, levelUpChannelId: "5", weeklyResetDay: "mon", weeklyChannelId: "3", rewardsMode: "auto", rewardType: "both", reward1stCredits: 500, reward2ndCredits: 250, reward3rdCredits: 100, reward1stEggs: 3, reward2ndEggs: 2, reward3rdEggs: 1 },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];

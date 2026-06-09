@@ -1011,6 +1011,44 @@
 .dash-next-preview .ar-add:focus { outline: none; border-color: var(--dsc-blurple); }
 .dash-next-preview .ar-empty { color: var(--dsc-text-faint); font-size: 0.82rem; font-style: italic; }
 
+/* ---- Shared module-canvas controls (fields / sections / chips) ---- */
+.dash-next-preview .mc-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.dash-next-preview .mc-section:first-of-type { border-top: 0; margin-top: 4px; padding-top: 0; }
+.dash-next-preview .mc-section-lbl { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dsc-text-muted); margin-bottom: 12px; }
+.dash-next-preview .mc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.dash-next-preview .mc-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dash-next-preview .mc-field-lbl { font-size: 0.82rem; font-weight: 600; color: var(--dsc-text); }
+.dash-next-preview .mc-hint { font-size: 0.76rem; color: var(--dsc-text-faint); }
+.dash-next-preview .mc-hint-block { padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; }
+.dash-next-preview .mc-num,
+.dash-next-preview .mc-select { width: 100%; font: inherit; font-size: 0.9rem; color: var(--dsc-text); background: var(--dsc-bg); border: 1px solid var(--dsc-line); border-radius: 8px; padding: 9px 11px; }
+.dash-next-preview .mc-num:focus,
+.dash-next-preview .mc-select:focus { outline: none; border-color: var(--dsc-blurple); }
+.dash-next-preview .mc-switch-row { margin-top: 14px; }
+.dash-next-preview .mc-chips { padding: 4px 0; }
+.dash-next-preview .mc-chip-hash { color: var(--dsc-text-faint); font-weight: 700; }
+
+/* ---- XP canvas (level-up + leaderboard preview, reward grid) ---- */
+.dash-next-preview .xp-preview { margin-bottom: 14px; }
+.dash-next-preview .xp-lvl { display: flex; align-items: center; gap: 8px; color: #dbdee1; font-size: 0.92rem; flex-wrap: wrap; }
+.dash-next-preview .xp-lvl-ico { font-size: 1.15rem; }
+.dash-next-preview .xp-lvl-name { color: #fff; }
+.dash-next-preview .xp-lvl-ch { font-size: 0.74rem; color: var(--dsc-text-faint); background: rgba(255, 255, 255, 0.05); padding: 2px 7px; border-radius: 6px; }
+.dash-next-preview .xp-lvl-off { font-style: italic; color: var(--dsc-text-faint); }
+.dash-next-preview .xp-lb { margin-top: 12px; }
+.dash-next-preview .xp-lb-title { font-weight: 700; color: #fff; margin-bottom: 8px; }
+.dash-next-preview .xp-lb-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; font-size: 0.9rem; color: #dbdee1; }
+.dash-next-preview .xp-lb-medal { font-size: 1rem; width: 20px; text-align: center; }
+.dash-next-preview .xp-lb-name { color: #fff; font-weight: 500; }
+.dash-next-preview .xp-lb-xp { margin-left: auto; color: var(--dsc-text-muted); font-variant-numeric: tabular-nums; }
+.dash-next-preview .xp-rewards-host { margin-top: 14px; }
+.dash-next-preview .xp-rewards { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.dash-next-preview .xp-reward-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dash-next-preview .xp-reward-place { min-width: 64px; font-weight: 600; color: var(--dsc-text); }
+.dash-next-preview .xp-reward-cell { display: inline-flex; align-items: center; gap: 6px; }
+.dash-next-preview .xp-reward-cell .mc-num { width: 96px; }
+.dash-next-preview .xp-reward-unit { font-size: 0.78rem; color: var(--dsc-text-faint); }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }
