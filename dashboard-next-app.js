@@ -704,8 +704,19 @@
       }
     }
 
+    // Whether the Setup Hub is fully complete drives whether it appears in the
+    // nav at all. Resolve it before building the sidebar so the first paint is
+    // correct (cached per guild, so this only fetches once per server).
+    await ensureSetupStatus();
+    const hubComplete = hubAllDone(state.setupStatus && state.setupStatus.setup && state.setupStatus.setup.flags);
+    // Hide the Setup Hub once complete — unless the user explicitly reopened it
+    // from the Overview (so they can still un-mark an optional module).
+    const hideSetupHub = hubComplete && !state._forceHub;
+    // Never strand the user on a hub that's been hidden.
+    if (hideSetupHub && state.activeTab === "setup-hub") state.activeTab = "overview";
+
     const layout = h("div", { class: "dash-layout" });
-    layout.append(renderSidebar(plan));
+    layout.append(renderSidebar(plan, hideSetupHub));
     const content = h("div", { class: "dash-content" });
     layout.append(content);
     root.append(layout);
@@ -720,7 +731,7 @@
   }
 
   /** Grouped sidebar with icons, sections, premium-locked indicators. */
-  function renderSidebar(plan) {
+  function renderSidebar(plan, hideSetupHub) {
     const isPremium = plan === "premium" || plan === "monthly" || plan === "lifetime";
     // Keep .dash-sidebar for the mobile-drawer toggle + layout grid; the new
     // Discord-native look is driven entirely by .dsx-nav (+ children).
@@ -762,7 +773,8 @@
       .map((m) => m.name);
 
     const groups = [
-      { label: "Core",                items: ["setup-hub", "overview", "analytics", "embed-builder"] },
+      // Setup Hub drops out of the nav entirely once every module is configured.
+      { label: "Core",                items: [...(hideSetupHub ? [] : ["setup-hub"]), "overview", "analytics", "embed-builder"] },
       { label: "Discord Server",      items: inCat("discord") },
       { label: "Tickets & Staff",     items: inCat("tickets") },
       { label: "ARK Integration",     items: inCat("ark") },
@@ -818,6 +830,7 @@
           role: "tab",
           "aria-selected": id === state.activeTab ? "true" : "false",
           onclick: () => {
+            state._forceHub = false; // leaving via the nav re-arms auto-hide
             state.activeTab = id;
             // Close drawer on mobile after picking a tab
             const sb = root.querySelector(".dash-sidebar");
@@ -1628,9 +1641,36 @@
     try { localStorage.setItem(hubLocalKey(gid), JSON.stringify([...set])); } catch (_) {}
   }
 
+  // True when EVERY Setup Hub card is done (flagged ones via backend flags,
+  // flagless ones via localStorage). This is the signal for hiding the hub
+  // entirely once a server is fully configured.
+  function hubAllDone(flags) {
+    const f = flags || {};
+    const localDone = hubLocalDone(state.selectedGuildId);
+    return SETUP_HUB.every((c) => c.flag ? !!f[c.flag] : localDone.has(c.id));
+  }
+  // Cache the latest setup status per guild so the sidebar — which renders
+  // before any tab fetch — can decide whether to show the Setup Hub without a
+  // fetch of its own. Refreshed whenever Overview / Setup Hub pull /overview.
+  function cacheSetupStatus(gid, setup) {
+    // Bind to the guild the data was fetched FOR, and drop a response that
+    // resolved after the user already switched guilds (cross-guild bleed guard).
+    if (gid !== state.selectedGuildId) return;
+    state.setupStatus = { guildId: gid, setup: setup || {} };
+  }
+  async function ensureSetupStatus() {
+    if (state.setupStatus && state.setupStatus.guildId === state.selectedGuildId) return state.setupStatus.setup;
+    const gid = state.selectedGuildId;
+    try { const o = await data.overview(gid); cacheSetupStatus(gid, o.setup); }
+    catch { cacheSetupStatus(gid, (state.setupStatus && state.setupStatus.setup) || {}); }
+    return (state.setupStatus && state.setupStatus.guildId === state.selectedGuildId) ? state.setupStatus.setup : {};
+  }
+
   async function loadSetupHub(content) {
     try {
-      const o = await data.overview(state.selectedGuildId);
+      const gid = state.selectedGuildId;
+      const o = await data.overview(gid);
+      cacheSetupStatus(gid, o.setup);
       const flags = o.setup?.flags || {};
       const overrides = o.setup?.overrides || {};
       const guild = state.guilds.find((g) => g.id === state.selectedGuildId) || {};
@@ -1651,17 +1691,30 @@
       async function markDone(cat, value, btn) {
         if (btn) btn.disabled = true;
         let stillConfigured = false;
+        // Latest known flags, so we can detect when this was the final step.
+        let flagsAfter = (state.setupStatus && state.setupStatus.setup && state.setupStatus.setup.flags) || flags;
         if (cat.flag) {
           try {
-            const res = await data.setupOverride(state.selectedGuildId, cat.flag, value);
+            const res = await data.setupOverride(gid, cat.flag, value);
             // The route returns the fresh setup status. Undo only clears the
             // manual mark — if the module is genuinely configured in Discord it
             // stays done, so don't claim we moved it back.
+            if (res && res.flags) { flagsAfter = res.flags; cacheSetupStatus(gid, res); }
             if (!value && res && res.flags && res.flags[cat.flag]) stillConfigured = true;
           } catch (e) { toast("error", "Couldn't update — try again."); if (btn) btn.disabled = false; return; }
         } else {
-          hubSetLocalDone(state.selectedGuildId, cat.id, value);
+          hubSetLocalDone(gid, cat.id, value);
         }
+
+        // Final step done → the hub is about to disappear; take the user to the
+        // Overview rather than re-render a hub that's being removed.
+        if (value && hubAllDone(flagsAfter)) {
+          state.activeTab = "overview";
+          toast("success", "Setup complete — every module is configured. The Setup Hub is now hidden.");
+          render();
+          return;
+        }
+
         if (value) toast("success", `Marked ${cat.label} as done.`);
         else if (stillConfigured) toast("info", `${cat.label} is still configured in Discord — change it there to move it back.`);
         else toast("success", `Moved ${cat.label} back to setup.`);
@@ -1811,12 +1864,14 @@
     clear(content);
     content.append(renderOverviewSkeleton());
     try {
-      const guild = state.guilds.find((g) => g.id === state.selectedGuildId) || {};
+      const gid = state.selectedGuildId;
+      const guild = state.guilds.find((g) => g.id === gid) || {};
       // Overview + analytics in parallel. Analytics is best-effort.
       const [o, analytics] = await Promise.all([
-        data.overview(state.selectedGuildId),
-        data.analytics(state.selectedGuildId, 7).catch(() => null),
+        data.overview(gid),
+        data.analytics(gid, 7).catch(() => null),
       ]);
+      cacheSetupStatus(gid, o.setup);
       clear(content);
       // Rebuilt Discord-native overview (.dsx-ov-*): a health hero, a compact
       // weekly-activity row, quick actions, and recent activity. No old
@@ -1834,6 +1889,7 @@
   function renderOvHealth(o, guild) {
     const setup = o.setup || {};
     const pct = Math.max(0, Math.min(100, Math.round(setup.percent || 0)));
+    const setupComplete = hubAllDone(setup.flags);
     const members = (o.guild && o.guild.memberCount != null) ? o.guild.memberCount : null;
     const plan = guild.plan || "free";
     const premium = plan === "premium" || plan === "monthly" || plan === "lifetime";
@@ -1855,16 +1911,24 @@
         ),
         h("span", { class: "dsx-plan" + (premium ? " premium" : "") }, planLabel)
       ),
-      h("div", { class: "dsx-ovh-setup" },
-        h("div", { class: "dsx-ovh-setup-head" },
-          h("span", null, "Setup progress"),
-          h("strong", null, pct + "%")
-        ),
-        bar
-      ),
-      h("button", { type: "button", class: "dsx-btn dsx-btn-primary",
-        onclick: () => { state.activeTab = "setup-hub"; render(); } },
-        pct >= 100 ? "Review setup" : "Continue setup")
+      setupComplete
+        ? h("div", { class: "dsx-ovh-complete" },
+            (() => { const i = h("span", { class: "dsx-ovh-complete-ico", "aria-hidden": "true" }); i.append(iconSvg("check")); return i; })(),
+            h("span", null, "Setup complete — every module is configured"))
+        : h("div", { class: "dsx-ovh-setup" },
+            h("div", { class: "dsx-ovh-setup-head" },
+              h("span", null, "Setup progress"),
+              h("strong", null, pct + "%")
+            ),
+            bar
+          ),
+      setupComplete
+        ? h("button", { type: "button", class: "dsx-btn dsx-btn-ghost",
+            onclick: () => { state._forceHub = true; state.activeTab = "setup-hub"; render(); } },
+            "Reopen Setup Hub")
+        : h("button", { type: "button", class: "dsx-btn dsx-btn-primary",
+            onclick: () => { state.activeTab = "setup-hub"; render(); } },
+            pct >= 100 ? "Review setup" : "Continue setup")
     );
   }
 
@@ -2460,39 +2524,97 @@
     if (!dayStr) return "—";
     return new Date(dayStr + "T00:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
+  // Inclusive [from,to] slice of a {day,value}[] series. ISO YYYY-MM-DD strings
+  // compare correctly as plain strings, so no Date parsing needed.
+  function sliceByDate(series, from, to) {
+    return (series || []).filter((p) => p.day && p.day >= from && p.day <= to);
+  }
 
   async function loadAnalytics(content) {
-    clear(content);
-    content.append(renderGenericSkeleton());
-    const days = analyticsDays();
     try {
-      const a = await data.analytics(state.selectedGuildId, days);
+      // Pull the full retained window (90d) ONCE, then slice it client-side so
+      // the user can pick any specific date range without re-hitting the backend
+      // (which only understands a trailing "last N days").
+      const gid = state.selectedGuildId;
+      let raw = state._anRaw && state._anRaw.guildId === gid ? state._anRaw.data : null;
+      if (!raw) {
+        clear(content);
+        content.append(renderGenericSkeleton());
+        raw = await data.analytics(gid, 90);
+        if (gid !== state.selectedGuildId) return; // guild switched mid-fetch; drop the stale response
+        state._anRaw = { guildId: gid, data: raw };
+        state._anFrom = null; state._anTo = null; // new guild → forget prior dates
+      }
       clear(content);
+
+      // Available window: derive the day axis from the member series (fall back
+      // to the messages series), so the date pickers can't exceed real data.
+      const axis = (raw.memberSeries && raw.memberSeries.length ? raw.memberSeries
+        : (raw.series && raw.series.messages) || []).map((p) => p.day).filter(Boolean).sort();
+      const minDay = axis[0] || null;
+      const maxDay = axis[axis.length - 1] || null;
+      const dayAt = (fromEnd) => axis.length >= fromEnd ? axis[axis.length - fromEnd] : (minDay || maxDay);
+
+      // Default to the last 7 available days; clamp any chosen range to the window.
+      if (!state._anFrom || !state._anTo) { state._anTo = maxDay; state._anFrom = dayAt(7); }
+      if (minDay && state._anFrom < minDay) state._anFrom = minDay;
+      if (maxDay && state._anTo > maxDay) state._anTo = maxDay;
+      if (state._anFrom > state._anTo) state._anFrom = state._anTo;
+      const from = state._anFrom, to = state._anTo;
 
       const wrap = h("div", { class: "dsx-an" });
 
-      // Header: title + range toggle + export
-      const range = h("div", { class: "dsx-an-range" });
-      [[7, "7 days"], [14, "14 days"], [30, "30 days"]].forEach(([d, label]) => {
-        range.appendChild(h("button", {
+      // Quick presets set [last-Nd .. latest]; the date inputs pick anything.
+      const presets = h("div", { class: "dsx-an-range" });
+      [[7, "7d"], [14, "14d"], [30, "30d"], [90, "90d"]].forEach(([d, label]) => {
+        const pFrom = dayAt(d);
+        const active = from === pFrom && to === maxDay;
+        presets.appendChild(h("button", {
           type: "button",
-          class: "dsx-an-range-btn" + (d === days ? " active" : ""),
-          onclick: () => { state._analyticsDays = d; loadAnalytics(content); },
+          class: "dsx-an-range-btn" + (active ? " active" : ""),
+          onclick: () => { state._anFrom = pFrom; state._anTo = maxDay; loadAnalytics(content); },
         }, label));
       });
-      const exportBtn = h("button", { type: "button", class: "dsx-an-export", onclick: () => exportAnalyticsCsv(a) }, "Export CSV");
+
+      const mkDate = (label, val, onpick) => h("label", { class: "dsx-an-date" },
+        h("span", { class: "dsx-an-date-lbl" }, label),
+        h("input", { type: "date", class: "dsx-an-date-in", value: val || "",
+          min: minDay || null, max: maxDay || null,
+          onchange: (ev) => { const v = ev.target.value; if (v) onpick(v); else loadAnalytics(content); } })
+      );
+      const dates = h("div", { class: "dsx-an-dates" },
+        mkDate("From", from, (v) => { state._anFrom = v; if (state._anTo && v > state._anTo) state._anTo = v; loadAnalytics(content); }),
+        mkDate("To", to, (v) => { state._anTo = v; if (state._anFrom && v < state._anFrom) state._anFrom = v; loadAnalytics(content); })
+      );
+
+      // Slice every series to the chosen window once.
+      const filtered = {
+        members: raw.members,
+        memberSeries: sliceByDate(raw.memberSeries, from, to),
+        series: {
+          messages:    sliceByDate(raw.series && raw.series.messages, from, to),
+          commands:    sliceByDate(raw.series && raw.series.commands, from, to),
+          voice_joins: sliceByDate(raw.series && raw.series.voice_joins, from, to),
+          welcomes:    sliceByDate(raw.series && raw.series.welcomes, from, to),
+          pop_uses:    sliceByDate(raw.series && raw.series.pop_uses, from, to),
+        },
+        donations: raw.donations ? { series: sliceByDate(raw.donations.series, from, to) } : null,
+        cards: raw.cards,
+      };
+
+      const exportBtn = h("button", { type: "button", class: "dsx-an-export", onclick: () => exportAnalyticsCsv(filtered, from, to) }, "Export CSV");
       wrap.append(
         h("header", { class: "dsx-an-head" },
           h("div", null,
             h("h1", { class: "dsx-an-title" }, "Analytics"),
-            h("p", { class: "dsx-an-sub" }, "Real activity across your server, last " + days + " days. Pick a metric to chart it.")
+            h("p", { class: "dsx-an-sub" }, "Real activity across your server. Pick a metric to chart, and choose any date range.")
           ),
-          h("div", { class: "dsx-an-actions" }, range, exportBtn)
+          h("div", { class: "dsx-an-actions" }, presets, dates, exportBtn)
         )
       );
 
       // Metric-selector chart — the whole view (no rectangular card wall)
-      wrap.append(renderAnalyticsChart(a, days));
+      wrap.append(renderAnalyticsChart(filtered, from, to));
 
       content.append(wrap);
     } catch (e) { renderTabError(content, e); }
@@ -2500,17 +2622,26 @@
 
   // Interactive analytics chart: click a metric to chart its series over the
   // selected range. Defaults to Members so member growth is shown first.
-  function renderAnalyticsChart(a, days) {
+  function renderAnalyticsChart(a, from, to) {
+    // A real guild's member count is never 0, so a 0 in the (zero-filled) member
+    // series means an offline / pre-tracking day — scan back to the last real
+    // value rather than showing "Latest: 0" for a historical end-date.
+    const lastVal = (s) => { for (let i = (s ? s.length : 0) - 1; i >= 0; i--) { if ((s[i].value || 0) > 0) return s[i].value; } return 0; };
+    // Members shows the latest count within the range; counters show the
+    // in-range total — both computed from the already date-sliced series.
     const metrics = [
-      { key: "members",     label: "Members",     series: a.memberSeries || [],                     total: a.members, totalLabel: "Current" },
-      { key: "messages",    label: "Messages",    series: (a.series && a.series.messages) || [],    total: (a.cards && a.cards.messages && a.cards.messages.total) },
-      { key: "commands",    label: "Commands",    series: (a.series && a.series.commands) || [],    total: (a.cards && a.cards.commands && a.cards.commands.total) },
-      { key: "voice_joins", label: "Voice joins", series: (a.series && a.series.voice_joins) || [], total: (a.cards && a.cards.voice_joins && a.cards.voice_joins.total) },
-      { key: "welcomes",    label: "Welcomes",    series: (a.series && a.series.welcomes) || [],    total: (a.cards && a.cards.welcomes && a.cards.welcomes.total) },
+      { key: "members",     label: "Members",     series: a.memberSeries || [],                     total: lastVal(a.memberSeries), totalLabel: "Latest" },
+      { key: "messages",    label: "Messages",    series: (a.series && a.series.messages) || [] },
+      { key: "commands",    label: "Commands",    series: (a.series && a.series.commands) || [] },
+      { key: "pop_uses",    label: "/pop uses",   series: (a.series && a.series.pop_uses) || [] },
+      { key: "voice_joins", label: "Voice joins", series: (a.series && a.series.voice_joins) || [] },
+      { key: "welcomes",    label: "Welcomes",    series: (a.series && a.series.welcomes) || [] },
     ];
+    const startKey = state._anMetric && metrics.some((m) => m.key === state._anMetric) ? state._anMetric : "members";
 
     const card = h("div", { class: "dsx-an-chart" });
     const pills = h("div", { class: "dsx-an-pills", role: "tablist", "aria-label": "Metric" });
+    const windowLabel = h("div", { class: "dsx-an-window" }, from && to ? `${fmtDay(from)} – ${fmtDay(to)}` : "All time");
     const summary = h("div", { class: "dsx-an-summary" });
     const host = h("div", { class: "dsx-an-host" });
 
@@ -2521,6 +2652,7 @@
     }
 
     function draw(m) {
+      state._anMetric = m.key; // remember the choice across date changes / re-renders
       pills.querySelectorAll(".dsx-an-pill").forEach((p) => {
         const on = p.dataset.key === m.key;
         p.classList.toggle("active", on);
@@ -2544,17 +2676,18 @@
       );
     }
 
-    metrics.forEach((m, i) => {
+    metrics.forEach((m) => {
+      const on = m.key === startKey;
       pills.appendChild(h("button", {
         type: "button", role: "tab", "data-key": m.key,
-        class: "dsx-an-pill" + (i === 0 ? " active" : ""),
-        "aria-selected": i === 0 ? "true" : "false",
+        class: "dsx-an-pill" + (on ? " active" : ""),
+        "aria-selected": on ? "true" : "false",
         onclick: () => draw(m),
       }, m.label));
     });
 
-    card.append(pills, summary, host);
-    draw(metrics[0]); // Members
+    card.append(h("div", { class: "dsx-an-chart-head" }, pills, windowLabel), summary, host);
+    draw(metrics.find((m) => m.key === startKey) || metrics[0]);
     return card;
   }
 
@@ -2696,7 +2829,7 @@
   }
 
   /** Build a CSV of the daily series + donations and trigger a download. */
-  function exportAnalyticsCsv(a) {
+  function exportAnalyticsCsv(a, from, to) {
     try {
       const counters = ["messages", "commands", "voice_joins", "welcomes", "pop_uses"];
       const days = (a.series && a.series.messages) ? a.series.messages.map((p) => p.day) : [];
@@ -2720,7 +2853,8 @@
       const safeName = ((guild && guild.name) || "server").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
       const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
-      const link = h("a", { href: url, download: `analytics-${safeName}-${a.days}d.csv` });
+      const range = from && to ? `${from}_to_${to}` : `${a.days || ""}d`;
+      const link = h("a", { href: url, download: `analytics-${safeName}-${range}.csv` });
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -5023,18 +5157,27 @@
       premiumActive: true, plan: "premium", botInstalled: true,
       setup: mockStatus(),
     });
-    const MOCK_DAYS = ["2026-06-03", "2026-06-04", "2026-06-05", "2026-06-06", "2026-06-07", "2026-06-08", "2026-06-09"];
-    const mkS = (vals) => vals.map((v, i) => ({ day: MOCK_DAYS[i], value: v }));
+    // 90 days of deterministic synthetic data so the date pickers + presets have
+    // a real window to slice (no Math.random — stable across reloads).
+    const mkDays = (n) => {
+      const out = []; const base = new Date("2026-06-09T00:00:00Z");
+      for (let i = n - 1; i >= 0; i--) out.push(new Date(base.getTime() - i * 86400000).toISOString().slice(0, 10));
+      return out;
+    };
+    const MOCK_DAYS = mkDays(90);
+    const synth = (b, amp, period, seed) => MOCK_DAYS.map((day, i) => ({ day, value: Math.max(0, Math.round(b + amp * Math.sin(i / period) + ((i * 37 + seed) % 13) - 6)) }));
+    const memberSeries = MOCK_DAYS.map((day, i) => ({ day, value: 1000 + Math.round(i * 2.75 + 9 * Math.sin(i / 5)) }));
     data.analytics = async () => ({
-      days: 7, members: 1247, memberSeries: mkS([1180, 1192, 1201, 1210, 1228, 1239, 1247]),
+      days: 90, members: memberSeries[memberSeries.length - 1].value, memberSeries,
       cards: {
         messages: { total: 18432, week: 4210, prevWeek: 3870 }, commands: { total: 2304, week: 540, prevWeek: 610 },
         pop_uses: { total: 892, week: 210, prevWeek: 180 }, voice_joins: { total: 430, week: 96, prevWeek: 88 },
         welcomes: { total: 312, week: 74, prevWeek: 65 },
       },
       series: {
-        messages: mkS([520, 610, 580, 640, 700, 660, 500]), commands: mkS([80, 76, 90, 70, 85, 72, 67]),
-        voice_joins: mkS([12, 14, 11, 16, 13, 15, 15]), welcomes: mkS([9, 11, 10, 12, 11, 10, 11]),
+        messages: synth(560, 120, 6, 3), commands: synth(78, 22, 5, 7),
+        voice_joins: synth(14, 5, 7, 1), welcomes: synth(10, 4, 8, 5),
+        pop_uses: synth(30, 12, 6, 9),
       },
     });
     data.audit = async () => ({ entries: [
@@ -5185,6 +5328,8 @@
     state.channels = null; // reset cached lists for new guild
     state.categories = null;
     state.roles = null;
+    state.setupStatus = null; // never carry one guild's setup completeness to another
+    state._forceHub = false;
     render();
   }
 
@@ -5197,6 +5342,7 @@
     state.channels = null;
     state.categories = null;
     state.roles = null;
+    state.setupStatus = null;
     render();
   }
 

@@ -523,6 +523,10 @@
 .dsx-ovh-setup-head strong { color: var(--dsc-text); font-size: 0.95rem; }
 .dsx-ovh-bar { height: 8px; border-radius: 999px; background: var(--dsc-bg); overflow: hidden; }
 .dsx-ovh-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--dsc-blurple); transition: width 0.8s cubic-bezier(0.22, 0.7, 0.25, 1); }
+/* Setup-complete state (replaces the progress bar + CTA once the hub is done). */
+.dsx-ovh-complete { display: flex; align-items: center; gap: 9px; font-size: 0.9rem; font-weight: 600; color: var(--dsc-text); }
+.dsx-ovh-complete-ico { flex: none; width: 26px; height: 26px; border-radius: 999px; display: grid; place-items: center; color: var(--dsc-blurple); background: rgba(88, 101, 242, 0.16); }
+.dsx-ovh-complete-ico svg { width: 16px; height: 16px; }
 
 /* ---- Buttons ---- */
 .dsx-btn {
@@ -534,6 +538,9 @@
 }
 .dsx-btn-primary { background: var(--dsc-blurple); color: #fff; }
 .dsx-btn-primary:hover { background: var(--dsc-blurple-hover); }
+.dsx-btn-ghost { background: transparent; border-color: var(--dsc-line); color: var(--dsc-text-muted); }
+.dsx-btn-ghost:hover { background: var(--dsc-bg-hover); color: var(--dsc-text); border-color: rgba(88, 101, 242, 0.4); }
+.dsx-btn:focus-visible { outline: 2px solid var(--dsc-blurple); outline-offset: 2px; }
 
 /* ---- Weekly stats ---- */
 .dsx-ov-stats { display: flex; gap: 12px; }
@@ -817,10 +824,22 @@
 .dsx-an-range-btn { border: 0; background: transparent; color: var(--dsc-text-muted); font: inherit; font-size: 0.8rem; font-weight: 600; padding: 6px 12px; border-radius: 5px; cursor: pointer; transition: background .15s, color .15s; }
 .dsx-an-range-btn:hover { color: var(--dsc-text); }
 .dsx-an-range-btn.active { background: var(--dsc-bg-hover); color: #fff; }
+.dsx-an-range-btn:focus-visible { outline: 2px solid var(--dsc-blurple); outline-offset: 1px; }
 .dsx-an-export { border: 1px solid var(--dsc-line); background: var(--dsc-bg-raise); color: var(--dsc-text-muted); font: inherit; font-size: 0.8rem; font-weight: 600; padding: 7px 14px; border-radius: var(--dsc-radius-sm); cursor: pointer; transition: background .15s, color .15s; }
 .dsx-an-export:hover { background: var(--dsc-bg-hover); color: var(--dsc-text); }
+.dsx-an-export:focus-visible { outline: 2px solid var(--dsc-blurple); outline-offset: 2px; }
+/* Specific-date pickers (native inputs, themed dark via color-scheme). */
+.dsx-an-dates { display: inline-flex; align-items: center; gap: 8px; }
+.dsx-an-date { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--dsc-text-muted); }
+.dsx-an-date-lbl { font-weight: 600; }
+.dsx-an-date-in { font: inherit; font-size: 0.8rem; color: var(--dsc-text); color-scheme: dark; background: var(--dsc-bg-raise); border: 1px solid var(--dsc-line); border-radius: var(--dsc-radius-sm); padding: 6px 9px; cursor: pointer; }
+.dsx-an-date-in:hover { border-color: rgba(88, 101, 242, 0.4); }
+.dsx-an-date-in:focus-visible { outline: 2px solid var(--dsc-blurple); outline-offset: 2px; }
 
 .dsx-an-chart { background: var(--dsc-bg-raise); border: 1px solid var(--dsc-line); border-radius: var(--dsc-radius); padding: 16px 18px 20px; }
+.dsx-an-chart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.dsx-an-chart-head .dsx-an-pills { margin-bottom: 0; }
+.dsx-an-window { flex: none; font-size: 0.78rem; font-weight: 600; color: var(--dsc-text-faint); background: var(--dsc-bg); border: 1px solid var(--dsc-line); border-radius: 999px; padding: 5px 12px; white-space: nowrap; }
 .dsx-an-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
 .dsx-an-pill { border: 1px solid var(--dsc-line); background: var(--dsc-bg); color: var(--dsc-text-muted); font: inherit; font-size: 0.82rem; font-weight: 600; padding: 6px 14px; border-radius: 999px; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
 .dsx-an-pill:hover { color: var(--dsc-text); border-color: rgba(88, 101, 242, 0.4); }
@@ -831,7 +850,7 @@
 .dsx-an-sum-l { font-size: 0.72rem; color: var(--dsc-text-faint); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
 .dsx-an-host { min-height: 260px; }
 .dsx-an-empty { display: grid; place-items: center; min-height: 260px; text-align: center; color: var(--dsc-text-faint); font-size: 0.9rem; padding: 20px; }
-@media (max-width: 600px) { .dsx-an-summary { gap: 20px; } }
+@media (max-width: 600px) { .dsx-an-summary { gap: 20px; } .dsx-an-dates { flex-wrap: wrap; } .dsx-an-date { flex: 1 1 auto; } }
 
 /* ---- Shared feedback components: hardcoded neon-green "success/info" + the
    premium-upsell orange -> blurple. (Error stays red, warn stays amber, and the
