@@ -5527,51 +5527,52 @@
         }
       }).catch(() => {});
 
-      // Empty state — owns the create CTA when no menus exist
+      // Empty state — show an example Discord preview alongside the create CTA
       if (!menus.length) {
+        const sample = { name: "Ping Roles", description: "Pick the pings you want to get", type: "dropdown", options: [
+          { roleId: "", label: "Announcements", description: "Server news & updates", emoji: "📢" },
+          { roleId: "", label: "Events", description: "Get pinged for events", emoji: "🎉" },
+          { roleId: "", label: "Giveaways", description: "Never miss a drop", emoji: "🎁" },
+        ] };
+        const spv = renderRoleMenuPreview(sample, { name: sample.name, description: sample.description, type: sample.type });
+        spv.draw();
         content.append(
-          h("div", { class: "dash-card", style: { textAlign: "center", padding: "44px 24px" } },
-            h("div", { style: { fontSize: "2.4rem", marginBottom: "10px" } }, "🎭"),
-            h("h4", { style: { margin: "0 0 6px", fontSize: "1.08rem" } }, "No role menus yet"),
-            h("p", { style: { color: "var(--text-muted)", margin: "0 0 20px", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" } },
-              "Create one to let members pick roles from a dropdown or button panel. You can post it to any channel and update it any time."),
-            h("button", { type: "button", class: "btn btn-primary", onclick: () => openCreateMenuModal(content) },
-              "+ Create your first menu")
-          )
+          h("div", { class: "dash-card" },
+            h("div", { class: "w-canvas-head" },
+              h("span", { class: "w-canvas-label" }, "Example role menu"),
+              h("span", { class: "w-canvas-hint" }, "What members see in Discord")),
+            h("div", { class: "rm-pv-sample" }, spv.device),
+            h("div", { class: "rm-pv-emptymsg" },
+              h("h4", null, "No role menus yet"),
+              h("p", null, "Create one to let members pick roles from a dropdown or button panel — post it to any channel and update it any time."),
+              h("button", { type: "button", class: "btn btn-primary", onclick: () => openCreateMenuModal(content) }, "+ Create your first menu")))
         );
         return;
       }
 
-      // Menu cards
-      const grid = h("div", { class: "rm-list" });
+      // Menu cards — each is a live Discord preview
+      const grid = h("div", { class: "rm-pv-list" });
       menus.forEach((m) => grid.appendChild(renderMenuCard(m, content)));
       content.append(grid);
     } catch (e) { renderTabError(content, e); }
   }
 
+  // Each saved menu renders as its actual Discord panel preview, with a compact
+  // header (name / channel / type / status) and an Edit button into the editor.
   function renderMenuCard(m, content) {
     const ch = (state.channels || []).find((c) => c.id === m.channelId);
-    const card = h("button", { type: "button", class: "rm-card", onclick: () => { _rmEditingId = m.id; renderActiveTab(content); } },
-      h("div", { class: "rm-card-top" },
-        h("div", { class: "rm-card-icon" }, m.type === "button" ? "▢" : "▾"),
-        h("div", { class: "rm-card-info" },
-          h("div", { class: "rm-card-name" }, m.name),
-          h("div", { class: "rm-card-sub" },
-            ch ? `${ch.type === 15 ? "📋" : "#"} ${ch.name}` : "(channel missing)",
-            " · ",
-            `${m.options.length} option${m.options.length === 1 ? "" : "s"}`
-          )
-        ),
-        m.posted
-          ? h("span", { class: "rm-tag posted" }, "Posted")
-          : h("span", { class: "rm-tag draft" }, "Draft")
-      ),
-      h("div", { class: "rm-card-meta" },
-        h("span", { class: "rm-meta-pill" }, m.type === "button" ? "Buttons" : "Dropdown"),
-        h("span", { class: "rm-card-arrow" }, "→")
-      )
-    );
-    return card;
+    const pv = renderRoleMenuPreview(m, { name: m.name, description: m.description || "", type: m.type });
+    pv.draw();
+    return h("div", { class: "dash-card rm-pv-card" },
+      h("div", { class: "rm-pv-cardhead" },
+        h("div", { class: "rm-pv-cardinfo" },
+          h("div", { class: "rm-pv-cardname" }, m.name),
+          h("div", { class: "rm-pv-cardsub" },
+            (ch ? `${ch.type === 15 ? "📋" : "#"} ${ch.name}` : "(no channel)") +
+            ` · ${m.options.length} option${m.options.length === 1 ? "" : "s"} · ${m.type === "button" ? "Buttons" : "Dropdown"}`)),
+        m.posted ? h("span", { class: "rm-tag posted" }, "Posted") : h("span", { class: "rm-tag draft" }, "Draft"),
+        h("button", { type: "button", class: "btn btn-primary rm-pv-edit", onclick: () => { _rmEditingId = m.id; renderActiveTab(content); } }, "Edit →")),
+      pv.device);
   }
 
   async function openCreateMenuModal(content) {
@@ -6767,19 +6768,27 @@
     data.embDraftSave = async () => ({ ok: true });
     data.embTplDelete = async () => ({ ok: true });
     data.emojis = async () => ({ emojis: [{ id: "1001", name: "pog", animated: false }, { id: "1002", name: "kekw", animated: false }, { id: "1003", name: "blobdance", animated: true }, { id: "1004", name: "pepega", animated: false }] });
-    // Role Menus stubs (?mock=rolemenus) — a posted dropdown menu with options.
-    const RM_MENU = { id: 1, name: "Ping Roles", description: "Pick the pings you want to get", type: "dropdown", channelId: "3", posted: true,
-      options: [
+    // Role Menus stubs — a dropdown menu + a button menu (?mock=rolemenus list,
+    // ?mock=rolemenu detail editor).
+    const RM_MENUS = [
+      { id: 1, name: "Ping Roles", description: "Pick the pings you want to get", type: "dropdown", channelId: "3", posted: true, options: [
         { id: 11, roleId: "20", label: "Announcements", description: "Server news & updates", emoji: "📢" },
         { id: 12, roleId: "22", label: "Events", description: "Get pinged for events", emoji: "🎉" },
         { id: 13, roleId: "21", label: "Giveaways", description: "Never miss a drop", emoji: "🎁" },
-      ] };
-    data.rmList = async () => ({ menus: [RM_MENU] });
-    data.rmGet = async () => ({ menu: RM_MENU });
-    data.rmCreate = async (gid, body) => ({ menu: Object.assign({ id: 2, posted: false, options: [] }, body) });
-    data.rmUpdate = async (gid, id, body) => { Object.assign(RM_MENU, body); return { menu: RM_MENU }; };
-    data.rmOptAdd = async (gid, id, body) => { const o = Object.assign({ id: 90 + RM_MENU.options.length }, body); RM_MENU.options.push(o); return { option: o }; };
-    data.rmOptDelete = async (gid, id, oid) => { RM_MENU.options = RM_MENU.options.filter((o) => String(o.id) !== String(oid)); return { ok: true }; };
+      ] },
+      { id: 2, name: "Game Roles", description: "Tap a game to get its role", type: "button", channelId: "1", posted: false, options: [
+        { id: 21, roleId: "20", label: "ARK", description: "", emoji: "🦖" },
+        { id: 22, roleId: "22", label: "Minecraft", description: "", emoji: "⛏️" },
+        { id: 23, roleId: "21", label: "Valheim", description: "", emoji: "🛡️" },
+      ] },
+    ];
+    const rmFind = (id) => RM_MENUS.find((x) => String(x.id) === String(id)) || RM_MENUS[0];
+    data.rmList = async () => ({ menus: RM_MENUS });
+    data.rmGet = async (gid, id) => ({ menu: rmFind(id) });
+    data.rmCreate = async (gid, body) => ({ menu: Object.assign({ id: 99, posted: false, options: [] }, body) });
+    data.rmUpdate = async (gid, id, body) => { const m = rmFind(id); Object.assign(m, body); return { menu: m }; };
+    data.rmOptAdd = async (gid, id, body) => { const m = rmFind(id); const o = Object.assign({ id: 900 + m.options.length }, body); m.options.push(o); return { option: o }; };
+    data.rmOptDelete = async (gid, id, oid) => { const m = rmFind(id); m.options = m.options.filter((o) => String(o.id) !== String(oid)); return { ok: true }; };
     data.rmPost = async () => ({ summary: "Posted to #announcements" });
     data.rmDelete = async () => ({ ok: true });
     const MOD_DEFS = {
@@ -6970,12 +6979,12 @@
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus", rolemenu: "roleMenus" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
     }
-    if (mode === "rolemenus") _rmEditingId = 1; // open the detail editor so the preview shows
+    if (mode === "rolemenu") _rmEditingId = 1; // ?mock=rolemenu → detail editor; ?mock=rolemenus → list of previews
     if (mode === "upsell") {
       data.module = async () => ({ tierLocked: true, module: { name: "tickets", label: "Tickets", tier: "premium", description: "Forum-based support tickets with staff claim, logging, and auto-close." } });
       state.selectedGuildId = state.guilds[0].id;

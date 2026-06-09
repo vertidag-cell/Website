@@ -1188,6 +1188,16 @@
 .dash-next-preview .rm-preview { margin-top: 4px; }
 .dash-next-preview .rm-pv-empty { margin-top: 10px; padding: 14px; text-align: center; color: var(--dsc-text-faint); font-size: 0.85rem; font-style: italic; background: rgba(255, 255, 255, 0.03); border-radius: 8px; }
 .dash-next-preview .rm-pv-arrow { color: var(--dsc-text-faint); font-size: 0.8rem; }
+.dash-next-preview .rm-pv-list { display: flex; flex-direction: column; gap: 14px; }
+.dash-next-preview .rm-pv-cardhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--dsc-line); }
+.dash-next-preview .rm-pv-cardinfo { flex: 1; min-width: 0; }
+.dash-next-preview .rm-pv-cardname { font-weight: 700; color: var(--dsc-text); font-size: 1rem; }
+.dash-next-preview .rm-pv-cardsub { font-size: 0.8rem; color: var(--dsc-text-muted); margin-top: 2px; }
+.dash-next-preview .rm-pv-edit { padding: 6px 14px; font-size: 0.84rem; }
+.dash-next-preview .rm-pv-sample { margin-bottom: 18px; }
+.dash-next-preview .rm-pv-emptymsg { text-align: center; max-width: 460px; margin: 0 auto; }
+.dash-next-preview .rm-pv-emptymsg h4 { margin: 0 0 6px; font-size: 1.08rem; color: var(--dsc-text); }
+.dash-next-preview .rm-pv-emptymsg p { color: var(--dsc-text-muted); margin: 0 0 18px; }
 
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
