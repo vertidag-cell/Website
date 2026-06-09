@@ -4946,6 +4946,11 @@
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
     }
+    if (mode === "upsell") {
+      data.module = async () => ({ tierLocked: true, module: { name: "tickets", label: "Tickets", tier: "premium", description: "Forum-based support tickets with staff claim, logging, and auto-close." } });
+      state.selectedGuildId = state.guilds[0].id;
+      state.activeTab = "tickets";
+    }
     render();
     return true;
   }

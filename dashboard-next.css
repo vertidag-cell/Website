@@ -765,3 +765,23 @@
 .dsx-an-host { min-height: 260px; }
 .dsx-an-empty { display: grid; place-items: center; min-height: 260px; text-align: center; color: var(--dsc-text-faint); font-size: 0.9rem; padding: 20px; }
 @media (max-width: 600px) { .dsx-an-summary { gap: 20px; } }
+
+/* ---- Shared feedback components: hardcoded neon-green "success/info" + the
+   premium-upsell orange -> blurple. (Error stays red, warn stays amber, and the
+   real-time online/live status dots stay green.) ---- */
+.dash-next-preview .dash-notice.success,
+.dash-next-preview .dash-notice.info {
+  background: rgba(88, 101, 242, 0.08);
+  border-color: rgba(88, 101, 242, 0.3);
+}
+.dash-next-preview .dash-notice.success .ni,
+.dash-next-preview .dash-notice.info .ni { background: rgba(88, 101, 242, 0.16); color: #aab2f7; }
+.dash-next-preview .dash-toast.success { background: rgba(88, 101, 242, 0.1); border-color: rgba(88, 101, 242, 0.4); }
+.dash-next-preview .dash-feat-card.ok .state { background: rgba(88, 101, 242, 0.14); color: #aab2f7; }
+.dash-next-preview .dash-stat-delta.up { color: #8b93f2; }
+/* Plan tags: free -> neutral, premium/lifetime -> amber (match the picker). */
+.dash-next-preview .dash-tag.free { background: rgba(255, 255, 255, 0.06); color: var(--dsc-text-muted); border-color: var(--dsc-line); }
+.dash-next-preview .dash-tag.premium,
+.dash-next-preview .dash-tag.lifetime { background: rgba(240, 178, 50, 0.14); color: var(--dsc-amber-text); border-color: rgba(240, 178, 50, 0.3); }
+/* Premium upsell page: orange chip border -> blurple (badge/glow already remapped). */
+.dash-next-preview .dash-upsell-chip { border-color: rgba(88, 101, 242, 0.25); }
