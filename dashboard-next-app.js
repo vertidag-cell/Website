@@ -3536,6 +3536,7 @@
       if (mod.name === "events") return renderEventsCanvas(content, mod, m.values);
       if (mod.name === "giveaways") return renderGiveawaysCanvas(content, mod, m.values);
       if (mod.name === "tickets") return renderTicketsCanvas(content, mod, m.values);
+      if (mod.name === "staffPay") return renderStaffPayCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4738,6 +4739,51 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "The panel members use to get help")),
       device, topbar, catSection, staffSection, lifeSection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Staff Pay as a live-preview canvas: a monthly staff-earnings summary embed.
+  // Only real control is the forum channel + enabled, so the preview leads.
+  function renderStaffPayCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, forumChannelId: "" }, values || {});
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+
+    // ---- Live preview: monthly staff-earnings summary ----
+    const device = h("div", { class: "eb-discord staffpay-preview" });
+    function drawPreview() {
+      clear(device);
+      const rows = [["Aria", "24 tickets", "£120"], ["Kade", "17 tickets", "£85"], ["Nyx", "8 tickets", "£40"]];
+      device.append(h("div", { class: "eb-embed staffpay-card", style: { borderColor: "#3ba55d" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "sp-title" }, "💼 Staff Earnings · June 2026"),
+          ...rows.map(([n, sub, amt]) => h("div", { class: "sp-row" },
+            h("div", { class: "sp-id" }, h("span", { class: "sp-name" }, "@" + n), h("span", { class: "sp-sub" }, sub)),
+            h("span", { class: "sp-amt" }, amt))),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Logged in #" + (chName(mv.forumChannelId) || "staff-pay"))))));
+    }
+    drawPreview();
+
+    // ---- Top bar: forum channel + enabled ----
+    const forumCh = renderChannelSelect("sp-forumch", "forumChannelId", state.channels || [], mv.forumChannelId);
+    forumCh.classList.add("w-select");
+    forumCh.addEventListener("change", () => { mv.forumChannelId = forumCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), forumCh),
+      mcSwitch("Staff Pay enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Arkoris tallies each staff member's ticket work and posts a monthly earnings thread to the forum channel above — no spreadsheets needed."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "The monthly summary Arkoris posts")),
+      device, topbar, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
@@ -6576,6 +6622,7 @@
       { id: "1", name: "general", type: 0 }, { id: "2", name: "welcome", type: 0 },
       { id: "3", name: "announcements", type: 0 }, { id: "4", name: "mod-logs", type: 0 },
       { id: "5", name: "level-up", type: 0 }, { id: "6", name: "bot-spam", type: 0 },
+      { id: "7", name: "staff-pay", type: 0 },
     ] });
     data.categories = async () => ({ categories: [{ id: "10", name: "INFORMATION" }, { id: "11", name: "COMMUNITY" }] });
     data.roles = async () => ({ roles: [{ id: "20", name: "Member" }, { id: "21", name: "Admin" }, { id: "22", name: "Staff" }] });
@@ -6752,10 +6799,20 @@
         },
         values: { enabled: true, panelChannelId: "3", ticketCategoryId: "11", staffRoleIds: ["22"], logChannelId: "4", autoCloseHours: 48, claimEnabled: true },
       },
+      staffPay: {
+        module: {
+          name: "staffPay", label: "Staff Pay", tier: "premium", description: "Track staff earnings and monthly logs.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "forumChannelId", type: "channel", label: "Staff Pay forum channel" },
+          ],
+        },
+        values: { enabled: true, forumChannelId: "7" },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", giveaways: "giveaways", tickets: "tickets" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", giveaways: "giveaways", tickets: "tickets", staffpay: "staffPay" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];

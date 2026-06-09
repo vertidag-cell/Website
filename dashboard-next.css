@@ -1158,6 +1158,16 @@
 .dash-next-preview .ticket-flow { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 9px 12px; background: rgba(88, 101, 242, 0.08); border: 1px solid rgba(88, 101, 242, 0.2); border-radius: 8px; font-size: 0.82rem; color: var(--dsc-text-muted); }
 .dash-next-preview .ticket-flow-ico { color: var(--dsc-blurple); font-weight: 700; }
 
+/* ---- Staff Pay canvas (monthly staff-earnings summary) ---- */
+.dash-next-preview .staffpay-preview { margin-bottom: 14px; }
+.dash-next-preview .sp-title { font-weight: 700; color: #fff; margin-bottom: 10px; }
+.dash-next-preview .sp-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; }
+.dash-next-preview .sp-row + .sp-row { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.dash-next-preview .sp-id { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dash-next-preview .sp-name { color: #fff; font-weight: 500; font-size: 0.9rem; }
+.dash-next-preview .sp-sub { color: var(--dsc-text-faint); font-size: 0.76rem; }
+.dash-next-preview .sp-amt { color: #3ba55d; font-weight: 700; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }
