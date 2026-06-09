@@ -1614,131 +1614,59 @@
     try {
       const o = await data.overview(state.selectedGuildId);
       const flags = o.setup?.flags || {};
-      const isPremium = !!o.premiumActive;
-      const setup = o.setup || { percent: 0, total: 0, completedCount: 0 };
+      const guild = state.guilds.find((g) => g.id === state.selectedGuildId) || {};
+      const isPremium = !!o.premiumActive || (guild.plan && guild.plan !== "free")
+        || o.plan === "premium" || o.plan === "monthly" || o.plan === "lifetime";
+      const setup = o.setup || { percent: 0 };
       clear(content);
 
-      // ── Two-column shell: main (hero + grid) + right rail ──────────
-      const shell = h("div", { class: "hub-shell" });
-      const main = h("div", { class: "hub-main" });
-      const rail = h("aside", { class: "hub-rail" });
-      shell.append(main, rail);
-      content.append(shell);
+      const wrap = h("div", { class: "dsx-hub" });
 
-      // Hero band
-      main.append(
-        h("div", { class: "hub-hero" },
-          h("div", { class: "hub-hero-body" },
-            h("div", { class: "hub-hero-eyebrow" }, "/ SETUP"),
-            h("h1", { class: "hub-hero-title" }, "Setup Hub"),
-            h("div", { class: "hub-hero-rule" }),
-            h("p", { class: "hub-hero-desc" },
-              "Configure and customize your server with Arkoris's powerful modules. Every card writes to the same database as ",
+      // Header
+      wrap.append(
+        h("header", { class: "dsx-hub-head" },
+          h("div", null,
+            h("h1", { class: "dsx-hub-title" }, "Setup Hub"),
+            h("p", { class: "dsx-hub-sub" },
+              "Configure every Arkoris module. Changes here write to the same place as ",
               h("code", null, "/setup"), " in Discord.")
           ),
-          h("div", { class: "hub-hero-glow", "aria-hidden": "true" })
+          h("span", { class: "dsx-hub-progress" }, (setup.percent || 0) + "% configured")
         )
       );
 
       // Module card grid
-      const grid = h("div", { class: "hub-grid" });
+      const grid = h("div", { class: "dsx-hub-grid" });
       SETUP_HUB.forEach((cat) => {
-        const isConfigured = cat.flag ? !!flags[cat.flag] : null;
-        const isLocked = cat.tier === "premium" && !isPremium;
-        const card = h("div", {
-          class: `hub-card ${isConfigured ? "configured" : ""} ${isLocked ? "locked" : ""}`,
+        const configured = cat.flag ? !!flags[cat.flag] : false;
+        const locked = cat.tier === "premium" && !isPremium;
+        const card = h("button", {
+          type: "button",
+          class: "dsx-hub-card" + (locked ? " locked" : ""),
+          onclick: () => {
+            if (cat.comingSoon) { toast("warn", `${cat.label} is configured in Discord via /setup for now.`, 4500); return; }
+            if (cat.module) { state.activeTab = cat.module; render(); }
+          },
         });
-        const iconWrap = h("div", { class: "hub-card-icon" });
-        iconWrap.appendChild(iconSvg(TAB_ICONS[cat.module] || "grid"));
-        const go = () => {
-          if (cat.comingSoon) {
-            toast("warn", `${cat.label} is configured in Discord via /setup for now.`, 4500);
-            return;
-          }
-          if (cat.module) { state.activeTab = cat.module; render(); }
-        };
-        // Native .append() (unlike h()) does not skip null children — it
-        // coerces them to the literal text "null". Filter first so free /
-        // unconfigured cards don't render a stray "null null".
+        const ico = h("span", { class: "dsx-hub-card-ico", "aria-hidden": "true" }); ico.append(iconSvg(TAB_ICONS[cat.module] || "grid"));
+        const cta = h("span", { class: "dsx-enter", "aria-hidden": "true" }); cta.append(iconSvg("arrowRight"));
         card.append(
-          ...[
-            cat.tier === "premium" ? h("span", { class: "hub-card-tier" }, "PRO") : null,
-            isConfigured === true ? h("span", { class: "hub-card-check" }, "✓") : null,
-            iconWrap,
-            h("div", { class: "hub-card-name" }, cat.label),
-            h("div", { class: "hub-card-desc" }, SETUP_HUB_DESC[cat.id] || "Configure this module."),
-            h("button", { type: "button", class: "hub-card-btn", onclick: go },
-              cat.comingSoon ? "Discord only" : "Configure",
-              h("span", { class: "hub-card-btn-arrow" }, "›")),
-          ].filter(Boolean)
+          h("div", { class: "dsx-hub-card-top" },
+            ico,
+            h("div", { class: "dsx-hub-card-badges" },
+              cat.tier === "premium" ? h("span", { class: "dsx-nav-pro" }, "PRO") : null,
+              configured ? h("span", { class: "dsx-hub-card-done" }, "Configured") : null
+            )
+          ),
+          h("div", { class: "dsx-hub-card-name" }, cat.label),
+          h("div", { class: "dsx-hub-card-desc" }, SETUP_HUB_DESC[cat.id] || "Configure this module."),
+          h("span", { class: "dsx-hub-card-cta" }, cat.comingSoon ? "Discord only" : "Configure", cta)
         );
-        // Whole card is clickable too
-        card.addEventListener("click", (e) => { if (!e.target.closest(".hub-card-btn")) go(); });
         grid.appendChild(card);
       });
-      main.append(grid);
+      wrap.append(grid);
 
-      // ── Right rail ────────────────────────────────────────────────
-      // Bot status
-      rail.append(
-        h("div", { class: "hub-rail-card" },
-          h("div", { class: "hub-rail-label" }, "Bot Status"),
-          h("div", { class: "hub-status-row" },
-            h("div", { class: "hub-status-badge" }, "✓"),
-            h("div", null,
-              h("div", { class: "hub-status-main" }, o.botInstalled ? "Online" : "Not installed"),
-              h("div", { class: "hub-status-sub" }, o.botInstalled ? "All systems operational" : "Invite the bot to this server")
-            )
-          )
-        )
-      );
-
-      // Server info — real data only
-      const g = o.guild || {};
-      const created = g.createdAt ? new Date(g.createdAt) : null;
-      const planLabel = o.plan === "lifetime" ? "Lifetime"
-                      : (o.plan === "premium" || o.plan === "monthly") ? "Premium" : "Free";
-      rail.append(
-        h("div", { class: "hub-rail-card" },
-          h("div", { class: "hub-rail-label" }, "Server Info"),
-          h("div", { class: "hub-info-row" }, h("span", null, "Server"),  h("strong", null, g.name || "—")),
-          g.memberCount != null
-            ? h("div", { class: "hub-info-row" }, h("span", null, "Members"), h("strong", null, g.memberCount.toLocaleString()))
-            : null,
-          created
-            ? h("div", { class: "hub-info-row" }, h("span", null, "Created"), h("strong", null, created.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })))
-            : null,
-          h("div", { class: "hub-info-row" }, h("span", null, "Plan"), h("strong", null, planLabel)),
-          h("div", { class: "hub-info-row" }, h("span", null, "Setup"), h("strong", null, `${setup.percent || 0}% · ${setup.completedCount || 0}/${setup.total || 0}`))
-        )
-      );
-
-      // Quick actions (real)
-      rail.append(
-        h("div", { class: "hub-rail-card" },
-          h("div", { class: "hub-rail-label" }, "Quick Actions"),
-          h("div", { class: "hub-rail-actions" },
-            renderHubAction("activity", "Overview",     () => { state.activeTab = "overview"; render(); }),
-            renderHubAction("fileText", "Audit Log",    () => { state.activeTab = "audit"; render(); }),
-            renderHubAction("plug",     "Invite Bot",   cfg.links?.inviteBot),
-            renderHubAction("lifeRing", "Join Support", cfg.links?.supportDiscord)
-          )
-        )
-      );
-
-      // Go Premium (only when not premium)
-      if (!isPremium) {
-        rail.append(
-          h("div", { class: "hub-rail-card hub-premium" },
-            h("div", { class: "hub-premium-head" },
-              h("span", { class: "hub-premium-crown" }, "♛"),
-              h("span", null, "Go Premium")
-            ),
-            h("p", null, "Unlock Payments, Staff Pay, Hype, Branding, Tickets, Events and more."),
-            btn("Upgrade Now", { kind: "btn-primary", onclick: () => { state.activeTab = "premium"; render(); } })
-          )
-        );
-      }
+      content.append(wrap);
     } catch (e) { renderTabError(content, e); }
   }
 
@@ -5006,6 +4934,7 @@
     data.modules = async () => ({ modules: MOCK_MODULES });
     data.overview = async () => ({
       guild: { memberCount: 1247 },
+      premiumActive: true, plan: "premium", botInstalled: true,
       setup: {
         percent: 62, total: 13,
         flags: { welcome: true, autoRoles: true, roleMenus: false, tickets: true, staffPay: false, branding: true, ark: true, payments: false, events: true, xp: true, moderation: false, pets: false, giveaways: false },
@@ -5031,9 +4960,10 @@
       { ts: "2026-05-17T17:49:46Z", ok: false, action: "paypal_test", target: "payments" },
     ] });
 
-    if (mode === "overview") {
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub" };
+    if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
-      state.activeTab = "overview";
+      state.activeTab = TAB_FOR[mode];
     }
     render();
     return true;
