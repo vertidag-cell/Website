@@ -1075,6 +1075,22 @@
 .dash-next-preview .mc-kw-input { flex: 1; min-width: 150px; border: 0; background: transparent; color: var(--dsc-text); font: inherit; font-size: 0.85rem; padding: 4px 4px; }
 .dash-next-preview .mc-kw-input:focus { outline: none; }
 
+/* ---- Pets canvas (pet card with stat bars + Top Pets leaderboard) ---- */
+.dash-next-preview .pet-preview { margin-bottom: 14px; }
+.dash-next-preview .pet-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.dash-next-preview .pet-avatar { width: 52px; height: 52px; flex: none; display: grid; place-items: center; font-size: 1.8rem; background: rgba(87, 242, 135, 0.12); border-radius: 14px; }
+.dash-next-preview .pet-id { min-width: 0; }
+.dash-next-preview .pet-name { font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+.dash-next-preview .pet-level { font-size: 0.72rem; font-weight: 700; color: #57f287; background: rgba(87, 242, 135, 0.14); padding: 2px 8px; border-radius: 999px; }
+.dash-next-preview .pet-owner { font-size: 0.8rem; color: var(--dsc-text-muted); }
+.dash-next-preview .pet-bars { display: flex; flex-direction: column; gap: 12px; }
+.dash-next-preview .pet-bar-head { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; }
+.dash-next-preview .pet-bar-lbl { color: #dbdee1; }
+.dash-next-preview .pet-bar-pct { color: var(--dsc-text-muted); font-variant-numeric: tabular-nums; }
+.dash-next-preview .pet-bar { height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden; }
+.dash-next-preview .pet-bar > i { display: block; height: 100%; border-radius: 999px; transition: width .4s cubic-bezier(.22, 1, .36, 1); }
+.dash-next-preview .pet-lb { margin-top: 12px; }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }

@@ -3530,6 +3530,7 @@
       if (mod.name === "xp") return renderXpCanvas(content, mod, m.values);
       if (mod.name === "polls") return renderPollsCanvas(content, mod, m.values);
       if (mod.name === "moderation") return renderModerationCanvas(content, mod, m.values);
+      if (mod.name === "pets") return renderPetsCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4290,6 +4291,70 @@
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What lands in your mod-log")),
       device, topbar, modRoleSection, filterSection, warnSection, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Pets as a live-preview canvas: a pet card (level + stat bars) and an
+  // optional Top Pets leaderboard, with the channel + leaderboard controls.
+  function renderPetsCanvas(content, mod, values) {
+    const pv = Object.assign({ enabled: false, showLeaderboard: true, leaderboardChannelId: "", displayChannelId: "" }, values || {});
+    const baseline = JSON.stringify(pv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, pv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(pv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const username = state.user?.username || "owner";
+    const petBar = (label, pct, color) => h("div", { class: "pet-bar-row" },
+      h("div", { class: "pet-bar-head" }, h("span", { class: "pet-bar-lbl" }, label), h("span", { class: "pet-bar-pct" }, pct + "%")),
+      h("div", { class: "pet-bar" }, h("i", { style: { width: pct + "%", background: color } })));
+
+    // ---- Live preview: pet card + optional leaderboard ----
+    const device = h("div", { class: "eb-discord pet-preview" });
+    function drawPreview() {
+      clear(device);
+      device.append(h("div", { class: "eb-embed pet-card", style: { borderColor: "#57f287" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "pet-card-head" },
+            h("div", { class: "pet-avatar", "aria-hidden": "true" }, "🦖"),
+            h("div", { class: "pet-id" },
+              h("div", { class: "pet-name" }, "Rexy ", h("span", { class: "pet-level" }, "Lv 7")),
+              h("div", { class: "pet-owner" }, "@" + username + "'s companion"))),
+          h("div", { class: "pet-bars" }, petBar("Happiness", 86, "#57f287"), petBar("Hunger", 64, "#faa61a")),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Posts in #" + (chName(pv.displayChannelId) || "pet-zone") + " on feed / play")))));
+      if (pv.showLeaderboard !== false) {
+        const rows = [["🥇", "Rexy 🦖", "Lv 7"], ["🥈", "Mittens 🐱", "Lv 6"], ["🥉", "Hopper 🐰", "Lv 5"]];
+        device.append(h("div", { class: "eb-embed xp-lb pet-lb", style: { borderColor: "#f0b232" } },
+          h("div", { class: "eb-embed-inner" },
+            h("div", { class: "xp-lb-title" }, "🏆 Top Pets"),
+            ...rows.map(([m, n, lv]) => h("div", { class: "xp-lb-row" }, h("span", { class: "xp-lb-medal" }, m), h("span", { class: "xp-lb-name" }, n), h("span", { class: "xp-lb-xp" }, lv))),
+            h("div", { class: "eb-e-footer" }, h("span", null, "Updated in #" + (chName(pv.leaderboardChannelId) || "pets"))))));
+      }
+    }
+    drawPreview();
+
+    // ---- Top bar: display channel + Pets enabled ----
+    const dispCh = renderChannelSelect("pet-dispch", "displayChannelId", state.channels || [], pv.displayChannelId);
+    dispCh.classList.add("w-select");
+    dispCh.addEventListener("change", () => { pv.displayChannelId = dispCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), dispCh),
+      mcSwitch("Pets enabled", () => pv.enabled === true, (v) => { pv.enabled = v; markDirty(); }));
+
+    const lbCh = renderChannelSelect("pet-lbch", "leaderboardChannelId", state.channels || [], pv.leaderboardChannelId);
+    lbCh.classList.add("mc-select");
+    lbCh.addEventListener("change", () => { pv.leaderboardChannelId = lbCh.value; drawPreview(); markDirty(); });
+    const lbSection = mcSection("Pet leaderboard",
+      h("div", { class: "mc-switch-row" }, mcSwitch("Show the pet leaderboard", () => pv.showLeaderboard !== false, (v) => { pv.showLeaderboard = v; drawPreview(); markDirty(); })),
+      mcField("Leaderboard channel", lbCh));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Members raise a pet with ", h("code", null, "/pet"), " — feeding and playing keeps it happy and levels it up. Pet cards post in the display channel above."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "A pet card members see")),
+      device, topbar, lbSection, tip, statusBox, mcSaveBar(mod, content, () => pv, saveBtn, statusBox)));
   }
 
   /** Mark the form as dirty/clean by comparing live values to baseline. */
@@ -6221,10 +6286,22 @@
         },
         values: { enabled: true, modLogChannelId: "4", modRoleIds: ["22"], urlFilterEnabled: true, whitelistDomains: ["youtube.com", "twitch.tv", "arkoris.net"], maxWarnings: 3 },
       },
+      pets: {
+        module: {
+          name: "pets", label: "Pets", tier: "free", description: "Basic pet system. Advanced features unlock with Premium.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "showLeaderboard", type: "boolean", label: "Show leaderboard" },
+            { key: "leaderboardChannelId", type: "channel", label: "Leaderboard channel" },
+            { key: "displayChannelId", type: "channel", label: "Pet display channel" },
+          ],
+        },
+        values: { enabled: true, showLeaderboard: true, leaderboardChannelId: "3", displayChannelId: "1" },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
