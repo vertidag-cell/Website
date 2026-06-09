@@ -33,6 +33,15 @@ export async function onRequest(context) {
   if (isPreviewPage(url.pathname)) {
     const gate = requirePreviewAuth(context.request, context.env);
     if (gate) return gate; // 401 challenge, or 503 if PREVIEW_PASS isn't set
+    // Authed: serve the page but NEVER cache it. Static assets here ship with
+    // Cache-Control: public, max-age=14400 (4h), which made the preview HTML
+    // stick to old ?v= asset refs between deploys. no-store kills that.
+    return noStore(await context.next());
+  }
+  // Preview-only JS/CSS: public, but also no-store so we never serve a stale
+  // build while iterating on the redesign (no ?v= bumping needed).
+  if (isPreviewAsset(url.pathname)) {
+    return noStore(await context.next());
   }
 
   return context.next();
@@ -43,6 +52,19 @@ export async function onRequest(context) {
 function isPreviewPage(pathname) {
   const p = pathname.toLowerCase();
   return p === '/dashboard-next' || p === '/dashboard-next.html';
+}
+
+// The preview's own JS/CSS (not the gated page).
+function isPreviewAsset(pathname) {
+  const p = pathname.toLowerCase();
+  return p === '/dashboard-next-app.js' || p === '/dashboard-next.css';
+}
+
+// Re-wrap a response with a no-store cache policy so it's always fresh.
+function noStore(res) {
+  const fresh = new Response(res.body, res);
+  fresh.headers.set('Cache-Control', 'no-store, must-revalidate');
+  return fresh;
 }
 
 // Returns a Response to short-circuit with (401/503), or null when the request

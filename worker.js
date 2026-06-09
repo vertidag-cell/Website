@@ -61,11 +61,22 @@ export default {
     if (lower === "/dashboard-next" || lower === "/dashboard-next.html") {
       const gate = requirePreviewAuth(request, env);
       if (gate) return gate;
+      return noStore(await env.ASSETS.fetch(request)); // never cache the preview page
+    }
+    if (lower === "/dashboard-next-app.js" || lower === "/dashboard-next.css") {
+      return noStore(await env.ASSETS.fetch(request)); // preview assets: always fresh
     }
 
     return env.ASSETS.fetch(request);
   },
 };
+
+// Re-wrap a response with a no-store cache policy so the preview is always fresh.
+function noStore(res) {
+  const fresh = new Response(res.body, res);
+  fresh.headers.set("Cache-Control", "no-store, must-revalidate");
+  return fresh;
+}
 
 // Returns a 401/503 Response to short-circuit, or null when authorized.
 function requirePreviewAuth(request, env) {
