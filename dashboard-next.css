@@ -1149,6 +1149,15 @@
 .dash-next-preview .gw-host { font-size: 0.85rem; color: var(--dsc-text-muted); }
 .dash-next-preview .gw-enter { display: inline-block; margin-top: 12px; background: var(--dsc-blurple); color: #fff; font-weight: 600; font-size: 0.9rem; padding: 9px 18px; border-radius: 8px; }
 
+/* ---- Tickets canvas (support panel + staff-flow line) ---- */
+.dash-next-preview .ticket-preview { margin-bottom: 14px; }
+.dash-next-preview .ticket-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.05rem; color: #fff; margin-bottom: 6px; }
+.dash-next-preview .ticket-emoji { font-size: 1.2rem; }
+.dash-next-preview .ticket-desc { color: #dbdee1; font-size: 0.88rem; margin-bottom: 12px; }
+.dash-next-preview .ticket-open { display: inline-block; background: var(--dsc-blurple); color: #fff; font-weight: 600; font-size: 0.9rem; padding: 9px 18px; border-radius: 8px; }
+.dash-next-preview .ticket-flow { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 9px 12px; background: rgba(88, 101, 242, 0.08); border: 1px solid rgba(88, 101, 242, 0.2); border-radius: 8px; font-size: 0.82rem; color: var(--dsc-text-muted); }
+.dash-next-preview .ticket-flow-ico { color: var(--dsc-blurple); font-weight: 700; }
+
 /* ---- Analytics (.dsx-an-*) — rebuilt chart-first: header + metric selector +
    one interactive chart, replacing the old rectangular stat-card wall. ---- */
 .dsx-an { max-width: 940px; }

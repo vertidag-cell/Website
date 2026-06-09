@@ -3535,6 +3535,7 @@
       if (mod.name === "hype") return renderHypeCanvas(content, mod, m.values);
       if (mod.name === "events") return renderEventsCanvas(content, mod, m.values);
       if (mod.name === "giveaways") return renderGiveawaysCanvas(content, mod, m.values);
+      if (mod.name === "tickets") return renderTicketsCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -4658,6 +4659,85 @@
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "A giveaway members can enter")),
       device, topbar, hostSection, logSection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Reusable single-category <select> bound to model[key] for module canvases.
+  function mcCategorySelect(getV, setV, noneLabel) {
+    const cats = state.categories || [];
+    const sel = h("select", { class: "mc-select" }, h("option", { value: "" }, noneLabel || "— none —"), ...cats.map((c) => h("option", { value: c.id }, c.name)));
+    sel.value = getV() || "";
+    sel.addEventListener("change", () => setV(sel.value));
+    return sel;
+  }
+
+  // Tickets as a live-preview canvas: the ticket panel members click + a
+  // staff-flow line that reflects the claim / auto-close / staff-role settings.
+  function renderTicketsCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, panelChannelId: "", ticketCategoryId: "", staffRoleIds: [], logChannelId: "", autoCloseHours: 0, claimEnabled: true }, values || {});
+    mv.staffRoleIds = Array.isArray(mv.staffRoleIds) ? mv.staffRoleIds.slice() : [];
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const catName = (id) => { const c = (state.categories || []).find((x) => x.id === id); return c ? c.name : null; };
+    const roleById = (id) => (state.roles || []).find((r) => r.id === id);
+
+    // ---- Live preview: ticket panel + staff-flow line ----
+    const device = h("div", { class: "eb-discord ticket-preview" });
+    function drawPreview() {
+      clear(device);
+      const cat = mv.ticketCategoryId ? catName(mv.ticketCategoryId) : null;
+      const staffNames = mv.staffRoleIds.map((id) => roleById(id)).filter(Boolean).map((r) => "@" + r.name);
+      device.append(h("div", { class: "eb-embed ticket-card", style: { borderColor: "#5865f2" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "ticket-head" }, h("span", { class: "ticket-emoji", "aria-hidden": "true" }, "🎫"), h("span", null, "Support")),
+          h("div", { class: "ticket-desc" }, "Need help? Open a ticket and our staff team will assist you privately."),
+          h("div", { class: "ticket-open" }, "📩 Open a ticket"),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Panel in #" + (chName(mv.panelChannelId) || "support") + " · tickets under " + (cat || "Support"))))));
+      const flow = [];
+      flow.push(staffNames.length ? (staffNames.join(", ") + " get pinged") : "Staff get pinged");
+      if (mv.claimEnabled !== false) flow.push("staff can claim it");
+      if ((mv.autoCloseHours | 0) > 0) flow.push("auto-closes after " + mv.autoCloseHours + "h idle");
+      device.append(h("div", { class: "ticket-flow" },
+        h("span", { class: "ticket-flow-ico", "aria-hidden": "true" }, "→"),
+        h("span", null, "When opened: " + flow.join(" · "))));
+    }
+    drawPreview();
+
+    // ---- Top bar: panel channel + enabled ----
+    const panelCh = renderChannelSelect("tk-panelch", "panelChannelId", state.channels || [], mv.panelChannelId);
+    panelCh.classList.add("w-select");
+    panelCh.addEventListener("change", () => { mv.panelChannelId = panelCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), panelCh),
+      mcSwitch("Tickets enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const catSection = mcSection("Tickets open under",
+      mcField("Category", mcCategorySelect(() => mv.ticketCategoryId, (v) => { mv.ticketCategoryId = v; drawPreview(); markDirty(); }, "— pick a category —"), "New ticket channels are created in this category"));
+
+    const staffSection = mcSection("Staff",
+      mcField("Staff roles", mcChips("role", () => mv.staffRoleIds, (a) => { mv.staffRoleIds = a; }, () => { markDirty(); drawPreview(); }, { empty: "No staff roles yet", add: "+ Add a staff role" }), "Pinged when a ticket opens and given access to it"),
+      h("div", { class: "mc-switch-row" }, mcSwitch("Let staff claim a ticket", () => mv.claimEnabled !== false, (v) => { mv.claimEnabled = v; drawPreview(); markDirty(); })));
+
+    const logCh = renderChannelSelect("tk-logch", "logChannelId", state.channels || [], mv.logChannelId);
+    logCh.classList.add("mc-select");
+    logCh.addEventListener("change", () => { mv.logChannelId = logCh.value; markDirty(); });
+    const lifeSection = mcSection("Lifecycle",
+      h("div", { class: "mc-grid" },
+        mcField("Ticket log channel", logCh, "Transcripts are archived here on close"),
+        mcField("Auto-close after (hours)", mcNumber(() => mv.autoCloseHours, (v) => { mv.autoCloseHours = v; drawPreview(); markDirty(); }, { min: 0, max: 720 }), "0 = never auto-close")));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Members click the button to open a private ticket channel. Staff handle it, then close it to archive a transcript to the log channel."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "The panel members use to get help")),
+      device, topbar, catSection, staffSection, lifeSection, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
@@ -6657,10 +6737,25 @@
         },
         values: { enabled: true, defaultChannelId: "3", allowedRoleIds: ["22"], logChannelId: "4" },
       },
+      tickets: {
+        module: {
+          name: "tickets", label: "Tickets", tier: "premium", description: "Forum-based support tickets, staff workflows, transcripts.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "panelChannelId", type: "channel", label: "Ticket panel channel" },
+            { key: "ticketCategoryId", type: "category", label: "Ticket category" },
+            { key: "staffRoleIds", type: "roles", label: "Staff roles" },
+            { key: "logChannelId", type: "channel", label: "Ticket log channel" },
+            { key: "autoCloseHours", type: "integer", label: "Auto-close after (hours, 0=off)" },
+            { key: "claimEnabled", type: "boolean", label: "Allow staff claim" },
+          ],
+        },
+        values: { enabled: true, panelChannelId: "3", ticketCategoryId: "11", staffRoleIds: ["22"], logChannelId: "4", autoCloseHours: 48, claimEnabled: true },
+      },
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", giveaways: "giveaways" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", pets: "pets", credits: "credits", hype: "hype", events: "events", giveaways: "giveaways", tickets: "tickets" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
