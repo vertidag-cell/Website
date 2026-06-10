@@ -19,11 +19,15 @@ const ALLOWED_AUTH_PATHS = new Set([
   "/auth/discord/callback",
   "/auth/logout",
   "/auth/session",
+  "/auth/csrf", // session-bound CSRF token for state-changing dashboard calls
 ]);
 
 function proxy(request, url, env) {
   const target = BACKEND + url.pathname + url.search;
   const proxied = new Request(target, request);
+  // Never forward browser Authorization headers to the backend — dashboard
+  // auth is cookie-based; anything in Authorization here is not ours to leak.
+  proxied.headers.delete("Authorization");
   // Shared secret so the Square Cloud backend can verify the request actually
   // came through this Cloudflare proxy (arkoris.net) and reject direct hits to
   // the squareweb.app origin. Set PROXY_SECRET on BOTH this Worker and the

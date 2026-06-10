@@ -15,6 +15,7 @@ const ALLOWED = new Set([
   '/auth/discord/callback',
   '/auth/logout',
   '/auth/session',
+  '/auth/csrf', // session-bound CSRF token for state-changing dashboard calls
 ]);
 
 export async function onRequest(context) {
@@ -30,6 +31,9 @@ export async function onRequest(context) {
   // with a 302 back to the dashboard. Those redirects must reach the browser.
   const target = BACKEND + url.pathname + url.search;
   const proxied = new Request(target, request);
+  // Never forward browser Authorization headers to the backend — dashboard
+  // auth is cookie-based; anything in Authorization here is not ours to leak.
+  proxied.headers.delete('Authorization');
   // Shared secret proving this request came through the arkoris.net proxy.
   // Set PROXY_SECRET on the Pages project + backend to activate; fails open until then.
   if (context.env && context.env.PROXY_SECRET) proxied.headers.set('X-Arkoris-Proxy', context.env.PROXY_SECRET);
