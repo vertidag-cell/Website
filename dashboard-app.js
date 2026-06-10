@@ -398,7 +398,6 @@
     saveModule: (gid, name, body) => api(`/api/dashboard/guilds/${gid}/modules/${name}`, { method: "POST", body }),
     resetModule: (gid, name) => api(`/api/dashboard/guilds/${gid}/modules/${name}/reset`, { method: "POST" }),
     quickSetup: (gid, name, body) => api(`/api/dashboard/guilds/${gid}/modules/${name}/quick-setup`, { method: "POST", body: body || {} }),
-    audit: (gid) => api(`/api/dashboard/guilds/${gid}/audit-log`),
     analytics: (gid, days) => api(`/api/dashboard/guilds/${gid}/analytics?days=${days || 7}`),
     channels: (gid) => api(`/api/dashboard/guilds/${gid}/discord/channels`),
     categories: (gid) => api(`/api/dashboard/guilds/${gid}/discord/categories`),
@@ -1009,7 +1008,7 @@
     if (tab === "analytics") return loadAnalytics(content);
     if (tab === "embed-builder") return loadEmbedBuilder(content);
     if (tab === "premium") return renderPremium(content);
-    if (tab === "audit") return loadAudit(content);
+    if (tab === "audit") return loadGameLogs(content);
     if (tab === "support") return renderSupportTab(content);
     return loadModule(content, tab);
   }
@@ -3552,7 +3551,7 @@
         if (mod.name === "population") return renderPopulationView(content);
         if (mod.name === "roleMenus") return renderRoleMenusInfo(content);
         if (mod.name === "ark") return renderArkInfo(content);
-        if (mod.name === "logs") return loadAudit(content);
+        if (mod.name === "logs") return loadGameLogs(content);
       }
 
       // Welcome → live-preview canvas (edit the message in the Discord preview).
@@ -6588,72 +6587,45 @@
   /* ============================================================
      Tab: Audit log
      ============================================================ */
-  // Human labels for the backend's audit action codes. Anything unknown gets
-  // prettified (underscores → spaces) so new backend actions never render raw.
-  const AUDIT_ACTION_LABELS = {
-    login: "Signed in", logout: "Signed out",
-    module_save: "Saved settings", module_save_invalid: "Save rejected — invalid values",
-    module_reset: "Reset settings to defaults", module_denied: "Change blocked — no permission",
-    quick_setup_run: "Ran Quick Setup", quick_setup_denied: "Quick Setup blocked", quick_setup_error: "Quick Setup failed",
-    branding_update: "Updated branding", branding_reset: "Reset branding",
-    role_menu_create: "Created a role menu", role_menu_update: "Edited a role menu", role_menu_delete: "Deleted a role menu",
-    role_menu_option_add: "Added a role-menu option", role_menu_option_update: "Edited a role-menu option", role_menu_option_delete: "Removed a role-menu option",
-    role_menu_post: "Posted a role menu to Discord", role_menu_post_failed: "Role-menu post failed",
-    embed_template_create: "Saved an embed template", embed_template_update: "Edited an embed template", embed_template_delete: "Deleted an embed template",
-    embed_send: "Sent an embed to Discord", embed_send_failed: "Embed send failed", embed_edit: "Edited a sent embed", embed_delete: "Deleted a sent embed",
-    paypal_config_update: "Updated PayPal settings", paypal_config_update_failed: "PayPal settings save failed",
-    paypal_test_ok: "PayPal connection test passed", paypal_test_failed: "PayPal connection test failed", paypal_test_error: "PayPal connection test errored",
-    staff_tier_create: "Created a staff pay tier", staff_tier_update: "Edited a staff pay tier", staff_tier_delete: "Deleted a staff pay tier",
-    setup_override_set: "Marked a setup step done", setup_override_clear: "Un-marked a setup step",
-    server_template_apply_started: "Started applying a server template", server_template_replace_started: "Started a FULL-REPLACE server template",
-    server_template_applied: "Server template applied", server_template_failed: "Server template failed", server_template_denied: "Server template blocked",
-    hype_config_sync_failed: "Hype settings didn't reach the bot", events_config_sync_failed: "Events settings didn't reach the bot",
-    welcome_config_sync_failed: "Welcome settings didn't reach the bot", xp_config_sync_failed: "XP settings didn't reach the bot",
-  };
-  function auditLabel(action) {
-    return AUDIT_ACTION_LABELS[action] || String(action || "activity").replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
-  }
-  function timeAgo(ts) {
-    const ms = Date.now() - new Date(ts).getTime();
-    if (!isFinite(ms)) return "—";
-    const m = Math.round(ms / 60000);
-    if (m < 1) return "just now";
-    if (m < 60) return m + "m ago";
-    const hrs = Math.round(m / 60);
-    if (hrs < 24) return hrs + "h ago";
-    const d = Math.round(hrs / 24);
-    return d === 1 ? "yesterday" : d + "d ago";
-  }
+  // Discord & Game Logs — what the bot records and which forum each stream
+  // lands in. The logs themselves live in Discord (readable by staff, per-map
+  // posts); this page is the map of that system + how to turn it on.
+  function loadGameLogs(content) {
+    clear(content);
+    content.append(h("div", { class: "dash-card" },
+      h("h3", null, "Discord & Game Logs"),
+      h("p", { style: { margin: 0, color: "var(--text-muted)" } },
+        "Everything Arkoris records for this server is posted into log channels and forums inside your Discord — organised per map, readable by staff, searchable forever.")));
 
-  async function loadAudit(content) {
-    try {
-      const a = await data.audit(state.selectedGuildId);
-      clear(content);
-      content.append(h("div", { class: "dash-card" },
-        h("h3", null, "Activity Log"),
-        h("p", { style: { margin: 0, color: "var(--text-muted)" } }, "Everything done from this dashboard — most recent first, last 50 actions.")));
-      if (!a.entries || !a.entries.length) {
-        content.append(notice("info", "Nothing here yet", "Actions you take on this dashboard (saves, quick setups, sends) will show up here."));
-        return;
-      }
-      const modLabel = (t) => {
-        const m = (state.modules || []).find((x) => x.name === t);
-        return m ? m.label : t;
-      };
-      const list = h("div", { class: "dash-audit-list" });
-      a.entries.forEach((e) => {
-        const failed = e.ok === false;
-        const row = h("div", { class: "dash-audit-row" + (failed ? " failed" : "") },
-          h("span", { class: "dash-audit-dot " + (failed ? "fail" : "ok"), "aria-hidden": "true" }),
-          h("div", { class: "dash-audit-main" },
-            h("span", { class: "dash-audit-label" }, auditLabel(e.action)),
-            e.target ? h("span", { class: "dash-audit-target" }, modLabel(e.target)) : null,
-            failed && e.errorCode ? h("span", { class: "dash-audit-err" }, String(e.errorCode).replace(/_/g, " ").slice(0, 60)) : null),
-          h("span", { class: "dash-audit-time", title: new Date(e.ts).toLocaleString() }, timeAgo(e.ts)));
-        list.append(row);
-      });
-      content.append(h("div", { class: "dash-card" }, list));
-    } catch (e) { renderTabError(content, e); }
+    const item = (name, desc) => h("div", { class: "log-cat" },
+      h("span", { class: "log-cat-name" }, name),
+      h("span", { class: "log-cat-desc" }, desc));
+
+    content.append(h("div", { class: "dash-card" },
+      h("h3", { style: { margin: "0 0 4px" } }, "💬 Discord server logs"),
+      h("p", { style: { margin: "0 0 10px", color: "var(--text-muted)" } }, "Activity inside your Discord, posted to the log channels the bot generates."),
+      item("Member activity", "Joins, leaves and invites"),
+      item("Messages", "Edits and deletions"),
+      item("Moderation", "Bans, kicks, timeouts and warnings"),
+      item("Server changes", "Role and channel updates")));
+
+    content.append(h("div", { class: "dash-card" },
+      h("h3", { style: { margin: "0 0 4px" } }, "🦖 ARK game-log forums"),
+      h("p", { style: { margin: "0 0 10px", color: "var(--text-muted)" } }, "Live from your linked Nitrado servers — one forum per stream, one post per map."),
+      item("ark-chat-logs", "In-game chat, plus Global / Tribe"),
+      item("ark-kill-logs", "PvP / PvE kills"),
+      item("ark-join-leave-logs", "Player joins & leaves"),
+      item("ark-tribe-logs", "Tribe events — tames, members, structures"),
+      item("ark-admin-logs", "Admin console commands + unrecognized-admin alerts"),
+      item("ark-ban-logs", "Bans & unbans on your linked servers"),
+      item("cheater-log", "Cheater detection — spoofing, alts, ban evasion, burners"),
+      item("service-logs", "Logged player services — carries, grinding, shop")));
+
+    content.append(h("div", { class: "dash-card" },
+      h("h3", { style: { margin: "0 0 6px" } }, "Turn it on"),
+      h("p", { style: { margin: 0, color: "var(--text-muted)" } },
+        "One click creates the whole system: ", h("code", null, "/setup → 📋 Logs & Monitoring → Generate Logs"),
+        " — then pick which ARK streams you want under ", h("code", null, "Forum Log Categories"), ".")));
   }
 
   /* ============================================================
@@ -6757,7 +6729,7 @@
       { name: "hype", label: "Hype", tier: "premium" }, { name: "events", label: "Events", tier: "premium" },
       { name: "tickets", label: "Tickets", tier: "premium" },
       { name: "staffPay", label: "Staff Pay", tier: "premium" }, { name: "ark", label: "ARK Management", tier: "premium" },
-      { name: "logs", label: "Logs", tier: "free" }, { name: "payments", label: "Payments", tier: "premium" },
+      { name: "logs", label: "Discord & Game Logs", tier: "free" }, { name: "payments", label: "Payments", tier: "premium" },
       { name: "branding", label: "Branding", tier: "premium" }, { name: "serverTemplates", label: "Server Templates", tier: "premium" },
     ];
     state.modules = MOCK_MODULES;
@@ -6844,12 +6816,6 @@
         preview: { channels: [MOCK_TPL("START HERE", ["# 👋｜welcome", "# 🎭｜get-roles"]), MOCK_TPL("COMMUNITY", ["# 💬｜general", "# 🖼｜media", "# 🤖｜bot-commands"]), MOCK_TPL("EVENTS", ["📣 📅｜event-announcements", "# 🎉｜event-chat"])], roles: ["Admin", "Moderator", "Event Host", "Active Member", "Member", "Muted"] } },
     ] });
     data.templateApply = async () => ({ ok: true, started: true, summary: "Template apply started (mock) — nothing was changed." });
-    data.audit = async () => ({ entries: [
-      { ts: "2026-05-17T19:29:34Z", ok: true,  action: "module_save", target: "branding" },
-      { ts: "2026-05-17T18:39:24Z", ok: true,  action: "module_save", target: "welcome" },
-      { ts: "2026-05-17T18:12:01Z", ok: true,  action: "panel_post",  target: "roleMenus" },
-      { ts: "2026-05-17T17:49:46Z", ok: false, action: "paypal_test", target: "payments" },
-    ] });
     // Module-form stubs (for ?mock=welcome etc.)
     data.channels = async () => ({ channels: [
       { id: "1", name: "general", type: 0 }, { id: "2", name: "welcome", type: 0 },
@@ -6919,6 +6885,7 @@
         values: { primaryColor: "#5865f2", footerText: "Velated PVP · Powered by Arkoris", footerIcon: "", thumbnail: "", showTimestamp: true },
       },
       ark: { module: { name: "ark", label: "ARK Server Suite", customUi: true, tier: "premium" }, values: {} },
+      logs: { module: { name: "logs", label: "Discord & Game Logs", customUi: true, tier: "free" }, values: {} },
       autoRoles: {
         module: {
           name: "autoRoles", label: "Auto Roles", tier: "free", description: "Assign roles automatically to new members.",
@@ -7050,7 +7017,7 @@
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", moderation: "moderation", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus", rolemenu: "roleMenus" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", moderation: "moderation", logs: "logs", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus", rolemenu: "roleMenus" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];

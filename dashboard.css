@@ -1277,3 +1277,9 @@
 .dash-app .tpl-confirm-lbl { display: block; font-size: .8rem; color: var(--text-muted); margin-bottom: 6px; }
 .dash-app .tpl-locked { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; background: rgba(240,178,50,.08); border: 1px solid rgba(240,178,50,.25); border-radius: 10px; font-size: .88rem; }
 .dash-app .tpl-locked-ico { font-size: 1.1rem; }
+
+/* ── Discord & Game Logs: category rows ─────────────────────────────── */
+.dash-app .log-cat { display: flex; align-items: baseline; gap: 10px; padding: 7px 2px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.dash-app .log-cat:last-child { border-bottom: 0; }
+.dash-app .log-cat-name { font-family: var(--mono, "JetBrains Mono", monospace); font-size: .84rem; color: #5865f2; flex: none; min-width: 170px; }
+.dash-app .log-cat-desc { font-size: .86rem; color: var(--text-muted); }
