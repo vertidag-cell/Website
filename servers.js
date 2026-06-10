@@ -17,14 +17,15 @@
     var avatar = s.icon
       ? '<img class="srv-icon" src="' + esc(s.icon) + '" alt="" width="56" height="56" loading="lazy">'
       : '<div class="srv-icon srv-fallback">' + esc((s.name || "?").slice(0, 1).toUpperCase()) + "</div>";
-    var members = s.members ? '<span class="srv-meta">👥 ' + Number(s.members).toLocaleString() + " members</span>" : "";
-    var blurb = s.blurb ? '<p class="srv-blurb">' + esc(s.blurb) + "</p>" : "";
+    var members = s.members ? '<span class="srv-meta"><b>' + Number(s.members).toLocaleString() + "</b> members</span>" : "";
+    // Always render the body zone (even when empty) so cards align with/without a blurb.
+    var blurb = '<div class="srv-body">' + (s.blurb ? '<p class="srv-blurb">' + esc(s.blurb) + "</p>" : "") + "</div>";
     var prem = s.premium ? '<span class="srv-prem">✦ Premium</span>' : "";
     // Every listed server has a real invite (the backend drops private ones);
     // keep a private fallback just in case a stray entry slips through.
     var join = validInvite
-      ? '<a class="btn btn-primary srv-join" href="' + esc(s.invite) + '" target="_blank" rel="noopener noreferrer">Join Server</a>'
-      : '<span class="srv-join srv-private">🔒 Private — invite only</span>';
+      ? '<a class="srv-join" href="' + esc(s.invite) + '" target="_blank" rel="noopener noreferrer">Join Server <span aria-hidden="true" class="srv-join-arr">→</span></a>'
+      : '<span class="srv-private">Private — invite only</span>';
     return (
       '<div class="feature-card srv-card' + (s.premium ? " premium" : "") + '">' +
       prem +
