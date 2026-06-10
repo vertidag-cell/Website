@@ -423,6 +423,11 @@
     paypalGet:  (gid)         => api(`/api/dashboard/guilds/${gid}/payments/paypal`),
     paypalSave: (gid, body)   => api(`/api/dashboard/guilds/${gid}/payments/paypal`, { method: "POST", body }),
     paypalTest: (gid)         => api(`/api/dashboard/guilds/${gid}/payments/paypal/test`, { method: "POST" }),
+    // ARK Server Suite — read-only live status of linked Nitrado maps
+    arkServers: (gid)         => api(`/api/dashboard/guilds/${gid}/ark/servers`),
+    // Server templates — catalog + guarded apply
+    templates: (gid)          => api(`/api/dashboard/guilds/${gid}/server-templates`),
+    templateApply: (gid, id, body) => api(`/api/dashboard/guilds/${gid}/server-templates/${id}/apply`, { method: "POST", body: body || {} }),
     // Embed Builder
     embTplList:   (gid)         => api(`/api/dashboard/guilds/${gid}/embeds/templates`),
     embTplCreate: (gid, body)   => api(`/api/dashboard/guilds/${gid}/embeds/templates`, { method: "POST", body }),
@@ -828,7 +833,7 @@
       try {
         const m = await data.modules();
         // Modules intentionally hidden from the dashboard (still usable via their Discord commands).
-        state.modules = (m.modules || []).filter((mod) => !["giveaways", "credits", "pets"].includes(mod.name));
+        state.modules = (m.modules || []).filter((mod) => !["giveaways", "credits", "pets", "polls"].includes(mod.name));
       } catch (e) {
         return renderTabError(root, e);
       }
@@ -885,7 +890,7 @@
     const CATEGORY_OF = {
       // Discord Server
       welcome: "discord", autoRoles: "discord", roleMenus: "discord", xp: "discord",
-      hype: "discord", polls: "discord", moderation: "discord",
+      hype: "discord", moderation: "discord",
       events: "discord",
       // Tickets & Staff
       tickets: "tickets", staffPay: "tickets",
@@ -2064,7 +2069,6 @@
     { id: "levels",      label: "Levels",      emoji: "⚡", module: "xp",            flag: "xp" },
     { id: "welcome",     label: "Welcome",     emoji: "👋", module: "welcome",       flag: "welcome" },
     { id: "roleMenus",   label: "Role Menus",  emoji: "🎭", module: "roleMenus",     flag: "roleMenus" },
-    { id: "polls",       label: "Polls",       emoji: "📊", module: "polls",         flag: null },
     { id: "moderation",  label: "Moderation",  emoji: "🛡️", module: "moderation",   flag: "moderation" },
     { id: "tickets",     label: "Tickets",     emoji: "🎫", module: "tickets",       flag: "tickets",    tier: "premium" },
     { id: "payments",    label: "Payments",    emoji: "💳", module: "payments",      flag: "payments",   tier: "premium" },
@@ -3555,7 +3559,6 @@
       if (mod.name === "welcome") return renderWelcomeCanvas(content, mod, m.values);
       if (mod.name === "autoRoles") return renderAutoRolesCanvas(content, mod, m.values);
       if (mod.name === "xp") return renderXpCanvas(content, mod, m.values);
-      if (mod.name === "polls") return renderPollsCanvas(content, mod, m.values);
       if (mod.name === "moderation") return renderModerationCanvas(content, mod, m.values);
       if (mod.name === "hype") return renderHypeCanvas(content, mod, m.values);
       if (mod.name === "events") return renderEventsCanvas(content, mod, m.values);
@@ -4191,39 +4194,7 @@
 
   // Polls as a live-preview canvas: a Discord poll with live-result bars; the
   // editable control is which roles may start a poll.
-  function renderPollsCanvas(content, mod, values) {
-    const pv = Object.assign({ enabled: true, allowedRoleIds: [] }, values || {});
-    pv.allowedRoleIds = Array.isArray(pv.allowedRoleIds) ? pv.allowedRoleIds.slice() : [];
-    const baseline = JSON.stringify(pv);
-    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, pv))));
-
-    const statusBox = h("div");
-    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
-    function markDirty() { saveBtn.disabled = JSON.stringify(pv) === baseline; }
-
-    const opts = [["Ragnarok", 52], ["The Island", 31], ["Aberration", 17]];
-    const poll = h("div", { class: "eb-discord poll-preview" },
-      h("div", { class: "poll-q" }, "📊 Which map should we wipe to next?"),
-      ...opts.map(([label, pct]) => h("div", { class: "poll-opt" },
-        h("div", { class: "poll-opt-fill", style: { width: pct + "%" } }),
-        h("div", { class: "poll-opt-row" }, h("span", { class: "poll-opt-label" }, label), h("span", { class: "poll-opt-pct" }, pct + "%")))),
-      h("div", { class: "poll-foot" }, "47 votes · ends in 22h"));
-
-    const topbar = h("div", { class: "w-topbar" },
-      h("span", { class: "poll-topbar-lbl" }, "Results update live as members vote"),
-      mcSwitch("Polls enabled", () => pv.enabled !== false, (v) => { pv.enabled = v; markDirty(); }));
-
-    const roleSection = mcSection("Who can start a poll",
-      mcChips("role", () => pv.allowedRoleIds, (a) => { pv.allowedRoleIds = a; }, markDirty, { empty: "Everyone can start a poll", add: "+ Allow a role" }));
-
-    const tip = h("div", { class: "w-tip" },
-      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
-      h("div", null, "Hosts run ", h("code", null, "/poll"), " to post one. Leave host roles empty to let anyone start a poll, or restrict it to staff."));
-
-    content.append(h("div", { class: "dash-card w-canvas" },
-      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "A poll members see in chat")),
-      poll, topbar, roleSection, tip, statusBox, mcSaveBar(mod, content, () => pv, saveBtn, statusBox)));
-  }
+  // (Polls was removed from the dashboard — /poll lives entirely in Discord.)
 
   // Reusable tag/keyword input (chips + free-text add) for module canvases.
   function mcKeywords(getList, setList, markDirty, opts) {
@@ -4569,6 +4540,8 @@
     mv.staffRoleIds = Array.isArray(mv.staffRoleIds) ? mv.staffRoleIds.slice() : [];
     const baseline = JSON.stringify(mv);
     content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+    // One-click bootstrap of the whole Support layout — same engine as /setup.
+    content.append(renderQuickSetupBanner(mod, content));
 
     const statusBox = h("div");
     const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
@@ -4669,12 +4642,16 @@
 
     const tip = h("div", { class: "w-tip" },
       (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
-      h("div", null, "Arkoris tallies each staff member's ticket work and posts a monthly earnings thread to the forum channel above — no spreadsheets needed."));
+      h("div", null, "Arkoris tallies each staff member's ticket work and posts a monthly earnings thread to the forum channel above — pay amounts come from the tiers you manage below."));
 
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "The monthly summary Arkoris posts")),
       device, topbar, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+
+    // Per-role pay tiers — full create/edit/delete (ticket levels, auction %,
+    // event payouts). Loads async; renders its own premium note on 403.
+    renderStaffTiersSection(content);
   }
 
   // Payments as a live-preview canvas: a payment panel with inline-editable
@@ -4734,76 +4711,135 @@
 
     const tip = h("div", { class: "w-tip" },
       (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
-      h("div", null, "Connect PayPal or Stripe with ", h("code", null, "/payments setup"), " in Discord. Members pay from the panel and Arkoris auto-confirms, then logs it to the channel above."));
+      h("div", null, "Connect your PayPal API keys in the section below — members pay from the panel, Arkoris auto-confirms and logs it to the channel above."));
 
     content.append(h("div", { class: "dash-card w-canvas" },
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Click the text to edit your instructions")),
       device, topbar, curSection, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+
+    // PayPal API + webhook configuration — secrets are write-only (the
+    // backend only ever returns masks) + a live connection test button.
+    renderPayPalConfigSection(content);
   }
 
   // Server Templates as a live-preview canvas: a segmented preset selector that
   // previews the channel tree + roles each template would build.
-  function renderServerTemplatesCanvas(content, mod, values) {
-    const mv = Object.assign({ enabled: false }, values || {});
-    const baseline = JSON.stringify(mv);
-    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+  async function renderServerTemplatesCanvas(content, mod, values) {
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, values || {}))));
+    const host = h("div", { class: "dash-card w-canvas" });
+    content.append(host);
+    host.append(h("div", { class: "skel-card" },
+      h("div", { class: "skel skel-line lg w-30" }), h("div", { class: "skel skel-line w-80" })));
 
-    const statusBox = h("div");
-    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
-    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    let cat;
+    try { cat = await data.templates(state.selectedGuildId); }
+    catch (e) { clear(host); host.append(notice("warn", "Couldn't load templates", e.message || "Backend error")); return; }
+    const templates = (cat && cat.templates) || [];
+    if (!templates.length) { clear(host); host.append(notice("info", "No templates available", "The backend returned an empty catalog.")); return; }
 
-    const TEMPLATES = {
-      gaming: { emoji: "🎮", label: "Gaming", channels: [{ cat: "INFORMATION", items: ["# rules", "# announcements"] }, { cat: "COMMUNITY", items: ["# general", "# clips", "🔊 Game Night"] }], roles: ["Admin", "Moderator", "Member", "Booster"] },
-      support: { emoji: "🛟", label: "Support", channels: [{ cat: "INFO", items: ["# welcome", "# faq"] }, { cat: "SUPPORT", items: ["# open-a-ticket", "# staff-chat"] }], roles: ["Staff", "Support", "Member"] },
-      ark: { emoji: "🦖", label: "ARK Cluster", channels: [{ cat: "CLUSTER", items: ["# server-status", "# rates", "🔊 Tribe VC"] }, { cat: "COMMUNITY", items: ["# general", "# trading", "# bug-reports"] }], roles: ["Admin", "Helper", "Survivor", "Donor"] },
-    };
-    let active = "gaming";
+    const EMOJI = { ARK: "🦖", SUPPORT: "🛟", COMMUNITY: "🏠" };
+    let active = templates[0].id;
+    const byId = Object.fromEntries(templates.map((t) => [t.id, t]));
+    const guildName = (state.guilds.find((g) => g.id === state.selectedGuildId) || {}).name || "";
 
-    // ---- Live preview: the channel tree + roles a template builds ----
+    const tabs = h("div", { class: "ev-tabs" });
     const device = h("div", { class: "template-preview" });
+    const applyHost = h("div");
+
+    function drawTabs() {
+      clear(tabs);
+      for (const t of templates) {
+        const b = h("button", {
+          type: "button",
+          class: "ev-tab" + (t.id === active ? " active" : ""),
+          onclick: () => { active = t.id; drawTabs(); drawPreview(); drawApply(); },
+        }, (EMOJI[t.id] || "📦") + " " + t.label, " ",
+          h("span", { class: "tpl-tier " + (t.tier === "free" ? "free" : "prem") }, t.tier === "free" ? "FREE" : (t.locked ? "🔒 PREMIUM" : "PREMIUM")));
+        if (t.id === active) b.style.setProperty("--ev-accent", "#5865f2");
+        tabs.append(b);
+      }
+    }
+
     function drawPreview() {
       clear(device);
-      const t = TEMPLATES[active];
-      const chCount = t.channels.reduce((n, c) => n + c.items.length, 0);
+      const t = byId[active];
       const channelsCol = h("div", { class: "tpl-channels" });
-      t.channels.forEach((c) => {
+      for (const c of (t.preview?.channels || [])) {
         channelsCol.append(h("div", { class: "tpl-cat" }, c.cat));
-        c.items.forEach((it) => channelsCol.append(h("div", { class: "tpl-ch" }, it)));
-      });
+        for (const it of c.items) channelsCol.append(h("div", { class: "tpl-ch" }, it));
+      }
       const rolesCol = h("div", { class: "tpl-roles" },
         h("div", { class: "tpl-roles-lbl" }, "Roles"),
-        h("div", { class: "tpl-roles-list" }, ...t.roles.map((r) => h("span", { class: "tpl-role" }, r))));
+        h("div", { class: "tpl-roles-list" }, ...(t.preview?.roles || []).map((r) => h("span", { class: "tpl-role" }, r))));
       device.append(h("div", { class: "tpl-card" },
+        t.blurb ? h("div", { class: "tpl-blurb" }, t.blurb + (t.live ? " Updated live from the source server." : "")) : null,
         h("div", { class: "tpl-cols" }, channelsCol, rolesCol),
-        h("div", { class: "tpl-foot" }, "Creates " + chCount + " channels · " + t.roles.length + " roles when applied")));
+        h("div", { class: "tpl-foot" }, `Creates ${t.channels} channels in ${t.categories} categories · ${t.roles} roles`)));
     }
 
-    // ---- Segmented template selector ----
-    const tabs = h("div", { class: "ev-tabs" });
-    function renderTabs() {
-      clear(tabs);
-      Object.keys(TEMPLATES).forEach((k) => {
-        const t = TEMPLATES[k];
-        const b = h("button", { type: "button", class: "ev-tab" + (k === active ? " active" : ""), onclick: () => { active = k; renderTabs(); drawPreview(); } }, t.emoji + " " + t.label);
-        if (k === active) b.style.setProperty("--ev-accent", "#5865f2");
-        tabs.append(b);
-      });
+    function drawApply() {
+      clear(applyHost);
+      const t = byId[active];
+      if (t.locked) {
+        applyHost.append(h("div", { class: "tpl-locked" },
+          h("span", { class: "tpl-locked-ico", "aria-hidden": "true" }, "🔒"),
+          h("div", null,
+            h("strong", null, t.label + " is a Premium template. "),
+            "Unlock it (and the rest of Premium) with ", h("code", null, "/subscribe"), " in Discord.")));
+        return;
+      }
+      let mode = "seed";
+      const seedBtn = h("button", { type: "button", class: "ev-tab active", onclick: () => setMode("seed") }, "➕ Add what's missing");
+      const replBtn = h("button", { type: "button", class: "ev-tab", onclick: () => setMode("replace") }, "💥 Full replace");
+      const modeNote = h("p", { class: "tpl-mode-note" });
+      const confirmWrap = h("div", { class: "tpl-confirm", style: { display: "none" } },
+        h("label", { class: "tpl-confirm-lbl", for: "tpl-confirm-name" }, "Type the server name to confirm the wipe:"),
+        h("input", { type: "text", id: "tpl-confirm-name", class: "mc-input", placeholder: guildName }));
+      function setMode(m) {
+        mode = m;
+        seedBtn.classList.toggle("active", m === "seed");
+        replBtn.classList.toggle("active", m === "replace");
+        modeNote.textContent = m === "seed"
+          ? "Safe: only creates roles/channels that don't exist yet — nothing is touched or deleted."
+          : "⚠ Destructive: deletes the server's existing roles and channels FIRST, then builds the template. There is no undo.";
+        confirmWrap.style.display = m === "replace" ? "" : "none";
+      }
+      setMode("seed");
+      const go = h("button", {
+        type: "button", class: "btn btn-primary",
+        onclick: async () => {
+          const body = { mode };
+          if (mode === "replace") {
+            const typed = confirmWrap.querySelector("input").value;
+            if (typed !== guildName) { toast("error", "Server name doesn't match — full replace not started.", 5000); return; }
+            body.confirmName = typed;
+            if (!confirm(`FULL REPLACE on “${guildName}”: every existing role and channel the bot can delete will be wiped, then “${t.label}” is built. This cannot be undone. Continue?`)) return;
+          } else if (!confirm(`Apply “${t.label}” to ${guildName}? Missing roles/channels will be created; existing ones are left untouched.`)) return;
+          go.disabled = true; go.textContent = "Applying…";
+          try {
+            const r = await data.templateApply(state.selectedGuildId, t.id, body);
+            toast("success", r.summary || "Template apply started — watch your server build out.", 9000);
+            go.textContent = "Apply started ✓";
+          } catch (e) {
+            go.disabled = false; go.textContent = "Apply this template";
+            toast("error", e.data?.message || e.message || "Apply failed", 6500);
+          }
+        },
+      }, "Apply this template");
+      applyHost.append(h("div", { class: "tpl-apply" },
+        h("div", { class: "ev-tabs tpl-modes" }, seedBtn, replBtn),
+        modeNote, confirmWrap,
+        h("div", { class: "dash-actions" }, go)));
     }
-    drawPreview(); renderTabs();
 
-    const topbar = h("div", { class: "w-topbar" },
-      h("span", { class: "poll-topbar-lbl" }, "Preset channel, role & permission layouts you can apply in one command"),
-      mcSwitch("Server Templates enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
-
-    const tip = h("div", { class: "w-tip" },
-      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
-      h("div", null, "Run ", h("code", null, "/setup template"), " in Discord to apply a preset. Arkoris creates the channels, roles and permissions for you — your existing channels are left untouched."));
-
-    content.append(h("div", { class: "dash-card w-canvas" },
-      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Pick a template to see what it builds")),
-      tabs, device, topbar, tip, statusBox,
-      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+    clear(host);
+    host.append(
+      h("div", { class: "w-canvas-head" },
+        h("span", { class: "w-canvas-label" }, "Server templates"),
+        h("span", { class: "w-canvas-hint" }, "Pick a layout, preview it, apply it — right from here")),
+      tabs, device, applyHost);
+    drawTabs(); drawPreview(); drawApply();
   }
 
   /** Mark the form as dirty/clean by comparing live values to baseline. */
@@ -5336,20 +5372,66 @@
     );
   }
 
-  function renderArkInfo(content) {
+  async function renderArkInfo(content) {
     clear(content);
-    const featCard = (title, body) => h("div", { class: "dash-card" },
-      h("h3", { style: { margin: "0 0 6px" } }, title),
-      h("p", { style: { margin: 0, color: "var(--text-muted)" } }, body));
-
     content.append(
       h("div", { class: "dash-card" },
         h("h3", { style: { margin: "0 0 6px" } }, "🦖 ARK Server Suite"),
         h("p", { style: { margin: 0 } },
-          "Full management for your linked Nitrado ARK servers — player intel, anti-cheat, logs, leaderboards, bans, wipes, rollbacks and a live game-chat mirror. Set up once, then run it all from Discord.")
+          "Your linked Nitrado ARK servers, live. Player intel, anti-cheat, logs, bans, wipes and rollbacks run from the ", h("code", null, "/ark"), " panel in Discord — destructive actions stay behind in-server confirmation + audit on purpose.")
       )
     );
 
+    // ── Live server grid ─────────────────────────────────────────────────
+    const liveHost = h("div");
+    content.append(liveHost);
+    liveHost.append(h("div", { class: "skel-card" },
+      h("div", { class: "skel skel-line lg w-30" }),
+      h("div", { class: "skel skel-line w-70" })));
+
+    async function drawServers() {
+      let r;
+      try { r = await data.arkServers(state.selectedGuildId); }
+      catch (e) { r = null; }
+      clear(liveHost);
+      if (!r || (!r.connected && !(r.servers || []).length)) {
+        liveHost.append(h("div", { class: "dash-card" },
+          h("h3", { style: { margin: "0 0 6px" } }, "No ARK servers linked yet"),
+          h("p", { style: { margin: "0 0 12px", color: "var(--text-muted)" } },
+            "Connect your Nitrado token and link your maps once — this page then shows their live status."),
+          h("ol", { style: { margin: "0 0 4px", paddingLeft: "20px", color: "var(--text-muted)", lineHeight: "1.8" } },
+            h("li", null, h("code", null, "/setup → 🦖 ARK Server"), " — paste your Nitrado token"),
+            h("li", null, "Pick the maps to link"),
+            h("li", null, "Refresh this page"))));
+        return;
+      }
+      const servers = r.servers || [];
+      const head = h("div", { class: "ark-live-head" },
+        h("h3", { style: { margin: 0 } }, `Linked servers (${servers.length})`),
+        h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: () => { clear(liveHost); liveHost.append(h("div", { class: "skel-card" }, h("div", { class: "skel skel-line w-50" }))); drawServers(); } }, "↻ Refresh"));
+      const grid = h("div", { class: "ark-live-grid" });
+      for (const s of servers) {
+        const st = String(s.status || "").toLowerCase();
+        const cls = st === "started" ? "up" : st === "restarting" ? "mid" : st ? "down" : "unknown";
+        const players = (s.players != null) ? `${s.players}${s.maxPlayers ? " / " + s.maxPlayers : ""} online` : "player count syncs on the next poll";
+        grid.append(h("div", { class: "ark-srv-card " + cls },
+          h("div", { class: "ark-srv-top" },
+            h("span", { class: "ark-srv-dot", "aria-hidden": "true" }),
+            h("span", { class: "ark-srv-name" }, s.name || "Server"),
+            h("span", { class: "ark-srv-state" }, st ? st : "status pending")),
+          h("div", { class: "ark-srv-meta" },
+            h("span", { class: "ark-srv-map" }, s.map || "map unknown"),
+            h("span", { class: "ark-srv-players" }, players))));
+      }
+      liveHost.append(h("div", { class: "dash-card" }, head, grid,
+        h("p", { class: "ark-live-note" }, "Status comes from the bot's Nitrado poller — it refreshes automatically every few minutes.")));
+    }
+    await drawServers();
+
+    // ── What the suite does (run from /ark in Discord) ───────────────────
+    const featCard = (title, body) => h("div", { class: "dash-card" },
+      h("h3", { style: { margin: "0 0 6px" } }, title),
+      h("p", { style: { margin: 0, color: "var(--text-muted)" } }, body));
     const feats = [
       ["🔎 Player Lookup", "Search any player or tribe — sessions, maps, in-game chat, tribemates, names, bans and risk flags."],
       ["🛡️ ARK Guard", "19 cheater-detection signals (ban-evasion, dupes, aimbot cadence, account-sharing…) with auto-alerts on top suspects."],
@@ -5363,23 +5445,6 @@
     const grid = h("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px", margin: "14px 0" } });
     for (const [t, d] of feats) grid.append(featCard(t, d));
     content.append(grid);
-
-    content.append(
-      h("div", { class: "dash-card" },
-        h("h3", { style: { margin: "0 0 6px" } }, "⚙️ Set up & manage in Discord"),
-        h("p", { style: { marginTop: 0 } },
-          "ARK is panel-driven inside Discord — destructive actions (wipes, bans, rollbacks) require in-server confirmation + an audit trail, so they're intentionally not exposed on the web."),
-        h("ol", { style: { margin: "0 0 14px", paddingLeft: "20px", color: "var(--text-muted)", lineHeight: "1.8" } },
-          h("li", null, "Connect your Nitrado token + link maps — ", h("code", null, "/setup → 🦖 ARK Server")),
-          h("li", null, "Manage everything — ", h("code", null, "/ark"), " (Lookup, ARK Guard, Live Logs, Leaderboards, Bans, Wipe/Rollback, Controls)"),
-          h("li", null, "Optional live chat mirror — ", h("code", null, "/setup → 📰 Forum Logs"))
-        ),
-        h("div", { class: "dash-actions" },
-          btn("Add / Open Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
-          btn("Support Server", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
-        )
-      )
-    );
   }
 
   async function renderPopulationView(content) {
@@ -6523,27 +6588,71 @@
   /* ============================================================
      Tab: Audit log
      ============================================================ */
+  // Human labels for the backend's audit action codes. Anything unknown gets
+  // prettified (underscores → spaces) so new backend actions never render raw.
+  const AUDIT_ACTION_LABELS = {
+    login: "Signed in", logout: "Signed out",
+    module_save: "Saved settings", module_save_invalid: "Save rejected — invalid values",
+    module_reset: "Reset settings to defaults", module_denied: "Change blocked — no permission",
+    quick_setup_run: "Ran Quick Setup", quick_setup_denied: "Quick Setup blocked", quick_setup_error: "Quick Setup failed",
+    branding_update: "Updated branding", branding_reset: "Reset branding",
+    role_menu_create: "Created a role menu", role_menu_update: "Edited a role menu", role_menu_delete: "Deleted a role menu",
+    role_menu_option_add: "Added a role-menu option", role_menu_option_update: "Edited a role-menu option", role_menu_option_delete: "Removed a role-menu option",
+    role_menu_post: "Posted a role menu to Discord", role_menu_post_failed: "Role-menu post failed",
+    embed_template_create: "Saved an embed template", embed_template_update: "Edited an embed template", embed_template_delete: "Deleted an embed template",
+    embed_send: "Sent an embed to Discord", embed_send_failed: "Embed send failed", embed_edit: "Edited a sent embed", embed_delete: "Deleted a sent embed",
+    paypal_config_update: "Updated PayPal settings", paypal_config_update_failed: "PayPal settings save failed",
+    paypal_test_ok: "PayPal connection test passed", paypal_test_failed: "PayPal connection test failed", paypal_test_error: "PayPal connection test errored",
+    staff_tier_create: "Created a staff pay tier", staff_tier_update: "Edited a staff pay tier", staff_tier_delete: "Deleted a staff pay tier",
+    setup_override_set: "Marked a setup step done", setup_override_clear: "Un-marked a setup step",
+    server_template_apply_started: "Started applying a server template", server_template_replace_started: "Started a FULL-REPLACE server template",
+    server_template_applied: "Server template applied", server_template_failed: "Server template failed", server_template_denied: "Server template blocked",
+    hype_config_sync_failed: "Hype settings didn't reach the bot", events_config_sync_failed: "Events settings didn't reach the bot",
+    welcome_config_sync_failed: "Welcome settings didn't reach the bot", xp_config_sync_failed: "XP settings didn't reach the bot",
+  };
+  function auditLabel(action) {
+    return AUDIT_ACTION_LABELS[action] || String(action || "activity").replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+  }
+  function timeAgo(ts) {
+    const ms = Date.now() - new Date(ts).getTime();
+    if (!isFinite(ms)) return "—";
+    const m = Math.round(ms / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return m + "m ago";
+    const hrs = Math.round(m / 60);
+    if (hrs < 24) return hrs + "h ago";
+    const d = Math.round(hrs / 24);
+    return d === 1 ? "yesterday" : d + "d ago";
+  }
+
   async function loadAudit(content) {
     try {
       const a = await data.audit(state.selectedGuildId);
       clear(content);
-      content.append(h("div", { class: "dash-card" }, h("h3", null, "Audit Log"), h("p", null, "Recent dashboard actions. Last 50 entries.")));
+      content.append(h("div", { class: "dash-card" },
+        h("h3", null, "Activity Log"),
+        h("p", { style: { margin: 0, color: "var(--text-muted)" } }, "Everything done from this dashboard — most recent first, last 50 actions.")));
       if (!a.entries || !a.entries.length) {
-        content.append(notice("info", "No entries yet", "Dashboard actions you take will appear here."));
+        content.append(notice("info", "Nothing here yet", "Actions you take on this dashboard (saves, quick setups, sends) will show up here."));
         return;
       }
+      const modLabel = (t) => {
+        const m = (state.modules || []).find((x) => x.name === t);
+        return m ? m.label : t;
+      };
       const list = h("div", { class: "dash-audit-list" });
       a.entries.forEach((e) => {
-        list.append(
-          h("div", { class: "dash-audit-row" },
-            h("span", { class: "dash-audit-time" }, new Date(e.ts).toLocaleString()),
-            h("span", { class: `dash-audit-action ${e.ok ? "ok" : "fail"}` }, e.action),
-            h("span", { class: "dash-audit-target" }, e.target || "—"),
-            h("span", { class: "dash-audit-user" }, e.userId ? `<@${e.userId.slice(-6)}>` : "—")
-          )
-        );
+        const failed = e.ok === false;
+        const row = h("div", { class: "dash-audit-row" + (failed ? " failed" : "") },
+          h("span", { class: "dash-audit-dot " + (failed ? "fail" : "ok"), "aria-hidden": "true" }),
+          h("div", { class: "dash-audit-main" },
+            h("span", { class: "dash-audit-label" }, auditLabel(e.action)),
+            e.target ? h("span", { class: "dash-audit-target" }, modLabel(e.target)) : null,
+            failed && e.errorCode ? h("span", { class: "dash-audit-err" }, String(e.errorCode).replace(/_/g, " ").slice(0, 60)) : null),
+          h("span", { class: "dash-audit-time", title: new Date(e.ts).toLocaleString() }, timeAgo(e.ts)));
+        list.append(row);
       });
-      content.append(list);
+      content.append(h("div", { class: "dash-card" }, list));
     } catch (e) { renderTabError(content, e); }
   }
 
@@ -6644,7 +6753,7 @@
     const MOCK_MODULES = [
       { name: "welcome", label: "Welcome", tier: "free" }, { name: "autoRoles", label: "Auto Roles", tier: "free" },
       { name: "roleMenus", label: "Role Menus", tier: "free" }, { name: "xp", label: "XP / Leaderboards", tier: "free" },
-      { name: "polls", label: "Polls", tier: "free" }, { name: "moderation", label: "Moderation", tier: "free" },
+      { name: "moderation", label: "Moderation", tier: "free" },
       { name: "hype", label: "Hype", tier: "premium" }, { name: "events", label: "Events", tier: "premium" },
       { name: "tickets", label: "Tickets", tier: "premium" },
       { name: "staffPay", label: "Staff Pay", tier: "premium" }, { name: "ark", label: "ARK Management", tier: "premium" },
@@ -6696,6 +6805,45 @@
         pop_uses: synth(30, 12, 6, 9),
       },
     });
+    // New-feature stubs: ARK live grid, staff tiers, PayPal config, templates.
+    data.arkServers = async () => ({ connected: true, servers: [
+      { id: "1", name: "Velated PVP — Ragnarok",   map: "Ragnarok",   status: "started",    players: 38, maxPlayers: 70 },
+      { id: "2", name: "Velated PVP — The Island", map: "The Island", status: "started",    players: 22, maxPlayers: 70 },
+      { id: "3", name: "Velated PVP — Aberration", map: "Aberration", status: "restarting", players: 0,  maxPlayers: 70 },
+      { id: "4", name: "Velated PVP — Extinction", map: "Extinction", status: "stopped",    players: 0,  maxPlayers: 70 },
+    ] });
+    data.tierList = async () => ({
+      tiers: [
+        { id: 1, role_id: "22", tier_name: "Senior Staff", priority: 10, ticket_basic: 5, ticket_medium: 8, ticket_advanced: 12, auction_percentage: 5, event_payouts: { "Raid Base": 20, "Vault Event": 15 }, can_payment: true,  can_log: true, can_approve_payout: true,  can_configure_tickets: false },
+        { id: 2, role_id: "23", tier_name: "Support",      priority: 5,  ticket_basic: 3, ticket_medium: 5, ticket_advanced: 8,  auction_percentage: 0, event_payouts: {},                                     can_payment: false, can_log: true, can_approve_payout: false, can_configure_tickets: false },
+      ],
+      currency: { code: "GBP", symbol: "£" },
+      defaults: { ticket: { basic: { amount: 0.2 }, medium: { amount: 0.3 }, advanced: { amount: 0.4 } }, event: { "Raid Base": 20, "Vault Event": 15, "Scav": 10, "Other": 10 } },
+    });
+    data.tierCreate = async (g, b) => ({ ok: true, tier: Object.assign({ id: 99 }, b) });
+    data.tierUpdate = async (g, id, b) => ({ ok: true, tier: Object.assign({ id }, b) });
+    data.tierDelete = async () => ({ ok: true });
+    data.paypalGet = async () => ({
+      mode: "sandbox", brandName: "Velated PVP", prefer: "orders",
+      webhookUrl: "https://quicksark.squareweb.app/webhooks/paypal",
+      returnUrl: "https://quicksark.squareweb.app/paypal/return",
+      cancelUrl: "https://quicksark.squareweb.app/paypal/cancel",
+      clientId: { configured: true, source: "guild", last4: "x7Qk", length: 80 },
+      clientSecret: { configured: true, source: "guild", last4: "p2Lm", length: 80 },
+      webhookId: { configured: false },
+    });
+    data.paypalSave = async () => Object.assign({ ok: true }, await data.paypalGet());
+    data.paypalTest = async () => ({ ok: true, mode: "sandbox", tokenType: "Bearer", expiresIn: 32400, appId: "APP-80W284485P519543T" });
+    const MOCK_TPL = (cat, items) => ({ cat, items });
+    data.templates = async () => ({ isPremium: true, templates: [
+      { id: "ARK", label: "ARK Server Layout", tier: "premium", locked: false, live: true, blurb: "The full layout of our flagship ARK community, copied live.", categories: 6, channels: 29, roles: 6,
+        preview: { channels: [MOCK_TPL("WELCOME", ["# 👋｜welcome", "# 📜｜rules", "📣 📢｜announcements"]), MOCK_TPL("ARK SERVERS", ["# 🗺｜server-status", "# 📈｜rates", "🔊 Tribe VC"]), MOCK_TPL("STAFF", ["# 🛠｜staff-chat"])], roles: ["Admin", "Moderator", "Tribe Leader", "Supporter", "Member", "Muted"] } },
+      { id: "SUPPORT", label: "Support Discord", tier: "premium", locked: false, live: false, blurb: "A ticket-first support server with a private staff wing.", categories: 5, channels: 19, roles: 6,
+        preview: { channels: [MOCK_TPL("WELCOME", ["# 👋｜welcome", "# ❓｜faq", "📣 🟢｜status"]), MOCK_TPL("SUPPORT", ["# 🎫｜open-a-ticket", "# 💬｜help-chat", "# 🐛｜bug-reports"]), MOCK_TPL("STAFF", ["# 🛠｜staff-chat", "🔊 Staff Room"])], roles: ["Admin", "Support Manager", "Support Agent", "Verified", "Member", "Muted"] } },
+      { id: "COMMUNITY", label: "Community Hub", tier: "free", locked: false, live: false, blurb: "A clean general-purpose community layout.", categories: 6, channels: 20, roles: 6,
+        preview: { channels: [MOCK_TPL("START HERE", ["# 👋｜welcome", "# 🎭｜get-roles"]), MOCK_TPL("COMMUNITY", ["# 💬｜general", "# 🖼｜media", "# 🤖｜bot-commands"]), MOCK_TPL("EVENTS", ["📣 📅｜event-announcements", "# 🎉｜event-chat"])], roles: ["Admin", "Moderator", "Event Host", "Active Member", "Member", "Muted"] } },
+    ] });
+    data.templateApply = async () => ({ ok: true, started: true, summary: "Template apply started (mock) — nothing was changed." });
     data.audit = async () => ({ entries: [
       { ts: "2026-05-17T19:29:34Z", ok: true,  action: "module_save", target: "branding" },
       { ts: "2026-05-17T18:39:24Z", ok: true,  action: "module_save", target: "welcome" },
@@ -6802,16 +6950,6 @@
         },
         values: { enabled: true, xpMin: 5, xpMax: 15, cooldownSec: 60, ignoredChannels: ["6"], ignoredRoles: [], levelUpAnnounce: true, levelUpChannelId: "5", weeklyResetDay: "mon", weeklyChannelId: "3", rewardsMode: "auto", rewardType: "both", reward1stCredits: 500, reward2ndCredits: 250, reward3rdCredits: 100, reward1stEggs: 3, reward2ndEggs: 2, reward3rdEggs: 1 },
       },
-      polls: {
-        module: {
-          name: "polls", label: "Polls", tier: "free", description: "Quick role-gated polls with live results.",
-          fields: [
-            { key: "enabled", type: "boolean", label: "Enabled" },
-            { key: "allowedRoleIds", type: "roles", label: "Allowed host roles" },
-          ],
-        },
-        values: { enabled: true, allowedRoleIds: ["22"] },
-      },
       moderation: {
         module: {
           name: "moderation", label: "Moderation", tier: "free", description: "Ban, kick, timeout, URL filter, whitelist.",
@@ -6912,7 +7050,7 @@
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus", rolemenu: "roleMenus" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", moderation: "moderation", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus", rolemenu: "roleMenus" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
