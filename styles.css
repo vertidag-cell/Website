@@ -6,6 +6,11 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap');
 
 :root {
+  /* Tell the browser the site is dark so NATIVE UI follows: Firefox
+     scrollbars, form controls, autofill, validation popups. The custom
+     ::-webkit-scrollbar theming below covers Chromium; this covers the rest. */
+  color-scheme: dark;
+
   /* Brand colors — Cyber Command rebrand (neon green / pure black) */
   --bg: #030303;
   --bg-soft: #05070a;
