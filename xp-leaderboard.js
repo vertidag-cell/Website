@@ -38,7 +38,15 @@
     }
     return '<div class="' + cls + ' xplb-avfb">' + initial(name) + '</div>';
   }
-  function state(html) { root.innerHTML = '<div class="xplb-state">' + html + '</div>'; }
+  var STATE_ICONS = {
+    trophy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3"/></svg>',
+    link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+  };
+  function state(html, icon) {
+    var ic = STATE_ICONS[icon] || STATE_ICONS.trophy;
+    root.innerHTML = '<div class="xplb-state"><div class="xplb-state-ico">' + ic + '</div>' + html + '</div>';
+  }
   // Replace any broken <img data-letter> with an initial-letter fallback div.
   function wireImageFallbacks() {
     root.querySelectorAll('img[data-letter]').forEach(function (img) {
@@ -58,7 +66,7 @@
   }
 
   if (!guildId || !/^\d{5,25}$/.test(guildId)) {
-    state('<h2>No server selected</h2><p>This page needs a server link. Open it from your Discord server with <code>/leaderboard</code> &rarr; <b>View on the web</b>.</p><a class="btn btn-primary" href="index.html">Back to site</a>');
+    state('<h2>No server selected</h2><p>This page needs a server link. Open it from your Discord server with <code>/leaderboard</code> &rarr; <b>View on the web</b>.</p><a class="btn btn-primary" href="index.html">Back to site</a>', 'link');
     return;
   }
 
@@ -66,7 +74,7 @@
     .then(function (r) { return r.ok ? r.json() : r.json().catch(function () { return { error: 'http_' + r.status }; }); })
     .then(function (data) {
       if (!data || data.error) {
-        state('<h2>Leaderboard unavailable</h2><p>We couldn\'t load this server\'s leaderboard right now. Please try again in a moment.</p><a class="btn btn-outline" href="index.html">Back to site</a>');
+        state('<h2>Leaderboard unavailable</h2><p>We couldn\'t load this server\'s leaderboard right now. Please try again in a moment.</p><a class="btn btn-outline" href="index.html">Back to site</a>', 'alert');
         return;
       }
       var g = data.guild || {};
@@ -151,6 +159,6 @@
       wireImageFallbacks();
     })
     .catch(function () {
-      state('<h2>Couldn\'t reach the server</h2><p>The leaderboard service didn\'t respond. Please try again shortly.</p><a class="btn btn-outline" href="index.html">Back to site</a>');
+      state('<h2>Couldn\'t reach the server</h2><p>The leaderboard service didn\'t respond. Please try again shortly.</p><a class="btn btn-outline" href="index.html">Back to site</a>', 'alert');
     });
 })();
