@@ -4,5 +4,3 @@ Disallow: /api/
 Disallow: /auth/
 Disallow: /dashboard.html
 Disallow: /dashboard
-Disallow: /dashboard-next.html
-Disallow: /dashboard-next

@@ -1,6 +1,10 @@
 /*
- * Arkoris — Dashboard SPA (schema-driven)
+ * Arkoris — Dashboard SPA (Discord-native redesign, live)
  * ------------------------------------------------------------
+ * This IS the customer dashboard. It started as the dashboard-next
+ * preview fork and was merged back once approved; the design layer
+ * lives in dashboard.css (scoped under body.dash-app).
+ *
  * Renders ~20 module pages from a single backend schema endpoint.
  * Talks to the bot's Express server (Square Cloud) over fetch +
  * cookies. No secrets in this file.
@@ -106,11 +110,14 @@
     lock:      'M5 11a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM8 9V7a4 4 0 1 1 8 0v2',
     sparkle:   'M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M15 15l4 4M5 19l4-4M15 9l4-4',
     arrowRight:'M5 12h14M13 5l7 7-7 7',
+    check:     'M20 6L9 17l-5-5',
+    chevron:   'M6 9l6 6 6-6',
     menu:      'M3 6h18M3 12h18M3 18h18',
     user:      'M20 21a8 8 0 1 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10z',
     logout:    'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
     refresh:   'M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5',
     plug:      'M9 2v6M15 2v6M5 8h14v4a7 7 0 0 1-14 0zM12 19v3',
+    search:    'M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15z',
   };
   function iconSvg(name) {
     const d = ICON_PATHS[name] || ICON_PATHS.list;
@@ -145,13 +152,10 @@
     polls:        "poll",
     moderation:   "shield",
     xp:           "trophy",
-    pets:         "flag",
     tickets:      "ticket",
-    credits:      "coin",
     payments:     "creditCard",
     staffPay:     "wallet",
     hype:         "flame",
-    giveaways:    "gift",
     events:       "calendar",
     branding:     "palette",
     serverTemplates: "template",
@@ -187,6 +191,104 @@
   }
   function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
   function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+  // ---- Emoji picker (used by the Embed Builder button/option emoji fields) ----
+  const EMOJI_CATS = [
+    { key: "smileys", name: "Smileys", icon: "😀", emojis: [["😀","grin"],["😃","smile happy"],["😄","laugh"],["😁","grin"],["😆","laugh"],["😅","sweat"],["😂","joy lol"],["🤣","rofl lol"],["🙂","slight smile"],["🙃","upside"],["😉","wink"],["😊","blush"],["😇","angel"],["🥰","love"],["😍","heart eyes love"],["🤩","star struck"],["😘","kiss"],["😗","kiss"],["😋","yum"],["😛","tongue"],["😜","wink tongue"],["🤪","zany"],["😝","tongue"],["🤑","money"],["🤗","hug"],["🤭","giggle"],["🤫","shh quiet"],["🤔","thinking"],["🤐","zip"],["🤨","raised brow"],["😐","neutral"],["😑","expressionless"],["😶","no mouth"],["😏","smirk"],["😒","unamused"],["🙄","eye roll"],["😬","grimace"],["😌","relieved"],["😔","pensive sad"],["😪","sleepy"],["🤤","drool"],["😴","sleep zzz"],["😷","mask sick"],["🤒","sick"],["🤕","hurt"],["🤢","nauseous"],["🤮","vomit"],["🤧","sneeze"],["🥵","hot"],["🥶","cold"],["🥳","party"],["😎","cool sunglasses"],["🤓","nerd"],["🧐","monocle"],["😕","confused"],["😟","worried"],["🙁","frown"],["☹️","frown"],["😮","wow"],["😲","astonished"],["😳","flushed"],["🥺","pleading"],["😨","fear"],["😰","anxious"],["😥","sad"],["😢","cry"],["😭","sob cry"],["😱","scream"],["😖","confounded"],["😞","disappointed"],["😩","weary"],["😫","tired"],["🥱","yawn"],["😤","triumph"],["😡","rage angry mad"],["😠","angry mad"],["🤬","cursing"],["😈","devil"],["👿","imp angry"],["💀","skull dead"],["☠️","skull"],["💩","poop"],["🤡","clown"],["👻","ghost"],["👽","alien"],["👾","invader"],["🤖","robot"],["🎃","pumpkin"]] },
+    { key: "gestures", name: "Gestures & People", icon: "👍", emojis: [["👍","thumbs up like yes"],["👎","thumbs down no"],["👌","ok"],["🤌","pinch"],["🤏","small"],["✌️","peace victory"],["🤞","fingers crossed"],["🤟","love you"],["🤘","rock"],["🤙","call"],["👈","left"],["👉","right"],["👆","up"],["👇","down"],["☝️","point up"],["✋","raise hand stop"],["🤚","back hand"],["🖐️","hand"],["🖖","vulcan"],["👋","wave hi bye"],["🤝","handshake deal"],["🙏","pray thanks please"],["✍️","write"],["💪","muscle strong"],["🦾","mechanical arm"],["🙌","raise hands praise"],["👏","clap"],["🤲","palms"],["🙇","bow"],["🤦","facepalm"],["🤷","shrug"],["🧠","brain"],["👀","eyes look"],["👁️","eye"],["👶","baby"],["🧑","person"],["👑","crown king"],["🎩","top hat"],["🦸","hero"],["🦹","villain"]] },
+    { key: "hearts", name: "Hearts & Symbols", icon: "❤️", emojis: [["❤️","red heart love"],["🧡","orange heart"],["💛","yellow heart"],["💚","green heart"],["💙","blue heart"],["💜","purple heart"],["🖤","black heart"],["🤍","white heart"],["🤎","brown heart"],["💔","broken heart"],["❣️","heart"],["💕","hearts"],["💞","hearts"],["💓","beating heart"],["💗","growing heart"],["💖","sparkle heart"],["💘","cupid"],["💝","gift heart"],["💟","heart deco"],["💯","100 perfect"],["✨","sparkles"],["⭐","star"],["🌟","glowing star"],["💫","dizzy star"],["⚡","lightning bolt"],["🔥","fire lit hot"],["💥","boom"],["💢","anger"],["💦","sweat drops"],["💨","dash wind"],["💬","speech"],["💭","thought"],["✅","check yes done"],["❌","cross no"],["❓","question"],["❗","exclamation"],["⚠️","warning"],["🚫","no ban"],["♻️","recycle"],["🔞","18"],["✔️","check"],["➕","plus"],["➖","minus"],["💲","dollar"],["🔱","trident"],["⚜️","fleur"]] },
+    { key: "objects", name: "Objects", icon: "🎮", emojis: [["🎮","game controller"],["🕹️","joystick"],["🎲","dice"],["🎯","dart target"],["🎰","slot"],["🏆","trophy win"],["🥇","gold medal first"],["🥈","silver medal"],["🥉","bronze medal"],["🏅","medal"],["🎁","gift present"],["🎉","party tada"],["🎊","confetti"],["🎈","balloon"],["🔔","bell"],["🔕","mute bell"],["📣","megaphone"],["📢","loud"],["💡","idea bulb"],["🔦","flashlight"],["💰","money bag"],["💵","cash"],["💎","gem diamond"],["🔑","key"],["🗝️","old key"],["🔒","lock"],["🔓","unlock"],["🛡️","shield"],["⚔️","swords"],["🗡️","dagger"],["🏹","bow arrow"],["🔨","hammer"],["🛠️","tools"],["⚙️","gear settings"],["🔧","wrench"],["📌","pin"],["📍","location pin"],["📎","clip"],["✂️","scissors"],["📅","calendar"],["📊","bar chart"],["📈","chart up"],["📉","chart down"],["📜","scroll rules"],["📝","memo note"],["📁","folder"],["💻","laptop"],["🖥️","desktop"],["📱","phone"],["⌚","watch"],["🎵","music note"],["🎶","music"]] },
+    { key: "nature", name: "Nature", icon: "🌿", emojis: [["🌿","herb leaf"],["🍀","clover luck"],["🌱","seedling"],["🌲","tree"],["🌳","tree"],["🌵","cactus"],["🌴","palm"],["🌸","blossom"],["🌹","rose"],["🌺","hibiscus"],["🌻","sunflower"],["🌼","flower"],["💐","bouquet"],["🍁","maple leaf"],["🍂","leaves"],["🌍","earth globe"],["🌙","moon"],["☀️","sun"],["⛅","cloud sun"],["☁️","cloud"],["🌧️","rain"],["⛈️","storm"],["❄️","snow"],["🌊","wave water"],["🐶","dog"],["🐱","cat"],["🦊","fox"],["🐺","wolf"],["🐉","dragon"],["🦁","lion"],["🐻","bear"],["🦅","eagle"]] },
+    { key: "food", name: "Food & Drink", icon: "🍕", emojis: [["🍎","apple"],["🍕","pizza"],["🍔","burger"],["🍟","fries"],["🌭","hotdog"],["🍿","popcorn"],["🍩","donut"],["🍪","cookie"],["🎂","cake birthday"],["🍰","cake"],["🧁","cupcake"],["🍫","chocolate"],["🍬","candy"],["🍭","lollipop"],["🍺","beer"],["🍻","beers cheers"],["🥤","drink soda"],["☕","coffee"],["🍷","wine"],["🍸","cocktail"],["🥂","champagne cheers"],["🍒","cherry"],["🍓","strawberry"],["🍉","watermelon"],["🍇","grapes"],["🌮","taco"]] },
+    { key: "travel", name: "Travel & Places", icon: "🚀", emojis: [["🚀","rocket launch"],["🛸","ufo"],["✈️","plane"],["🚁","helicopter"],["🚗","car"],["🏎️","race car"],["🏍️","motorcycle"],["⛵","sailboat"],["🚤","speedboat"],["🗺️","map"],["🧭","compass"],["🏝️","island"],["🏔️","mountain"],["🌋","volcano"],["🏕️","camp"],["🏰","castle"],["🗼","tower"],["🎡","ferris wheel"],["🎢","roller coaster"],["⛺","tent"],["🌐","globe web"]] },
+    { key: "activity", name: "Activity & Sports", icon: "⚽", emojis: [["⚽","soccer football"],["🏀","basketball"],["🏈","football"],["⚾","baseball"],["🎾","tennis"],["🏐","volleyball"],["🎱","8ball pool"],["🥊","boxing"],["🎣","fishing"],["🎸","guitar"],["🎹","piano"],["🥁","drums"],["🎤","mic sing"],["🎧","headphones"],["🎬","movie film"],["🏆","trophy"],["🎯","target"],["🏹","archery"],["🎳","bowling"],["🛹","skateboard"],["⛳","golf"]] },
+  ];
+  let _ebEmojiPanel = null, _ebEmojiAnchor = null;
+  // NOTE: the codebase already has a separate openEmojiPicker/closeEmojiPicker
+  // (Role Menus, input-target based). These are DISTINCT names on purpose — do
+  // not rename them back or they'll collide (function declarations hoist).
+  function ebEmojiPickerClose() {
+    if (!_ebEmojiPanel) return;
+    _ebEmojiPanel.remove(); _ebEmojiPanel = null; _ebEmojiAnchor = null;
+    document.removeEventListener("mousedown", _ebEmojiOutside, true);
+    document.removeEventListener("keydown", _ebEmojiKeydown, true);
+    window.removeEventListener("scroll", _ebEmojiScroll, true);
+  }
+  function _ebEmojiOutside(e) { if (_ebEmojiPanel && !_ebEmojiPanel.contains(e.target) && !(e.target.closest && e.target.closest(".eb-emoji-trigger"))) ebEmojiPickerClose(); }
+  function _ebEmojiKeydown(e) { if (e.key === "Escape") ebEmojiPickerClose(); }
+  // Close only when the PAGE scrolls (anchor moves), NOT when the user scrolls
+  // the emoji grid itself to browse.
+  function _ebEmojiScroll(e) { const t = e.target; if (_ebEmojiPanel && !(t && t.nodeType === 1 && _ebEmojiPanel.contains(t))) ebEmojiPickerClose(); }
+  function ebEmojiPickerOpen(anchor, current, onPick) {
+    ebEmojiPickerClose();
+    const grid = h("div", { class: "eb-emoji-grid" });
+    function renderGrid(filter) {
+      clear(grid);
+      const f = (filter || "").trim().toLowerCase();
+      // This server's custom emojis first (rendered as images).
+      const custom = (_ebGuildEmojis || []).filter((ce) => !f || ce.name.toLowerCase().indexOf(f) !== -1);
+      if (custom.length) {
+        grid.append(h("div", { class: "eb-emoji-cat-h", "data-cat": "server" }, "Server"));
+        const crow = h("div", { class: "eb-emoji-cat-grid" });
+        custom.forEach((ce) => { const tok = ebEmojiToken(ce); crow.append(h("button", { type: "button", class: "eb-emoji-cell" + (tok === current ? " sel" : ""), title: ":" + ce.name + ":", onclick: () => { onPick(tok); ebEmojiPickerClose(); } }, h("img", { class: "eb-emoji-cimg", src: ebCustomEmojiSrc(ce), alt: ce.name, onerror: "this.replaceWith(document.createTextNode(':'+this.alt+':'))" }))); });
+        grid.append(crow);
+      }
+      EMOJI_CATS.forEach((c) => {
+        const matches = c.emojis.filter(([e, kw]) => !f || (kw + " " + e).toLowerCase().indexOf(f) !== -1);
+        if (!matches.length) return;
+        grid.append(h("div", { class: "eb-emoji-cat-h", "data-cat": c.key }, c.name));
+        const row = h("div", { class: "eb-emoji-cat-grid" });
+        matches.forEach(([e]) => row.append(h("button", { type: "button", class: "eb-emoji-cell" + (e === current ? " sel" : ""), title: e, onclick: () => { onPick(e); ebEmojiPickerClose(); } }, e)));
+        grid.append(row);
+      });
+      if (!grid.children.length) grid.append(h("div", { class: "eb-emoji-empty" }, "No emoji found"));
+    }
+    const search = h("input", { class: "eb-emoji-search", type: "text", placeholder: "Search emoji…", spellcheck: "false" });
+    search.addEventListener("input", () => renderGrid(search.value));
+    const jumpTo = (key) => { const head = grid.querySelector('[data-cat="' + key + '"]'); if (head) head.scrollIntoView({ block: "start" }); };
+    const cats = h("div", { class: "eb-emoji-cats" },
+      (_ebGuildEmojis && _ebGuildEmojis.length) ? h("button", { type: "button", class: "eb-emoji-cat-btn", title: "Server", onclick: () => jumpTo("server") }, "🏠") : null,
+      ...EMOJI_CATS.map((c) => h("button", { type: "button", class: "eb-emoji-cat-btn", title: c.name, onclick: () => jumpTo(c.key) }, c.icon)));
+    const foot = h("div", { class: "eb-emoji-foot" },
+      h("input", { class: "eb-emoji-custom", type: "text", placeholder: "Custom: <:name:id>", value: /^<a?:/.test(current || "") ? current : "", onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); onPick(e.target.value.trim()); ebEmojiPickerClose(); } } }),
+      h("button", { type: "button", class: "eb-emoji-clear", onclick: () => { onPick(""); ebEmojiPickerClose(); } }, "Clear"));
+    const panel = h("div", { class: "eb-emoji-pop" }, search, cats, grid, foot);
+    document.body.appendChild(panel);
+    renderGrid("");
+    const r = anchor.getBoundingClientRect();
+    const pw = 300, ph = panel.offsetHeight || 340;
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8));
+    let top = r.bottom + 6;
+    if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 6);
+    panel.style.left = left + "px"; panel.style.top = top + "px";
+    _ebEmojiPanel = panel; _ebEmojiAnchor = anchor;
+    try { search.focus(); } catch (_) {}
+    setTimeout(() => {
+      document.addEventListener("mousedown", _ebEmojiOutside, true);
+      document.addEventListener("keydown", _ebEmojiKeydown, true);
+      window.addEventListener("scroll", _ebEmojiScroll, true);
+    }, 0);
+  }
+  // Custom Discord emoji helpers. A custom emoji is "<:name:id>" / "<a:name:id>".
+  let _ebGuildEmojis = []; // [{id,name,animated}] for the current guild
+  function ebParseEmoji(v) { const m = /^<(a)?:([^:]+):(\d+)>$/.exec(v || ""); return m ? { animated: !!m[1], name: m[2], id: m[3] } : null; }
+  function ebCustomEmojiSrc(p) { return "https://cdn.discordapp.com/emojis/" + p.id + (p.animated ? ".gif" : ".png") + "?size=48"; }
+  function ebEmojiToken(ce) { return (ce.animated ? "<a:" : "<:") + ce.name + ":" + ce.id + ">"; }
+  // Render an emoji value as a node: an <img> for custom emojis, else text.
+  function ebEmojiNode(v, cls) { const p = ebParseEmoji(v); if (p) return h("img", { class: cls || "eb-cemoji", src: ebCustomEmojiSrc(p), alt: ":" + p.name + ":", title: ":" + p.name + ":", onerror: "this.replaceWith(document.createTextNode(this.alt))" }); return document.createTextNode(v || ""); }
+  // An emoji-input control: a trigger button that opens the picker. get/set bind
+  // the model; onChange runs after a pick (re-render). Works in canvas + form.
+  function ebEmojiField(get, set, onChange) {
+    const trigger = h("button", { type: "button", class: "eb-emoji-trigger", title: "Pick an emoji", "aria-label": "Pick an emoji" });
+    function setTrig(v) { clear(trigger); const p = ebParseEmoji(v); if (p) trigger.append(h("img", { class: "eb-emoji-trig-img", src: ebCustomEmojiSrc(p), alt: ":" + p.name + ":", onerror: "this.replaceWith(document.createTextNode('🔣'))" })); else trigger.textContent = v || "🙂"; trigger.classList.toggle("empty", !v); }
+    setTrig(get() || "");
+    trigger.onclick = (ev) => {
+      ev.stopPropagation();
+      if (_ebEmojiPanel && _ebEmojiAnchor === trigger) { ebEmojiPickerClose(); return; }
+      ebEmojiPickerOpen(trigger, get() || "", (v) => { set(v); setTrig(v); if (onChange) onChange(); });
+    };
+    return h("span", { class: "eb-emoji-field" }, trigger);
+  }
 
   function userAvatar(u) {
     if (u.avatar) return h("div", { class: "dash-avatar" }, h("img", { src: `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128`, alt: "" }));
@@ -264,6 +366,7 @@
     channels: (gid) => api(`/api/dashboard/guilds/${gid}/discord/channels`),
     categories: (gid) => api(`/api/dashboard/guilds/${gid}/discord/categories`),
     roles: (gid) => api(`/api/dashboard/guilds/${gid}/discord/roles`),
+    emojis: (gid) => api(`/api/dashboard/guilds/${gid}/discord/emojis`),
     // Role menu CRUD
     rmList: (gid) => api(`/api/dashboard/guilds/${gid}/role-menus`),
     rmGet: (gid, id) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}`),
@@ -391,267 +494,190 @@
   // Server-picker local UI state (search query + filter pill)
   const pickerState = { query: "", filter: "all" };
 
+  // Discord-native server picker. A calm "select a server" surface modeled on
+  // Discord's own UI: neutral grays, one blurple accent, a vertical list of
+  // server rows (health at a glance) instead of a card wall + aside + feature
+  // wall. New `.dsx-*` classes (styled in dashboard.css) so styles.css
+  // can't fight them.
   function renderGuildPicker() {
     clear(root);
+    const wrap = h("div", { class: "dsx-picker" });
+    wrap.append(renderPickerHead());
 
-    const totalCount   = state.guilds.length;
-    const premiumCount = state.guilds.filter((g) => g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime").length;
-    const ownerCount   = state.guilds.filter((g) => g.owner).length;
-
-    // ── Welcome header ─────────────────────────────────────────────
-    root.append(renderPickerHeader(totalCount));
-
-    // No manageable servers — premium empty state inside the layout
-    if (!totalCount) {
-      const card = h("div", { class: "picker-empty" },
-        (() => { const i = h("div", { class: "picker-empty-ico" }); i.appendChild(iconSvg("shield")); return i; })(),
-        h("h3", null, "No manageable servers found"),
-        h("p", null,
-          "You need to be a server owner, administrator, or have Manage Server permission AND have Arkoris installed in that server."),
-        h("div", { class: "dash-actions", style: { justifyContent: "center" } },
-          btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
-          btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true }),
-          btn("Refresh", { kind: "btn-outline", onclick: () => boot(true) })
-        )
-      );
-      root.append(card);
-      // Still show getting-started + features below
-      root.append(renderPickerFeaturePreview(), renderPickerSetupGuide());
+    if (!state.guilds.length) {
+      wrap.append(renderPickerEmpty());
+      root.append(wrap);
       return;
     }
 
-    // ── Main 2-column layout ───────────────────────────────────────
-    const grid = h("div", { class: "picker-grid" });
-
-    // ─ Left: search/filter + server cards
-    const left = h("div", { class: "picker-main" });
-    left.append(renderPickerSearchBar());
-    const listHost = h("div", { class: "picker-servers" });
-    left.append(listHost);
-    rerenderServerList(listHost);
-
-    // ─ Right: account + quick actions + premium info
-    const aside = h("aside", { class: "picker-aside" },
-      renderPickerAccountCard(totalCount, premiumCount, ownerCount),
-      renderPickerQuickActions(),
-      renderPickerPremiumCard()
-    );
-
-    grid.append(left, aside);
-    root.append(grid);
-
-    // ── Below the fold: feature preview + setup guide ─────────────
-    root.append(renderPickerFeaturePreview(), renderPickerSetupGuide());
+    wrap.append(renderPickerControls());
+    const list = h("div", { class: "dsx-server-list" });
+    wrap.append(list);
+    paintServerList(list);
+    wrap.append(renderPickerFooter());
+    root.append(wrap);
   }
 
-  function renderPickerHeader(totalCount) {
+  // Discord-styled avatar + server icon (own classes so styles.css can't reach them).
+  function dscAvatar(u, size) {
+    u = u || {};
+    const el = h("div", { class: "dsx-avatar", style: { width: (size || 40) + "px", height: (size || 40) + "px" } });
+    if (u.avatar) el.append(h("img", { src: `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128`, alt: "" }));
+    else el.append(h("span", null, (u.globalName || u.username || "U").charAt(0).toUpperCase()));
+    return el;
+  }
+  function dscGuildIcon(g, size) {
+    const el = h("div", { class: "dsx-gicon", style: { width: (size || 48) + "px", height: (size || 48) + "px" } });
+    if (g.icon) el.append(h("img", { src: `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=128`, alt: "" }));
+    else {
+      const initials = (g.name || "?").split(/\s+/).map((s) => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+      el.append(h("span", null, initials || "?"));
+    }
+    return el;
+  }
+
+  // Head: title + subline on the left, account chip + log out on the right.
+  function renderPickerHead() {
     const u = state.user || {};
     const name = u.globalName || u.username || "there";
-    return h("div", { class: "picker-header" },
-      h("div", { class: "picker-header-row" },
-        userAvatar(u),
-        h("div", { class: "picker-header-who" },
-          h("h1", { class: "picker-header-title" }, `Welcome back, ${name}`),
-          h("p", { class: "picker-header-sub" },
-            "Select a Discord server to manage setup, branding, role menus, /pop, staff pay, and every Arkoris feature.")
-        )
+    const logout = h("button", { type: "button", class: "dsx-icon-btn", title: "Log out", "aria-label": "Log out", onclick: handleLogout });
+    logout.append(iconSvg("logout"));
+    return h("header", { class: "dsx-pk-head" },
+      h("div", { class: "dsx-pk-headline" },
+        h("h1", { class: "dsx-pk-title" }, "Your servers"),
+        h("p", { class: "dsx-pk-sub" }, `Welcome back, ${name}. Pick a server to manage Arkoris.`)
       ),
-      h("div", { class: "picker-header-badges" },
-        h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Logged in with Discord"),
-        h("span", { class: "dash-status-pill" }, `${totalCount} manageable server${totalCount === 1 ? "" : "s"}`),
-        h("span", { class: "dash-status-pill premium" }, h("span", { class: "pill-dot" }), "Arkoris Dashboard")
-      ),
-      h("div", { class: "picker-header-actions" },
-        btn("Invite Bot",      { kind: "btn-primary", href: cfg.links?.inviteBot,      external: true }),
-        btn("Join Support",    { kind: "btn-ghost",   href: cfg.links?.supportDiscord, external: true }),
-        btn("View Pricing",    { kind: "btn-outline", href: "pricing.html" }),
-        btn("Log out",         { kind: "btn-ghost",   onclick: handleLogout })
+      h("div", { class: "dsx-account" },
+        h("div", { class: "dsx-account-id" },
+          dscAvatar(u, 30),
+          h("span", { class: "dsx-account-name" }, u.globalName || u.username || "—")
+        ),
+        logout
       )
     );
   }
 
-  function renderPickerSearchBar() {
-    const search = h("input", {
-      type: "search",
-      class: "picker-search",
-      placeholder: "Search your servers…",
-      value: pickerState.query,
-      autocomplete: "off",
-      spellcheck: "false",
-    });
-    search.addEventListener("input", () => {
-      pickerState.query = search.value;
-      rerenderServerList(root.querySelector(".picker-servers"));
-    });
+  // Search + segmented filter. Writes to the shared pickerState and repaints.
+  function renderPickerControls() {
+    const row = h("div", { class: "dsx-controls" });
 
-    const filters = [
-      { id: "all",      label: "All",       countFn: (gs) => gs.length },
-      { id: "premium",  label: "Premium",   countFn: (gs) => gs.filter((g) => g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime").length },
-      { id: "free",     label: "Free",      countFn: (gs) => gs.filter((g) => !["premium","monthly","lifetime"].includes(g.plan)).length },
-      { id: "owner",    label: "Owner",     countFn: (gs) => gs.filter((g) => g.owner).length },
-    ];
-    const pillRow = h("div", { class: "picker-filters" });
-    filters.forEach((f) => {
-      const count = f.countFn(state.guilds);
-      const pill = h("button", {
-        type: "button",
-        class: `picker-filter ${pickerState.filter === f.id ? "active" : ""}`,
+    const sico = h("span", { class: "dsx-search-ico" }); sico.append(iconSvg("search"));
+    const input = h("input", {
+      type: "search", class: "dsx-search-input", placeholder: "Search servers",
+      value: pickerState.query, autocomplete: "off", spellcheck: "false",
+      "aria-label": "Search your servers",
+    });
+    input.addEventListener("input", () => {
+      pickerState.query = input.value;
+      paintServerList(root.querySelector(".dsx-server-list"));
+    });
+    const search = h("div", { class: "dsx-search" }, sico, input);
+
+    const seg = h("div", { class: "dsx-seg", role: "tablist", "aria-label": "Filter servers" });
+    [["all", "All"], ["premium", "Premium"], ["owner", "Owner"]].forEach(([id, label]) => {
+      const active = pickerState.filter === id;
+      seg.append(h("button", {
+        type: "button", role: "tab", "aria-selected": active ? "true" : "false",
+        class: "dsx-seg-btn" + (active ? " active" : ""),
         onclick: () => {
-          pickerState.filter = f.id;
-          // Re-render filter row to reflect active state
-          const newBar = renderPickerSearchBar();
-          root.querySelector(".picker-searchbar").replaceWith(newBar);
-          rerenderServerList(root.querySelector(".picker-servers"));
+          if (pickerState.filter === id) return;
+          pickerState.filter = id;
+          row.replaceWith(renderPickerControls());
+          paintServerList(root.querySelector(".dsx-server-list"));
         },
-      },
-        f.label,
-        h("span", { class: "picker-filter-count" }, String(count))
-      );
-      pillRow.appendChild(pill);
+      }, label));
     });
 
-    const ico = h("span", { class: "picker-search-ico" });
-    ico.appendChild(iconSvg("activity"));
-    return h("div", { class: "picker-searchbar" },
-      h("div", { class: "picker-search-wrap" }, ico, search),
-      pillRow
-    );
+    row.append(search, seg);
+    return row;
   }
 
-  function filterGuilds(guilds) {
+  function pickerFilter(guilds) {
     const q = (pickerState.query || "").trim().toLowerCase();
     const f = pickerState.filter;
     return guilds.filter((g) => {
       if (q && !(g.name || "").toLowerCase().includes(q)) return false;
-      if (f === "premium" && !(g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime")) return false;
-      if (f === "free"    &&  (g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime")) return false;
-      if (f === "owner"   && !g.owner) return false;
+      const premium = g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime";
+      if (f === "premium" && !premium) return false;
+      if (f === "owner" && !g.owner) return false;
       return true;
     });
   }
 
-  function rerenderServerList(host) {
+  function paintServerList(host) {
     if (!host) return;
     clear(host);
-    const filtered = filterGuilds(state.guilds);
-    if (!filtered.length) {
-      host.append(
-        h("div", { class: "picker-empty-inline" },
-          (() => { const i = h("div", { class: "picker-empty-ico small" }); i.appendChild(iconSvg("activity")); return i; })(),
-          h("h4", null, "No matches"),
-          h("p", null,
-            pickerState.query
-              ? `No servers match "${pickerState.query}". Try a different search.`
-              : "No servers in this category.")
-        )
-      );
-      return;
+    const rows = pickerFilter(state.guilds);
+    if (!rows.length) {
+      host.append(h("div", { class: "dsx-list-empty" },
+        pickerState.query
+          ? `No servers match “${pickerState.query}”.`
+          : "No servers in this filter."));
+    } else {
+      rows.forEach((g, i) => {
+        const row = renderGuildRow(g);
+        row.style.setProperty("--i", String(i));
+        host.append(row);
+      });
     }
-    filtered.forEach((g, i) => {
-      const card = renderGuildCard(g);
-      // Staggered fade-in for premium feel
-      card.style.animationDelay = (i * 0.05) + "s";
-      host.appendChild(card);
-    });
+    host.append(renderAddServerRow());
   }
 
-  function renderGuildCard(g) {
-    const planLabel = g.plan === "lifetime" ? "Lifetime"
-                    : (g.plan === "premium" || g.plan === "monthly") ? "Premium"
-                    : "Free";
-    const planClass = g.plan === "lifetime" ? "lifetime"
-                    : (g.plan === "premium" || g.plan === "monthly") ? "premium"
-                    : "free";
+  function renderGuildRow(g) {
+    const premium = g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime";
+    const planLabel = g.plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
+    const role = g.owner ? "Owner" : "Manage Server";
 
-    const card = h("button", { class: "picker-server-card", type: "button",
-      onclick: () => selectGuild(g.id),
-      "aria-label": `Manage ${g.name}` });
-
-    card.append(
-      h("div", { class: "picker-server-top" },
-        guildIcon(g),
-        h("div", { class: "picker-server-info" },
-          h("div", { class: "picker-server-name" }, g.name),
-          h("div", { class: "picker-server-id" }, "ID · " + (g.id ? g.id.slice(-6) : "—"))
-        ),
-        h("span", { class: `dash-status-pill ${planClass}` },
-          g.plan === "lifetime" || g.plan === "premium" || g.plan === "monthly" ? h("span", { class: "pill-dot" }) : null,
-          planLabel)
-      ),
-      h("div", { class: "picker-server-badges" },
-        h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Bot Installed"),
-        g.owner ? h("span", { class: "dash-status-pill" }, "Owner")
-                : h("span", { class: "dash-status-pill" }, "Manage Server")
-      ),
-      h("div", { class: "picker-server-actions" },
-        h("span", { class: "picker-manage-btn" }, "Manage Server →")
-      )
-    );
-
-    return card;
-  }
-
-  // ── Aside cards ──────────────────────────────────────────────────
-  function renderPickerAccountCard(totalCount, premiumCount, ownerCount) {
-    return h("div", { class: "picker-aside-card" },
-      h("h4", null, "Account"),
-      h("div", { class: "picker-account-row" },
-        userAvatar(state.user),
-        h("div", null,
-          h("div", { class: "picker-account-name" }, state.user?.globalName || state.user?.username || "—"),
-          h("div", { class: "picker-account-sub" }, "@" + (state.user?.username || "—"))
+    const enter = h("span", { class: "dsx-enter", "aria-hidden": "true" }); enter.append(iconSvg("arrowRight"));
+    return h("button", {
+      type: "button", class: "dsx-server-row",
+      onclick: () => selectGuild(g.id), "aria-label": `Manage ${g.name || "server"}`,
+    },
+      dscGuildIcon(g, 48),
+      h("div", { class: "dsx-server-main" },
+        h("div", { class: "dsx-server-name" }, g.name || "Unknown server"),
+        h("div", { class: "dsx-server-meta" },
+          h("span", { class: "dsx-status" }, h("span", { class: "dsx-dot online" }), "Installed"),
+          h("span", { class: "dsx-sep", "aria-hidden": "true" }, "·"),
+          h("span", null, role)
         )
       ),
-      h("div", { class: "picker-mini-stats" },
-        renderMiniStat(String(totalCount),   "Servers"),
-        renderMiniStat(String(premiumCount), "Premium"),
-        renderMiniStat(String(ownerCount),   "Owner")
-      )
-    );
-  }
-  function renderMiniStat(value, label) {
-    return h("div", { class: "picker-mini-stat" },
-      h("div", { class: "picker-mini-stat-v" }, value),
-      h("div", { class: "picker-mini-stat-l" }, label)
+      h("span", { class: "dsx-plan" + (premium ? " premium" : "") }, planLabel),
+      enter
     );
   }
 
-  function renderPickerQuickActions() {
-    return h("div", { class: "picker-aside-card" },
-      h("h4", null, "Quick Actions"),
-      h("div", { class: "picker-quick-list" },
-        renderQuickRow("plug",    "Invite Bot",     cfg.links?.inviteBot,      true),
-        renderQuickRow("lifeRing","Support Server", cfg.links?.supportDiscord, true),
-        renderQuickRow("calendar","View Pricing",   "pricing.html",            false),
-        renderQuickRow("fileText","Dashboard Help", "faq.html",                false)
-      )
-    );
-  }
-  function renderQuickRow(iconName, label, href, external) {
+  function renderAddServerRow() {
+    const enter = h("span", { class: "dsx-enter", "aria-hidden": "true" }); enter.append(iconSvg("arrowRight"));
     return h("a", {
-      class: "picker-quick-row",
-      href: href || "#",
-      target: external ? "_blank" : null,
-      rel:    external ? "noopener noreferrer" : null,
+      class: "dsx-add-row", href: cfg.links?.inviteBot || "#",
+      target: "_blank", rel: "noopener noreferrer",
     },
-      icon(iconName, "picker-quick-ico"),
-      h("span", { class: "picker-quick-label" }, label),
-      h("span", { class: "picker-quick-arrow" }, "→")
+      h("span", { class: "dsx-add-plus", "aria-hidden": "true" }, "+"),
+      h("span", { class: "dsx-add-label" }, "Add Arkoris to another server"),
+      enter
     );
   }
 
-  function renderPickerPremiumCard() {
-    return h("div", { class: "picker-aside-card picker-premium" },
-      h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" } },
-        icon("sparkle", "picker-quick-ico"),
-        h("h4", { style: { margin: 0, color: "var(--dash-red-2)" } }, "Activate Premium")
-      ),
-      h("p", { style: { fontSize: "0.84rem", color: "var(--dash-muted)", margin: "0 0 12px" } },
-        "Premium is activated inside Discord. Invite the bot, pick a server, then run ",
-        h("code", null, "/subscribe"), " — checkout opens automatically."),
-      h("div", { class: "dash-actions", style: { marginTop: 0 } },
-        btn("Invite Bot",   { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
-        btn("Pricing",      { kind: "btn-ghost",   href: "pricing.html" })
+  function renderPickerFooter() {
+    return h("div", { class: "dsx-pk-footer" },
+      h("a", { href: cfg.links?.supportDiscord || "#", target: "_blank", rel: "noopener noreferrer" }, "Support"),
+      h("span", { class: "dsx-dotsep", "aria-hidden": "true" }, "·"),
+      h("a", { href: "pricing.html" }, "Pricing"),
+      h("span", { class: "dsx-dotsep", "aria-hidden": "true" }, "·"),
+      h("a", { href: "faq.html" }, "Help")
+    );
+  }
+
+  function renderPickerEmpty() {
+    const ico = h("div", { class: "dsx-empty-ico" }); ico.append(iconSvg("plug"));
+    return h("div", { class: "dsx-empty" },
+      ico,
+      h("h2", null, "No servers to manage yet"),
+      h("p", null, "Add Arkoris to a Discord server you own or help manage, then it'll show up here."),
+      h("div", { class: "dsx-empty-actions" },
+        btn("Add Arkoris to a server", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
+        btn("Join support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
       )
     );
   }
@@ -738,23 +764,25 @@
     );
     root.append(mobileBar);
 
-    // Top bar — clean status row
-    const topbar = h("div", { class: "dash-userbar" });
-    topbar.append(
-      h("button", { type: "button", class: "btn btn-ghost", "aria-label": "Back to server picker",
-        onclick: () => { state.selectedGuildId = null; render(); } }, "← Servers"),
-      guild ? guildIcon(guild) : userAvatar(state.user),
-      h("div", { class: "who" },
-        h("div", { class: "who-name" }, guild?.name || "Loading…"),
-        h("div", { class: "who-sub" },
-          (state.user.globalName || state.user.username),
-          guild?.id ? h("span", { style: { marginLeft: "8px", color: "var(--dash-muted-2)" } }, "· " + guild.id.slice(-6)) : null
-        )
+    // Top bar — Discord-style header (.dsx-topbar)
+    const premium = plan === "premium" || plan === "monthly" || plan === "lifetime";
+    const planLabel = plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
+    const back = h("button", { type: "button", class: "dsx-topbar-back", "aria-label": "Back to servers",
+      onclick: () => { state.selectedGuildId = null; render(); } });
+    back.append((() => { const i = h("span", { class: "dsx-back-ico", "aria-hidden": "true" }); i.append(iconSvg("arrowRight")); return i; })(), "Servers");
+    const logout = h("button", { type: "button", class: "dsx-icon-btn", title: "Log out", "aria-label": "Log out", onclick: handleLogout });
+    logout.append(iconSvg("logout"));
+    const topbar = h("div", { class: "dsx-topbar" },
+      back,
+      dscGuildIcon(guild || {}, 30),
+      h("div", { class: "dsx-topbar-id" },
+        h("div", { class: "dsx-topbar-name" }, guild?.name || "Loading…"),
+        h("div", { class: "dsx-topbar-sub" },
+          h("span", { class: "dsx-status" }, h("span", { class: "dsx-dot online" }), "Bot online"))
       ),
-      h("div", { id: "dash-save-status", class: "dash-save-status" }, "Saved ✓"),
-      h("span", { class: "dash-status-pill ok" }, h("span", { class: "pill-dot" }), "Bot Online"),
-      planPill(plan),
-      btn("Log out", { kind: "btn-ghost", onclick: handleLogout })
+      h("span", { class: "dsx-plan" + (premium ? " premium" : "") }, planLabel),
+      h("div", { id: "dash-save-status", class: "dsx-save" }, "Saved"),
+      logout
     );
     root.append(topbar);
 
@@ -762,14 +790,26 @@
     if (!state.modules) {
       try {
         const m = await data.modules();
-        state.modules = m.modules || [];
+        // Modules intentionally hidden from the dashboard (still usable via their Discord commands).
+        state.modules = (m.modules || []).filter((mod) => !["giveaways", "credits", "pets"].includes(mod.name));
       } catch (e) {
         return renderTabError(root, e);
       }
     }
 
+    // Whether the Setup Hub is fully complete drives whether it appears in the
+    // nav at all. Resolve it before building the sidebar so the first paint is
+    // correct (cached per guild, so this only fetches once per server).
+    await ensureSetupStatus();
+    const hubComplete = hubAllDone(state.setupStatus && state.setupStatus.setup && state.setupStatus.setup.flags);
+    // Hide the Setup Hub once complete — unless the user explicitly reopened it
+    // from the Overview (so they can still un-mark an optional module).
+    const hideSetupHub = hubComplete && !state._forceHub;
+    // Never strand the user on a hub that's been hidden.
+    if (hideSetupHub && state.activeTab === "setup-hub") state.activeTab = "overview";
+
     const layout = h("div", { class: "dash-layout" });
-    layout.append(renderSidebar(plan));
+    layout.append(renderSidebar(plan, hideSetupHub));
     const content = h("div", { class: "dash-content" });
     layout.append(content);
     root.append(layout);
@@ -784,17 +824,20 @@
   }
 
   /** Grouped sidebar with icons, sections, premium-locked indicators. */
-  function renderSidebar(plan) {
+  function renderSidebar(plan, hideSetupHub) {
     const isPremium = plan === "premium" || plan === "monthly" || plan === "lifetime";
-    const side = h("div", { class: "dash-sidebar", role: "tablist", "aria-label": "Dashboard navigation" });
+    // Keep .dash-sidebar for the mobile-drawer toggle + layout grid; the new
+    // Discord-native look is driven entirely by .dsx-nav (+ children).
+    const side = h("div", { class: "dash-sidebar dsx-nav", role: "tablist", "aria-label": "Dashboard navigation" });
 
-    // Brand block
+    // Brand header
+    const brandMark = h("div", { class: "dsx-nav-mark", "aria-hidden": "true" }); brandMark.append(iconSvg("flag"));
     side.append(
-      h("div", { class: "dash-side-brand" },
-        h("div", { class: "dash-side-brand-mark" }, iconSvg("flag")),
-        h("div", { class: "dash-side-brand-text" },
-          h("div", { class: "dash-side-brand-name" }, "Arkoris"),
-          h("div", { class: "dash-side-brand-sub" }, "Dashboard")
+      h("div", { class: "dsx-nav-head" },
+        brandMark,
+        h("div", { class: "dsx-nav-head-text" },
+          h("div", { class: "dsx-nav-brand" }, "Arkoris"),
+          h("div", { class: "dsx-nav-brand-sub" }, "Dashboard")
         )
       )
     );
@@ -805,8 +848,8 @@
     const CATEGORY_OF = {
       // Discord Server
       welcome: "discord", autoRoles: "discord", roleMenus: "discord", xp: "discord",
-      hype: "discord", credits: "discord", polls: "discord", moderation: "discord",
-      pets: "discord", events: "discord", giveaways: "discord",
+      hype: "discord", polls: "discord", moderation: "discord",
+      events: "discord",
       // Tickets & Staff
       tickets: "tickets", staffPay: "tickets",
       // ARK Integration
@@ -823,7 +866,8 @@
       .map((m) => m.name);
 
     const groups = [
-      { label: "Core",                items: ["setup-hub", "overview", "analytics", "embed-builder"] },
+      // Setup Hub drops out of the nav entirely once every module is configured.
+      { label: "Core",                items: [...(hideSetupHub ? [] : ["setup-hub"]), "overview", "analytics", "embed-builder"] },
       { label: "Discord Server",      items: inCat("discord") },
       { label: "Tickets & Staff",     items: inCat("tickets") },
       { label: "ARK Integration",     items: inCat("ark") },
@@ -843,17 +887,19 @@
     };
 
     if (!state.collapsedGroups) state.collapsedGroups = new Set();
+    const scroll = h("nav", { class: "dsx-nav-scroll" });
     groups.forEach((g) => {
       if (!g.items.length) return;
       const hasActive = g.items.includes(state.activeTab);
-      // The group holding the active tab is always rendered expanded so the
-      // user never loses sight of where they are.
+      // The group holding the active tab always renders expanded so the user
+      // never loses sight of where they are.
       const collapsed = !hasActive && state.collapsedGroups.has(g.label);
 
-      const group  = h("div", { class: `dash-side-group ${collapsed ? "collapsed" : ""}` });
+      const group = h("div", { class: `dsx-nav-group ${collapsed ? "collapsed" : ""}` });
+      const caret = h("span", { class: "dsx-nav-caret", "aria-hidden": "true" }); caret.append(iconSvg("arrowRight"));
       const header = h("button", {
         type: "button",
-        class: "dash-side-section",
+        class: "dsx-nav-cat",
         "aria-expanded": collapsed ? "false" : "true",
         onclick: () => {
           const nowCollapsed = !group.classList.contains("collapsed");
@@ -862,20 +908,22 @@
           if (nowCollapsed) state.collapsedGroups.add(g.label);
           else              state.collapsedGroups.delete(g.label);
         },
-      }, g.label, h("span", { class: "dash-side-caret" }, iconSvg("arrowRight")));
+      }, h("span", null, g.label), caret);
       group.append(header);
 
+      const items = h("div", { class: "dsx-nav-items" });
       g.items.forEach((id) => {
         const mod = state.modules.find((m) => m.name === id);
         const label = labels[id] || (mod?.label || id);
         const isPremTier = !!mod && mod.tier === "premium";
         const locked = isPremTier && !isPremium;
-        const tab = h("button", {
+        const item = h("button", {
           type: "button",
-          class: `dash-tab ${id === state.activeTab ? "active" : ""} ${locked ? "locked" : ""}`,
+          class: `dsx-nav-item ${id === state.activeTab ? "active" : ""} ${locked ? "locked" : ""}`,
           role: "tab",
           "aria-selected": id === state.activeTab ? "true" : "false",
           onclick: () => {
+            state._forceHub = false; // leaving via the nav re-arms auto-hide
             state.activeTab = id;
             // Close drawer on mobile after picking a tab
             const sb = root.querySelector(".dash-sidebar");
@@ -886,19 +934,22 @@
             render();
           },
         });
-        tab.append(tabIcon(id), label);
-        if (isPremTier) tab.append(h("span", { class: "dash-tab-tier" }, "PRO"));
-        if (locked)     tab.append(h("span", { class: "dash-lock" }, iconSvg("lock")));
-        group.append(tab);
+        const ico = h("span", { class: "dsx-nav-ico", "aria-hidden": "true" }); ico.append(iconSvg(TAB_ICONS[id] || "list"));
+        item.append(ico, h("span", { class: "dsx-nav-label" }, label));
+        if (isPremTier) item.append(h("span", { class: "dsx-nav-pro" }, "PRO"));
+        if (locked) { const lk = h("span", { class: "dsx-nav-lock", "aria-hidden": "true" }); lk.append(iconSvg("lock")); item.append(lk); }
+        items.append(item);
       });
-      side.append(group);
+      group.append(items);
+      scroll.append(group);
     });
+    side.append(scroll);
 
-    // Footer — quick support shortcut
+    // Footer — support + invite
     side.append(
-      h("div", { class: "dash-side-foot" },
-        btn("Discord", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true }),
-        btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true })
+      h("div", { class: "dsx-nav-foot" },
+        h("a", { class: "dsx-nav-foot-btn", href: cfg.links?.supportDiscord || "#", target: "_blank", rel: "noopener noreferrer" }, "Support"),
+        h("a", { class: "dsx-nav-foot-btn primary", href: cfg.links?.inviteBot || "#", target: "_blank", rel: "noopener noreferrer" }, "Invite Bot")
       )
     );
 
@@ -927,7 +978,7 @@
   const EB_LIMITS = { content: 2000, title: 256, description: 4096, footer: 2048, authorName: 256, fieldName: 256, fieldValue: 1024, fields: 25, total: 6000, embeds: 10, rows: 5, buttonsPerRow: 5, options: 25, placeholder: 150, optLabel: 100, optValue: 100, optDesc: 100, label: 80 };
   const EB_PRESET_COLORS = ["#e23b2e", "#f5851f", "#ffcc4d", "#2ecc71", "#3498db", "#9b59b6", "#e91e63", "#1abc9c", "#34495e", "#95a5a6", "#000000", "#ffffff"];
   const EB_BTN_STYLES = [["primary", "Primary"], ["secondary", "Secondary"], ["success", "Success"], ["danger", "Danger"], ["link", "Link"]];
-  const EB_ACTION_TYPES = [["none", "Nothing"], ["info_embed", "Show info embed"], ["text", "Send text reply"], ["give_role", "Give role"], ["remove_role", "Remove role"], ["toggle_role", "Toggle role"], ["open_ticket", "Open ticket"], ["custom", "Custom action"]];
+  const EB_ACTION_TYPES = [["none", "Nothing"], ["info_embed", "Show info embed"], ["text", "Send text reply"], ["give_role", "Give role"], ["remove_role", "Remove role"], ["toggle_role", "Toggle role"]];
 
   function ebBlankEmbed() { return { title: "", url: "", description: "", color: "#e23b2e", timestamp: null, author: { name: "", url: "", icon_url: "" }, thumbnail: { url: "" }, image: { url: "" }, footer: { text: "", icon_url: "" }, fields: [] }; }
   function ebEmbedEmpty(e) { return !s2(e.title) && !s2(e.description) && !(e.fields || []).length && !s2(e.image && e.image.url) && !s2(e.thumbnail && e.thumbnail.url) && !s2(e.author && e.author.name) && !s2(e.footer && e.footer.text); }
@@ -947,15 +998,17 @@
     };
     let channels = [], templates = [], roles = [];
     try {
-      const [chRes, tplRes, draftRes, rolesRes] = await Promise.all([
+      const [chRes, tplRes, draftRes, rolesRes, emoRes] = await Promise.all([
         data.channels(gid).catch(() => ({ channels: [] })),
         data.embTplList(gid).catch(() => ({ templates: [] })),
         data.embDraftGet(gid).catch(() => ({ draft: null })),
         data.roles(gid).catch(() => ({ roles: [] })),
+        (data.emojis ? data.emojis(gid).catch(() => ({ emojis: [] })) : Promise.resolve({ emojis: [] })),
       ]);
       channels = chRes.channels || [];
       templates = tplRes.templates || [];
       roles = rolesRes.roles || [];
+      _ebGuildEmojis = (emoRes && emoRes.emojis) || [];
       if (draftRes && draftRes.draft && draftRes.draft.draft) {
         try { applyModel(eb, draftRes.draft.draft); toast("info", "Restored your unsaved draft"); } catch {}
       }
@@ -968,6 +1021,10 @@
     // ---- elements we re-render into ----
     let editorEl, previewEl, validEl;
     let saveTimer = null;
+    let formSyncTimer = null;
+    // Re-render the side form on the next tick (after a pending click lands), so
+    // it never shows a value stale relative to a just-made inline preview edit.
+    function scheduleFormSync() { clearTimeout(formSyncTimer); formSyncTimer = setTimeout(() => renderEditor(), 0); }
     function scheduleAutosave() {
       const status = document.getElementById("dash-save-status");
       if (status) { status.textContent = "Saving…"; status.classList.add("saving"); }
@@ -991,31 +1048,41 @@
           btn("⤒ Export", { kind: "btn-ghost", onclick: ebExport }),
           btn("⧉ Copy JSON", { kind: "btn-ghost", onclick: ebCopyJson }),
           btn("💾 Save template", { kind: "btn-secondary", onclick: ebSaveTemplate }),
+          btn("📁 Templates", { kind: "btn-ghost", onclick: ebOpenTemplatesModal }),
           btn("📨 Post embed", { kind: "btn-primary eb-post-btn", onclick: ebOpenPost })
         )
       )
     );
 
-    const split = h("div", { class: "eb-split" });
-    editorEl = h("div", { class: "eb-editor" });
+    // Canvas-first layout: the live editor IS the preview (edit in place); the
+    // full form collapses into an "Advanced settings" panel for the deep config
+    // (channel/send, info-embed replies, exact values, templates).
+    const split = h("div", { class: "eb-split eb-canvas-mode" });
     const previewCol = h("div", { class: "eb-preview-col" });
     previewEl = h("div", { class: "eb-preview" });
     previewCol.append(
       h("div", { class: "eb-preview-head" },
-        h("span", { class: "eb-preview-label" }, "Live preview"),
-        h("span", { class: "eb-preview-hint" }, "Updates as you type")
+        h("span", { class: "eb-preview-label" }, "Live editor"),
+        h("span", { class: "eb-preview-hint" }, "Click any text to edit · ⚙ for settings · + to add")
       ),
       previewEl
     );
     validEl = h("div", { class: "eb-valid" });
     previewCol.append(validEl);
-    split.append(editorEl, previewCol);
+    // Everything is edited in the live canvas — there is no separate form panel.
+    // editorEl is created but NOT shown; it only keeps renderEditor()/renderAll()
+    // safe no-ops (they still target it harmlessly off-screen).
+    editorEl = h("div", { class: "eb-editor" });
+    split.append(previewCol);
     page.append(split);
 
     // ---- render fns ----
     function curEmbed() { return eb.embeds[eb.activeEmbed] || eb.embeds[0]; }
     function syncPreview() { renderPreview(); renderValidation(); scheduleAutosave(); }
-    function renderAll() { renderEditor(); renderPreview(); renderValidation(); }
+    // renderAll is the structural rebuild (used by the Advanced form's add/
+    // remove/reorder). Clear any open canvas popover so its index-based key
+    // can't re-open on the wrong element after indices shift.
+    function renderAll() { eb._openPop = null; renderEditor(); renderPreview(); renderValidation(); }
 
     // Tabs replace the old accordion → one compact panel at a time.
     const EB_TABS = [["message", "Message"], ["embed", "Embed"], ["author", "Author"], ["media", "Media"], ["fields", "Fields"], ["buttons", "Buttons"], ["dropdowns", "Dropdowns"], ["footer", "Footer"], ["templates", "Templates"], ["send", "Send"]];
@@ -1191,7 +1258,7 @@
               h("div", { class: "eb-btn-grid" },
                 field("Label", textInput(b.label, (v) => { b.label = v; syncPreview(); })),
                 field("Style", h("select", { class: "eb-select", onchange: (ev) => { b.style = ev.target.value; renderAll(); } }, ...EB_BTN_STYLES.map(([v, l]) => h("option", { value: v, selected: (b.style || "secondary") === v ? true : null }, l)))),
-                field("Emoji", textInput(b.emoji, (v) => { b.emoji = v; syncPreview(); }, "😀 or <:n:id>")),
+                field("Emoji", ebEmojiField(() => b.emoji, (v) => { b.emoji = v; }, () => syncPreview())),
                 b.style === "link" ? field("URL", urlInput(b.url, (v) => { b.url = v; syncPreview(); })) : field("Custom ID", textInput(b.custom_id, (v) => { b.custom_id = v; syncPreview(); }, "my_button_id"))
               ),
               h("div", { class: "eb-btn-row-foot" },
@@ -1241,7 +1308,7 @@
                 field("Label", textInput(o.label, (v) => { o.label = v; syncPreview(); })),
                 field("Value", textInput(o.value, (v) => { o.value = v; syncPreview(); })),
                 field("Description", textInput(o.description, (v) => { o.description = v; syncPreview(); })),
-                field("Emoji", textInput(o.emoji, (v) => { o.emoji = v; syncPreview(); }))
+                field("Emoji", ebEmojiField(() => o.emoji, (v) => { o.emoji = v; }, () => syncPreview()))
               ),
               h("label", { class: "eb-toggle" }, h("input", { type: "checkbox", checked: o.default ? true : null, onchange: (ev) => { o.default = ev.target.checked; syncPreview(); } }), h("span", null, "Selected by default")),
               h("div", { class: "eb-action" },
@@ -1330,57 +1397,295 @@
     }
 
     // ---- live preview ----
+    // ---- inline-editable preview ("edit the preview itself") ----
+    // plaintext-only contenteditable where supported (Chromium / Edge / Safari);
+    // falls back to a normal contenteditable + paste-as-text elsewhere.
+    const ebPlaintextOK = (() => { try { const d = document.createElement("div"); d.contentEditable = "plaintext-only"; return d.contentEditable === "plaintext-only"; } catch { return false; } })();
+    function ebReadText(el) { return (el.innerText || "").replace(/\n$/, ""); }
+    function ebCaretEnd(el) { try { const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } catch (_) {} }
+    // A contenteditable region bound to a model getter/setter. Edits update the
+    // model live WITHOUT re-rendering the preview (so the caret survives);
+    // markdown fields edit raw source while focused and re-render on blur.
+    function ebEditable(cls, get, set, opts) {
+      opts = opts || {};
+      const el = h(opts.tag || "div", { class: "eb-editable " + cls });
+      el.contentEditable = ebPlaintextOK ? "plaintext-only" : "true";
+      el.spellcheck = false;
+      // Labelled for assistive tech (a contenteditable is otherwise an unnamed
+      // edit field); placeholder stays as the visual hint.
+      el.setAttribute("role", "textbox");
+      el.setAttribute("aria-label", opts.label || opts.ph || "Edit");
+      if (opts.multiline) el.setAttribute("aria-multiline", "true");
+      if (opts.ph) el.setAttribute("data-ph", opts.ph);
+      const v0 = get() || "";
+      if (opts.markdown && s2(v0)) el.innerHTML = ebMarkdown(v0); else el.textContent = v0;
+      el.addEventListener("focus", () => {
+        // Swap rendered markdown -> raw source for editing, but only when there's
+        // actually markup to unwrap (plain text keeps the click caret position).
+        if (opts.markdown) { const raw = get() || ""; if (el.textContent !== raw) { el.textContent = raw; ebCaretEnd(el); } }
+      });
+      el.addEventListener("beforeinput", (ev) => {
+        if (opts.max && ebReadText(el).length >= opts.max && /^insert/.test(ev.inputType || "")) ev.preventDefault();
+      });
+      el.addEventListener("input", () => {
+        const v = ebReadText(el);
+        if (!v && el.innerHTML !== "") el.innerHTML = ""; // keep the :empty placeholder working
+        set(v); renderValidation(); scheduleAutosave();
+      });
+      el.addEventListener("blur", (ev) => {
+        let v = ebReadText(el);
+        if (!v.trim()) v = ""; // whitespace-only reads as empty (so the placeholder returns)
+        set(v);
+        if (opts.markdown) el.innerHTML = s2(v) ? ebMarkdown(v) : ""; else el.textContent = v;
+        renderValidation();
+        // Re-sync the side form so it never shows a stale value. If focus is
+        // moving INTO the form, defer so the click lands before the rebuild.
+        const to = ev.relatedTarget;
+        if (to && editorEl.contains(to)) scheduleFormSync(); else renderEditor();
+      });
+      el.addEventListener("paste", (ev) => {
+        ev.preventDefault();
+        let t = ((ev.clipboardData || window.clipboardData).getData("text") || "");
+        if (opts.max) { const room = opts.max - ebReadText(el).length; if (room <= 0) return; if (t.length > room) t = t.slice(0, room); }
+        try { document.execCommand("insertText", false, t); } catch (_) { el.textContent += t; }
+      });
+      if (!opts.multiline) el.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); el.blur(); } });
+      return el;
+    }
+
+    // Canvas re-render helpers: cvSync = value-only change (keeps caret/focus on
+    // the active control), cvRerender = structural change (rebuild the canvas).
+    function cvSync() { renderValidation(); scheduleAutosave(); }
+    function cvRerender() { renderPreview(); renderValidation(); scheduleAutosave(); }
+    function ebNewButton() { return { label: "Button", style: "primary", custom_id: "", url: "", emoji: "", disabled: false, action: { type: "none", ephemeral: true } }; }
+    function ebNewOption(n) { return { label: "Option", value: "value_" + n, description: "", emoji: "", default: false, action: { type: "none", ephemeral: true } }; }
+    function ebNewSelect() { return { type: "select", custom_id: "", placeholder: "Choose…", min_values: 1, max_values: 1, disabled: false, options: [ebNewOption(1)] }; }
+
     function renderPreview() {
       clear(previewEl);
-      const device = h("div", { class: "eb-discord" });
-      // message content
-      if (s2(eb.content)) device.append(h("div", { class: "eb-msg-content", html: ebMarkdown(eb.content) }));
-      const anyEmbed = eb.embeds.some((e) => !ebEmbedEmpty(e));
-      eb.embeds.forEach((e) => { if (!ebEmbedEmpty(e)) device.append(ebPreviewEmbed(e)); });
-      eb.components.forEach((row) => device.append(ebPreviewComponentRow(row)));
-      if (!s2(eb.content) && !anyEmbed && !eb.components.length) device.append(h("div", { class: "eb-empty-preview" }, h("div", { class: "eb-empty-ico" }, "🪶"), h("div", null, "Your message preview will appear here"), h("div", { class: "eb-empty-sub" }, "Start typing on the left.")));
+      const device = h("div", { class: "eb-discord eb-editing" });
+      // Message content above the embed — always editable.
+      device.append(ebEditable("eb-msg-content", () => eb.content, (v) => { eb.content = v; }, { label: "Message text above the embed", ph: "Message text above the embed (optional)", markdown: true, multiline: true, max: EB_LIMITS.content }));
+      // The active embed always renders (so an empty one can be built inline);
+      // any other embeds render only once they have content.
+      eb.embeds.forEach((e, i) => { if (!ebEmbedEmpty(e) || i === eb.activeEmbed) device.append(ebPreviewEmbed(e, true, i)); });
+      eb.components.forEach((row, ri) => device.append(ebPreviewComponentRow(row, ri)));
+      // "Add" affordances — build the whole message from the canvas, no form.
+      const add = h("div", { class: "eb-cv-add" });
+      if (eb.embeds.length < EB_LIMITS.embeds) add.append(h("button", { type: "button", class: "eb-add-chip", onclick: () => { eb.embeds.push(ebBlankEmbed()); eb.activeEmbed = eb.embeds.length - 1; cvRerender(); } }, "+ Embed"));
+      if (eb.components.length < EB_LIMITS.rows) {
+        add.append(h("button", { type: "button", class: "eb-add-chip", onclick: () => { eb.components.push({ type: "buttons", buttons: [ebNewButton()] }); cvRerender(); } }, "+ Buttons"));
+        add.append(h("button", { type: "button", class: "eb-add-chip", onclick: () => { eb.components.push(ebNewSelect()); cvRerender(); } }, "+ Menu"));
+      }
+      device.append(add);
+      // Allowed-mentions (who actually gets pinged) — small inline control.
+      device.append(h("div", { class: "eb-cv-mentions" },
+        h("span", { class: "eb-cv-mentions-lbl" }, "Pings"),
+        h("select", { class: "eb-cv-sel", onchange: (ev) => { eb.allowedMentions = ev.target.value; cvSync(); } },
+          ...[["default", "Respect roles/users"], ["none", "Suppress all mentions"], ["roles", "Allow role mentions"], ["users", "Allow user mentions"], ["all", "Allow @everyone / @here"]].map(([v, l]) => h("option", { value: v, selected: v === (eb.allowedMentions || "default") ? true : null }, l)))));
       previewEl.append(device);
     }
-    function ebPreviewEmbed(e) {
+    function ebPreviewEmbed(e, editable, i) {
       const col = /^#[0-9a-f]{6}$/i.test(e.color || "") ? e.color : "#e23b2e";
       const box = h("div", { class: "eb-embed", style: { borderColor: col } });
       const inner = h("div", { class: "eb-embed-inner" });
-      if (s2(e.author && e.author.name)) inner.append(h("div", { class: "eb-e-author" }, s2(e.author.icon_url) ? h("img", { class: "eb-e-author-ico", src: e.author.icon_url, onerror: "this.style.display='none'" }) : null, h("span", null, e.author.name)));
-      if (s2(e.title)) inner.append(e.url ? h("a", { class: "eb-e-title link", href: e.url, target: "_blank", rel: "noopener" }, e.title) : h("div", { class: "eb-e-title" }, e.title));
-      if (s2(e.description)) inner.append(h("div", { class: "eb-e-desc", html: ebMarkdown(e.description) }));
-      const inlineFields = (e.fields || []).filter((f) => s2(f.name) || s2(f.value));
-      if (inlineFields.length) {
-        const fg = h("div", { class: "eb-e-fields" });
-        inlineFields.forEach((f) => fg.append(h("div", { class: `eb-e-field ${f.inline ? "inline" : ""}` }, h("div", { class: "eb-e-field-name", html: ebMarkdown(f.name) }), h("div", { class: "eb-e-field-val", html: ebMarkdown(f.value) }))));
-        inner.append(fg);
+
+      // Embed tools (settings + delete) — top-right, shown on hover/focus.
+      if (editable) {
+        box.append(h("div", { class: "eb-cv-embed-tools" },
+          h("button", { type: "button", class: "eb-cv-gear", title: "Embed settings (colour, images, timestamp)", onclick: (ev) => { ev.stopPropagation(); ebPopToggle("embed:" + i); } }, "⚙"),
+          h("button", { type: "button", class: "eb-cv-rowdel", title: "Delete embed", onclick: () => { eb.embeds.splice(i, 1); if (!eb.embeds.length) eb.embeds.push(ebBlankEmbed()); eb.activeEmbed = Math.max(0, Math.min(eb.activeEmbed, eb.embeds.length - 1)); eb._openPop = null; cvRerender(); } }, "✕")));
       }
+
+      // Author
+      if (editable) {
+        const a = h("div", { class: "eb-e-author" });
+        if (s2(e.author && e.author.icon_url)) a.append(h("img", { class: "eb-e-author-ico", src: e.author.icon_url, onerror: "this.style.display='none'" }));
+        a.append(ebEditable("eb-e-author-name", () => e.author && e.author.name, (v) => { (e.author = e.author || {}).name = v; }, { tag: "span", label: "Author name", ph: "Author name", max: EB_LIMITS.authorName }));
+        inner.append(a);
+      } else if (s2(e.author && e.author.name)) {
+        inner.append(h("div", { class: "eb-e-author" }, s2(e.author.icon_url) ? h("img", { class: "eb-e-author-ico", src: e.author.icon_url, onerror: "this.style.display='none'" }) : null, h("span", null, e.author.name)));
+      }
+
+      // Title
+      if (editable) {
+        inner.append(ebEditable("eb-e-title", () => e.title, (v) => { e.title = v; }, { label: "Embed title", ph: "Title", max: EB_LIMITS.title }));
+      } else if (s2(e.title)) {
+        inner.append(e.url ? h("a", { class: "eb-e-title link", href: e.url, target: "_blank", rel: "noopener" }, e.title) : h("div", { class: "eb-e-title" }, e.title));
+      }
+
+      // Description
+      if (editable) {
+        inner.append(ebEditable("eb-e-desc", () => e.description, (v) => { e.description = v; }, { label: "Embed description", ph: "Description (markdown supported)", markdown: true, multiline: true, max: EB_LIMITS.description }));
+      } else if (s2(e.description)) {
+        inner.append(h("div", { class: "eb-e-desc", html: ebMarkdown(e.description) }));
+      }
+
+      // Fields
+      if (editable) {
+        const fg = h("div", { class: "eb-e-fields" });
+        (e.fields || []).forEach((f, fi) => {
+          fg.append(h("div", { class: "eb-e-field " + (f.inline ? "inline" : "") + " eb-cv-field" },
+            ebEditable("eb-e-field-name", () => f.name, (v) => { f.name = v; }, { label: "Field name", ph: "Field name", markdown: true, max: EB_LIMITS.fieldName }),
+            ebEditable("eb-e-field-val", () => f.value, (v) => { f.value = v; }, { label: "Field value", ph: "Field value", markdown: true, multiline: true, max: EB_LIMITS.fieldValue }),
+            h("div", { class: "eb-cv-field-tools" },
+              h("button", { type: "button", class: "eb-cv-field-tog" + (f.inline ? " on" : ""), title: "Toggle inline layout", onclick: () => { f.inline = !f.inline; cvRerender(); } }, "⇆"),
+              h("button", { type: "button", class: "eb-cv-optdel", title: "Remove field", onclick: () => { e.fields.splice(fi, 1); cvRerender(); } }, "✕"))));
+        });
+        inner.append(fg);
+        if ((e.fields || []).length < EB_LIMITS.fields) inner.append(h("button", { type: "button", class: "eb-add-chip sm eb-cv-addfield", onclick: () => { e.fields = e.fields || []; e.fields.push({ name: "Field name", value: "Field value", inline: false }); cvRerender(); } }, "+ Field"));
+      } else {
+        const showFields = (e.fields || []).filter((f) => s2(f.name) || s2(f.value));
+        if (showFields.length) {
+          const fg = h("div", { class: "eb-e-fields" });
+          showFields.forEach((f) => fg.append(h("div", { class: `eb-e-field ${f.inline ? "inline" : ""}` }, h("div", { class: "eb-e-field-name", html: ebMarkdown(f.name) }), h("div", { class: "eb-e-field-val", html: ebMarkdown(f.value) }))));
+          inner.append(fg);
+        }
+      }
+
       if (s2(e.image && e.image.url)) inner.append(h("img", { class: "eb-e-image", src: e.image.url, onerror: "this.style.display='none'" }));
-      if (s2(e.footer && e.footer.text) || e.timestamp) {
-        const ts = e.timestamp ? new Date(e.timestamp) : null;
+
+      // Footer (+ timestamp)
+      const ts = e.timestamp ? new Date(e.timestamp) : null;
+      const tsStr = ts && !isNaN(ts) ? ts.toLocaleString() : "";
+      if (editable) {
+        const f = h("div", { class: "eb-e-footer" });
+        if (s2(e.footer && e.footer.icon_url)) f.append(h("img", { class: "eb-e-footer-ico", src: e.footer.icon_url, onerror: "this.style.display='none'" }));
+        f.append(ebEditable("eb-e-footer-text", () => e.footer && e.footer.text, (v) => { (e.footer = e.footer || {}).text = v; }, { tag: "span", label: "Footer text", ph: "Footer text", max: EB_LIMITS.footer }));
+        if (tsStr) f.append(h("span", { class: "eb-e-foot-ts" }, " • " + tsStr));
+        inner.append(f);
+      } else if (s2(e.footer && e.footer.text) || e.timestamp) {
         inner.append(h("div", { class: "eb-e-footer" },
           s2(e.footer && e.footer.icon_url) ? h("img", { class: "eb-e-footer-ico", src: e.footer.icon_url, onerror: "this.style.display='none'" }) : null,
           h("span", null, [s2(e.footer && e.footer.text) ? e.footer.text : null, ts && !isNaN(ts) ? (s2(e.footer && e.footer.text) ? " • " : "") + ts.toLocaleString() : null].filter(Boolean).join(""))
         ));
       }
+
       box.append(inner);
       if (s2(e.thumbnail && e.thumbnail.url)) { box.classList.add("has-thumb"); inner.append(h("img", { class: "eb-e-thumb", src: e.thumbnail.url, onerror: "this.style.display='none'" })); }
+      if (editable) box.append(ebPop("embed:" + i, (p) => ebEmbedSettings(p, e)));
       return box;
     }
-    function ebPreviewComponentRow(row) {
-      const r = h("div", { class: "eb-comp-preview-row" });
-      if (row.type === "buttons") { (row.buttons || []).forEach((b) => r.append(h("button", { type: "button", class: `eb-d-btn ${b.style || "secondary"} ${b.disabled ? "disabled" : ""}`, disabled: true }, s2(b.emoji) ? b.emoji + " " : "", b.label || (b.style === "link" ? "Link" : "Button")))); return r; }
-      // interactive select — click to open, click an option to test its action
-      const closed = h("div", { class: `eb-d-select ${row.disabled ? "disabled" : ""}` }, h("span", null, row.placeholder || "Make a selection"), h("span", { class: "eb-d-select-chev" }, "▾"));
-      const list = h("div", { class: "eb-d-options", style: { display: "none" } });
-      (row.options || []).forEach((o) => {
-        if (!s2(o.label)) return;
-        list.append(h("div", { class: "eb-d-option", onclick: () => { list.style.display = "none"; showTestResult(o); } },
-          s2(o.emoji) ? h("span", { class: "eb-d-opt-emoji" }, o.emoji) : null,
-          h("div", { class: "eb-d-opt-text" }, h("div", { class: "eb-d-opt-label" }, o.label), s2(o.description) ? h("div", { class: "eb-d-opt-desc" }, o.description) : null)));
+    function ebPreviewComponentRow(row, ri) {
+      if (row.type === "buttons") return ebEditButtonsRow(row, ri);
+      if (row.type === "select") return ebEditSelectRow(row, ri);
+      return h("div");
+    }
+    // Inline control popover, opened by a gear. Its open/closed state lives in
+    // eb._openPop (keyed) so a canvas rerender re-opens the same one.
+    function ebPopToggle(key) { eb._openPop = (eb._openPop === key) ? null : key; cvRerender(); }
+    function ebPop(key, buildBody) {
+      const pop = h("div", { class: "eb-cv-pop" });
+      if (eb._openPop === key) { pop.classList.add("open"); buildBody(pop); }
+      return pop;
+    }
+    function ebEditButtonsRow(row, ri) {
+      const r = h("div", { class: "eb-comp-preview-row eb-cv-row" });
+      (row.buttons || []).forEach((b, bi) => {
+        const key = "btn:" + ri + ":" + bi;
+        const btnEl = h("div", { class: "eb-d-btn " + (b.style || "secondary") + (b.disabled ? " disabled" : "") + " eb-cv-btn" });
+        if (s2(b.emoji)) { const es = h("span", { class: "eb-d-btn-emoji" }); es.append(ebEmojiNode(b.emoji)); btnEl.append(es); }
+        btnEl.append(ebEditable("eb-d-btn-label", () => b.label, (v) => { b.label = v; }, { tag: "span", label: "Button label", ph: "Button", max: EB_LIMITS.label }));
+        btnEl.append(h("button", { type: "button", class: "eb-cv-gear", title: "Button settings", onclick: (e) => { e.stopPropagation(); ebPopToggle(key); } }, "▾"));
+        const pop = ebPop(key, (p) => {
+          const kids = [
+            h("div", { class: "eb-cv-pop-lbl" }, "Style"),
+            h("div", { class: "eb-cv-styles" }, ...EB_BTN_STYLES.map(([v, l]) => h("button", { type: "button", class: "eb-cv-style " + v + ((b.style || "secondary") === v ? " sel" : ""), title: l, onclick: () => { b.style = v; cvRerender(); } }))),
+            h("label", { class: "eb-cv-lbl" }, "Emoji", ebEmojiField(() => b.emoji, (v) => { b.emoji = v; }, () => cvRerender())),
+            b.style === "link"
+              ? h("label", { class: "eb-cv-lbl" }, "Link URL", h("input", { class: "eb-cv-in", type: "url", value: b.url || "", placeholder: "https://…", oninput: (ev) => { b.url = ev.target.value; cvSync(); } }))
+              : h("label", { class: "eb-cv-lbl" }, "Custom ID (auto from label)", h("input", { class: "eb-cv-in", type: "text", value: b.custom_id || "", placeholder: ebAutoId(b.label, "button"), oninput: (ev) => { b.custom_id = ev.target.value; cvSync(); } })),
+            h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: b.disabled ? true : null, onchange: (ev) => { b.disabled = ev.target.checked; cvRerender(); } }), h("span", null, "Disabled")),
+          ];
+          // Non-link buttons can DO something on click (same engine as dropdown
+          // options). Link buttons just open their URL.
+          if (b.style !== "link") {
+            b.action = b.action || { type: "none", ephemeral: true };
+            kids.push(
+              h("div", { class: "eb-cv-pop-lbl" }, "On click → does"),
+              h("select", { class: "eb-cv-sel", onchange: (ev) => { b.action.type = ev.target.value; cvRerender(); } }, ...EB_ACTION_TYPES.map(([v, l]) => h("option", { value: v, selected: (b.action.type || "none") === v ? true : null }, l))),
+              ...ebOptActionInline(b.action));
+          }
+          kids.push(h("button", { type: "button", class: "eb-cv-del", onclick: () => { row.buttons.splice(bi, 1); if (!row.buttons.length) eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "Delete button"));
+          p.append(...kids);
+        });
+        r.append(h("div", { class: "eb-cv-btn-wrap" }, btnEl, pop));
       });
-      if (!row.disabled) closed.onclick = () => { list.style.display = list.style.display === "none" ? "block" : "none"; };
-      r.append(h("div", { class: "eb-d-select-wrap" }, closed, list));
+      if ((row.buttons || []).length < EB_LIMITS.buttonsPerRow) r.append(h("button", { type: "button", class: "eb-add-chip sm", title: "Add button", onclick: () => { row.buttons = row.buttons || []; row.buttons.push(ebNewButton()); cvRerender(); } }, "+"));
+      r.append(h("button", { type: "button", class: "eb-cv-rowdel", title: "Delete this row", onclick: () => { eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "✕"));
       return r;
+    }
+    function ebEditSelectRow(row, ri) {
+      const key = "sel:" + ri;
+      const wrap = h("div", { class: "eb-d-select-wrap eb-cv-selwrap" });
+      wrap.append(h("div", { class: "eb-d-select " + (row.disabled ? "disabled" : "") },
+        ebEditable("eb-d-select-ph", () => row.placeholder, (v) => { row.placeholder = v; }, { tag: "span", label: "Dropdown placeholder", ph: "Make a selection", max: EB_LIMITS.placeholder }),
+        h("button", { type: "button", class: "eb-cv-gear", title: "Menu settings", onclick: (e) => { e.stopPropagation(); ebPopToggle(key); } }, "▾")));
+      wrap.append(ebPop(key, (p) => p.append(
+        h("label", { class: "eb-cv-lbl" }, "Custom ID (auto from placeholder)", h("input", { class: "eb-cv-in", type: "text", value: row.custom_id || "", placeholder: ebAutoId(row.placeholder, "menu"), oninput: (ev) => { row.custom_id = ev.target.value; cvSync(); } })),
+        h("div", { class: "eb-cv-grid2" },
+          h("label", { class: "eb-cv-lbl" }, "Min values", h("input", { class: "eb-cv-in", type: "number", min: 0, max: 25, value: row.min_values == null ? 1 : row.min_values, oninput: (ev) => { row.min_values = parseInt(ev.target.value, 10) || 0; cvSync(); } })),
+          h("label", { class: "eb-cv-lbl" }, "Max values", h("input", { class: "eb-cv-in", type: "number", min: 1, max: 25, value: row.max_values == null ? 1 : row.max_values, oninput: (ev) => { row.max_values = parseInt(ev.target.value, 10) || 1; cvSync(); } }))),
+        h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: row.disabled ? true : null, onchange: (ev) => { row.disabled = ev.target.checked; cvRerender(); } }), h("span", null, "Disabled")),
+        h("button", { type: "button", class: "eb-cv-del", onclick: () => { eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "Delete menu"))));
+      const list = h("div", { class: "eb-d-options eb-cv-opts" });
+      (row.options || []).forEach((o, oi) => {
+        o.action = o.action || { type: "none", ephemeral: true };
+        const optKey = "opt:" + ri + ":" + oi;
+        list.append(h("div", { class: "eb-d-option eb-cv-opt" },
+          ebEmojiField(() => o.emoji, (v) => { o.emoji = v; }, () => cvRerender()),
+          h("div", { class: "eb-d-opt-text" },
+            ebEditable("eb-d-opt-label", () => o.label, (v) => { o.label = v; }, { tag: "div", label: "Option label", ph: "Option label", max: EB_LIMITS.optLabel }),
+            ebEditable("eb-d-opt-desc", () => o.description, (v) => { o.description = v; }, { tag: "div", label: "Option description", ph: "Description (optional)", max: EB_LIMITS.optDesc })),
+          h("button", { type: "button", class: "eb-cv-gear", title: "Option action", onclick: (e) => { e.stopPropagation(); ebPopToggle(optKey); } }, "⚙"),
+          h("button", { type: "button", class: "eb-cv-optdel", title: "Remove option", onclick: () => { row.options.splice(oi, 1); eb._openPop = null; cvRerender(); } }, "✕")));
+        list.append(ebPop(optKey, (p) => p.append(
+          h("label", { class: "eb-cv-lbl" }, "On select → does",
+            h("select", { class: "eb-cv-sel", onchange: (ev) => { o.action.type = ev.target.value; cvRerender(); } }, ...EB_ACTION_TYPES.map(([v, l]) => h("option", { value: v, selected: o.action.type === v ? true : null }, l)))),
+          ...ebOptActionInline(o.action),
+          h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: o.default ? true : null, onchange: (ev) => { o.default = ev.target.checked; cvSync(); } }), h("span", null, "Selected by default")))));
+      });
+      if ((row.options || []).length < EB_LIMITS.options) list.append(h("button", { type: "button", class: "eb-add-chip sm", onclick: () => { row.options = row.options || []; row.options.push(ebNewOption((row.options || []).length + 1)); cvRerender(); } }, "+ Option"));
+      wrap.append(list);
+      wrap.append(h("button", { type: "button", class: "eb-cv-rowdel", title: "Delete this menu", onclick: () => { eb.components.splice(ri, 1); eb._openPop = null; cvRerender(); } }, "✕"));
+      return wrap;
+    }
+    function ebOptActionInline(act) {
+      const out = [];
+      const eph = () => h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: act.ephemeral !== false ? true : null, onchange: (ev) => { act.ephemeral = ev.target.checked; cvSync(); } }), h("span", null, "Only the clicker sees it"));
+      if (act.type === "text") out.push(h("label", { class: "eb-cv-lbl" }, "Reply text", h("input", { class: "eb-cv-in", type: "text", value: act.text || "", oninput: (ev) => { act.text = ev.target.value; cvSync(); } })), eph());
+      else if (act.type === "give_role" || act.type === "remove_role" || act.type === "toggle_role") out.push(h("label", { class: "eb-cv-lbl" }, "Role", h("select", { class: "eb-cv-sel", onchange: (ev) => { act.roleId = ev.target.value; cvSync(); } }, h("option", { value: "" }, "Select a role…"), ...roles.map((rl) => h("option", { value: rl.id, selected: act.roleId === rl.id ? true : null }, rl.name)))), eph());
+      else if (act.type === "info_embed") {
+        // Edit the reply embed right here (no detour to Advanced settings).
+        act.embed = act.embed || { title: "", description: "", color: "#5865f2", image: { url: "" }, footer: { text: "" } };
+        const e2 = act.embed;
+        out.push(
+          h("div", { class: "eb-cv-pop-lbl" }, "Reply embed"),
+          h("label", { class: "eb-cv-lbl" }, "Title", h("input", { class: "eb-cv-in", type: "text", value: e2.title || "", oninput: (ev) => { e2.title = ev.target.value; cvSync(); } })),
+          h("label", { class: "eb-cv-lbl" }, "Description", h("textarea", { class: "eb-cv-in", rows: 2, oninput: (ev) => { e2.description = ev.target.value; cvSync(); } }, e2.description || "")),
+          h("div", { class: "eb-cv-grid2" },
+            h("label", { class: "eb-cv-lbl" }, "Colour", h("input", { class: "eb-cv-color", type: "color", value: /^#[0-9a-f]{6}$/i.test(e2.color || "") ? e2.color : "#5865f2", oninput: (ev) => { e2.color = ev.target.value; cvSync(); } })),
+            h("label", { class: "eb-cv-lbl" }, "Footer", h("input", { class: "eb-cv-in", type: "text", value: (e2.footer && e2.footer.text) || "", oninput: (ev) => { (e2.footer = e2.footer || {}).text = ev.target.value; cvSync(); } }))),
+          h("label", { class: "eb-cv-lbl" }, "Image URL", h("input", { class: "eb-cv-in", type: "url", value: (e2.image && e2.image.url) || "", placeholder: "https://…", oninput: (ev) => { (e2.image = e2.image || {}).url = ev.target.value; cvSync(); } })),
+          eph()
+        );
+      }
+      return out;
+    }
+    function ebEmbedSettings(p, e) {
+      const colorOk = /^#[0-9a-f]{6}$/i.test(e.color || "") ? e.color : "#5865f2";
+      const urlField = (lbl, get, set, rerender) => h("label", { class: "eb-cv-lbl" }, lbl, h("input", { class: "eb-cv-in", type: "url", value: get() || "", placeholder: "https://…", oninput: (ev) => { set(ev.target.value); cvSync(); }, onchange: rerender ? () => cvRerender() : null }));
+      p.append(
+        h("div", { class: "eb-cv-pop-lbl" }, "Embed settings"),
+        h("label", { class: "eb-cv-lbl" }, "Colour", h("input", { class: "eb-cv-color", type: "color", value: colorOk, oninput: (ev) => { e.color = ev.target.value; const bx = p.closest(".eb-embed"); if (bx) bx.style.borderColor = ev.target.value; cvSync(); } })),
+        urlField("Large image URL", () => e.image && e.image.url, (v) => { (e.image = e.image || {}).url = v; }, true),
+        urlField("Thumbnail URL", () => e.thumbnail && e.thumbnail.url, (v) => { (e.thumbnail = e.thumbnail || {}).url = v; }, true),
+        urlField("Author icon URL", () => e.author && e.author.icon_url, (v) => { (e.author = e.author || {}).icon_url = v; }, true),
+        urlField("Author link URL", () => e.author && e.author.url, (v) => { (e.author = e.author || {}).url = v; }, false),
+        urlField("Footer icon URL", () => e.footer && e.footer.icon_url, (v) => { (e.footer = e.footer || {}).icon_url = v; }, true),
+        urlField("Title link URL", () => e.url, (v) => { e.url = v; }, false),
+        h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: e.timestamp ? true : null, onchange: (ev) => { e.timestamp = ev.target.checked ? new Date().toISOString() : null; cvRerender(); } }), h("span", null, "Show timestamp"))
+      );
     }
     function showTestResult(o) {
       const device = previewEl.querySelector(".eb-discord");
@@ -1411,10 +1716,14 @@
 
     // ---- actions ----
     function ebReset() {
-      if (!confirm("Reset the builder and clear your draft?")) return;
-      eb.channelId = ""; eb.content = ""; eb.allowedMentions = "default"; eb.embeds = [ebBlankEmbed()]; eb.activeEmbed = 0; eb.components = []; eb.templateId = null;
-      data.embDraftSave(gid, serializeModel(eb)).catch(() => {});
-      renderAll(); toast("info", "Builder reset");
+      ebModal("Reset the builder?", h("p", { class: "eb-modal-text" }, "This clears the current message and your saved draft. Your saved templates are not affected."), [
+        { label: "Cancel", kind: "btn-ghost" },
+        { label: "Reset", kind: "btn-danger", onConfirm: (close) => {
+          eb.channelId = ""; eb.content = ""; eb.allowedMentions = "default"; eb.embeds = [ebBlankEmbed()]; eb.activeEmbed = 0; eb.components = []; eb.templateId = null; eb._openPop = null;
+          data.embDraftSave(gid, serializeModel(eb)).catch(() => {});
+          renderAll(); toast("info", "Builder reset"); close();
+        } },
+      ]);
     }
     function ebCopyJson() { navigator.clipboard.writeText(JSON.stringify(serializeModel(eb), null, 2)).then(() => toast("success", "JSON copied"), () => toast("error", "Copy failed")); }
     function ebExport() {
@@ -1426,12 +1735,63 @@
       inp.onchange = () => { const file = inp.files[0]; if (!file) return; const rd = new FileReader(); rd.onload = () => { try { const j = JSON.parse(rd.result); const payload = j.payload || j; applyModel(eb, payload); renderAll(); syncPreview(); toast("success", "Template imported"); } catch { toast("error", "Invalid JSON file"); } }; rd.readAsText(file); };
       inp.click();
     }
-    async function ebSaveTemplate() {
-      const name = prompt("Template name:", eb._name || "My Embed"); if (!name) return;
-      try { const r = await data.embTplCreate(gid, { name, payload: serializeModel(eb) }); if (r && r.template) { templates.unshift(r.template); eb.templateId = r.template.id; eb._name = r.template.name; renderEditor(); toast("success", `Saved “${r.template.name}”`); } }
-      catch (e) { toast("error", ebErr(e) || "Could not save template"); }
+    function ebSaveTemplate() {
+      const input = h("input", { class: "eb-input eb-tpl-name", type: "text", value: eb._name || "My Embed", placeholder: "Template name", maxlength: 100, spellcheck: "false" });
+      let closeModal = function () {};
+      const doSave = async () => {
+        const name = (input.value || "").trim();
+        if (!name) { input.classList.add("eb-input-bad"); input.focus(); return; }
+        try {
+          const r = await data.embTplCreate(gid, { name, payload: serializeModel(eb) });
+          if (r && r.template) { templates.unshift(r.template); eb.templateId = r.template.id; eb._name = r.template.name; toast("success", `Saved “${r.template.name}”`); }
+          closeModal();
+        } catch (e) { toast("error", ebErr(e) || "Could not save template"); }
+      };
+      input.addEventListener("input", () => input.classList.remove("eb-input-bad"));
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); doSave(); } });
+      const body = h("div", { class: "eb-tpl-save" },
+        h("p", { class: "eb-modal-text" }, "Save this message as a reusable template you can apply any time from ", h("strong", null, "📁 Templates"), "."),
+        h("label", { class: "eb-tpl-save-lbl" }, "Template name"),
+        input);
+      closeModal = ebModal("Save as template", body, [
+        { label: "Cancel", kind: "btn-ghost" },
+        { label: "💾 Save template", kind: "btn-primary", onConfirm: () => doSave() },
+      ]);
+      setTimeout(() => { try { input.focus(); input.select(); } catch (_) {} }, 60);
     }
     function ebLoadTemplate(t) { applyModel(eb, { content: t.messageContent, allowedMentions: t.allowedMentions, embeds: t.embedJson, components: t.componentsJson }); eb.templateId = t.id; eb._name = t.name; renderAll(); syncPreview(); toast("success", `Loaded “${t.name}”`); }
+    // Saved templates, in a modal (the Advanced form is gone — everything lives
+    // in the canvas + the action bar).
+    function ebOpenTemplatesModal() {
+      const body = h("div", { class: "eb-tpl-modal" });
+      let closeModal = function () {};
+      let confirmId = null; // which template row is showing inline "Delete?" confirm
+      async function removeTemplate(t) {
+        try { await data.embTplDelete(gid, t.id); templates = templates.filter((x) => x.id !== t.id); toast("info", "Template deleted"); }
+        catch { toast("error", "Could not delete"); }
+      }
+      function renderList() {
+        clear(body);
+        if (!templates.length) { body.append(h("div", { class: "eb-empty" }, "No templates yet. Build an embed and hit “Save template”.")); return; }
+        templates.forEach((t) => {
+          if (confirmId === t.id) {
+            body.append(h("div", { class: "eb-tpl-row eb-tpl-row-confirm" },
+              h("span", { class: "eb-tpl-row-name" }, "Delete “" + t.name + "”?"),
+              h("div", { class: "eb-tpl-row-acts" },
+                btn("Delete", { kind: "btn-danger", onclick: async () => { await removeTemplate(t); confirmId = null; renderList(); } }),
+                btn("Cancel", { kind: "btn-ghost", onclick: () => { confirmId = null; renderList(); } }))));
+          } else {
+            body.append(h("div", { class: "eb-tpl-row" },
+              h("span", { class: "eb-tpl-row-name" }, t.name),
+              h("div", { class: "eb-tpl-row-acts" },
+                btn("Apply", { kind: "btn-secondary", onclick: () => { ebLoadTemplate(t); closeModal(); } }),
+                btn("Delete", { kind: "btn-ghost", onclick: () => { confirmId = t.id; renderList(); } }))));
+          }
+        });
+      }
+      renderList();
+      closeModal = ebModal("Templates", body, [{ label: "Close", kind: "btn-ghost" }]);
+    }
     async function ebDuplicateTemplate(t) {
       try { const r = await data.embTplCreate(gid, { name: t.name + " (copy)", category: t.category, payload: { content: t.messageContent, allowedMentions: t.allowedMentions, embeds: t.embedJson, components: t.componentsJson } }); if (r && r.template) { templates.unshift(r.template); renderEditor(); toast("success", "Duplicated"); } }
       catch (e) { toast("error", "Could not duplicate"); }
@@ -1502,11 +1862,38 @@
   }
 
   /* Embed builder model (de)serialisation + validation + tiny markdown */
+  // Auto custom_id from a label/placeholder so users never have to type one.
+  function ebAutoId(text, fallback) {
+    const slug = String(text || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80);
+    return slug || fallback;
+  }
+  function ebUniqId(used, base, fallback) {
+    let id = ebAutoId(base, fallback), cand = id, n = 2;
+    while (used.has(cand)) { cand = (id + "_" + n).slice(0, 100); n++; }
+    used.add(cand);
+    return cand;
+  }
+  // Fill in any missing button/select custom_id from its label/placeholder
+  // (unique within the message). Manual ids are kept; link buttons need none.
+  function ebSerializeComponents(components) {
+    const used = new Set();
+    components.forEach((row) => {
+      if (row.type === "buttons") (row.buttons || []).forEach((b) => { if (b.style !== "link" && s2(b.custom_id)) used.add(b.custom_id); });
+      else if (row.type === "select" && s2(row.custom_id)) used.add(row.custom_id);
+    });
+    return components.map((row) => {
+      if (row.type === "buttons") {
+        return Object.assign({}, row, { buttons: (row.buttons || []).map((b, i) => b.style === "link" ? b : Object.assign({}, b, { custom_id: s2(b.custom_id) ? b.custom_id : ebUniqId(used, b.label, "button_" + (i + 1)) })) });
+      }
+      if (row.type === "select") return Object.assign({}, row, { custom_id: s2(row.custom_id) ? row.custom_id : ebUniqId(used, row.placeholder, "menu") });
+      return row;
+    });
+  }
   function serializeModel(eb) {
     return {
       content: eb.content || "", allowedMentions: eb.allowedMentions || "default",
       embeds: (eb.embeds || []).map((e) => ({ title: e.title || "", url: e.url || "", description: e.description || "", color: e.color || "", timestamp: e.timestamp || null, author: { name: (e.author || {}).name || "", url: (e.author || {}).url || "", icon_url: (e.author || {}).icon_url || "" }, thumbnail: { url: (e.thumbnail || {}).url || "" }, image: { url: (e.image || {}).url || "" }, footer: { text: (e.footer || {}).text || "", icon_url: (e.footer || {}).icon_url || "" }, fields: (e.fields || []).map((f) => ({ name: f.name || "", value: f.value || "", inline: !!f.inline })) })),
-      components: (eb.components || []),
+      components: ebSerializeComponents(eb.components || []),
     };
   }
   function applyModel(eb, m) {
@@ -1538,13 +1925,17 @@
         (row.buttons || []).forEach((b, j) => {
           if (!s2(b.label) && !s2(b.emoji)) errs.push(`Row ${i + 1} button ${j + 1}: needs a label or emoji.`);
           if (b.style === "link") { if (!/^https?:\/\//i.test(b.url || "")) errs.push(`Row ${i + 1} button ${j + 1}: link needs http(s) URL.`); }
-          else if (!s2(b.custom_id)) errs.push(`Row ${i + 1} button ${j + 1}: needs a custom ID.`);
-          else if (ids.has(b.custom_id)) errs.push(`Duplicate custom ID “${b.custom_id}”.`); else ids.add(b.custom_id);
+          // custom_id is auto-derived from the label on send; only flag a clash
+          // between two MANUALLY-set ids.
+          else if (s2(b.custom_id)) { if (ids.has(b.custom_id)) errs.push(`Duplicate custom ID “${b.custom_id}”.`); else ids.add(b.custom_id); }
         });
       } else if (row.type === "select") {
-        if (!s2(row.custom_id)) errs.push(`Row ${i + 1}: select needs a custom ID.`); else if (ids.has(row.custom_id)) errs.push(`Duplicate custom ID “${row.custom_id}”.`); else ids.add(row.custom_id);
+        if (s2(row.custom_id)) { if (ids.has(row.custom_id)) errs.push(`Duplicate custom ID “${row.custom_id}”.`); else ids.add(row.custom_id); }
         if (!(row.options || []).length) errs.push(`Row ${i + 1}: select needs an option.`);
         if ((row.options || []).length > EB_LIMITS.options) errs.push(`Row ${i + 1}: max ${EB_LIMITS.options} options.`);
+        const minV = row.min_values == null ? 1 : row.min_values, maxV = row.max_values == null ? 1 : row.max_values;
+        if (minV > maxV) errs.push(`Row ${i + 1}: min values can't exceed max values.`);
+        if (maxV > (row.options || []).length) errs.push(`Row ${i + 1}: max values can't exceed the number of options.`);
         (row.options || []).forEach((o, j) => { if (!s2(o.label) || !s2(o.value)) errs.push(`Row ${i + 1} option ${j + 1}: label and value required.`); });
       }
     });
@@ -1554,6 +1945,8 @@
   }
   function ebMarkdown(t) {
     let x = escapeHtml(t || "");
+    // Custom Discord emojis: <:name:id> / <a:name:id> → <img> (escaped to &lt;…&gt;).
+    x = x.replace(/&lt;(a)?:(\w+):(\d+)&gt;/g, (_, anim, name, id) => `<img class="eb-cemoji-text" src="https://cdn.discordapp.com/emojis/${id}.${anim ? "gif" : "png"}?size=44" alt=":${name}:" title=":${name}:" onerror="this.replaceWith(document.createTextNode(':${name}:'))">`);
     x = x.replace(/```([\s\S]*?)```/g, (_, c) => `<pre>${c}</pre>`).replace(/`([^`]+)`/g, "<code>$1</code>");
     x = x.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>").replace(/__([^_]+)__/g, "<u>$1</u>").replace(/~~([^~]+)~~/g, "<s>$1</s>");
     x = x.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
@@ -1637,11 +2030,9 @@
     { id: "polls",       label: "Polls",       emoji: "📊", module: "polls",         flag: null },
     { id: "moderation",  label: "Moderation",  emoji: "🛡️", module: "moderation",   flag: "moderation" },
     { id: "tickets",     label: "Tickets",     emoji: "🎫", module: "tickets",       flag: "tickets",    tier: "premium" },
-    { id: "credits",     label: "Credits",     emoji: "💰", module: "credits",       flag: "credits",    tier: "premium" },
     { id: "payments",    label: "Payments",    emoji: "💳", module: "payments",      flag: "payments",   tier: "premium" },
     { id: "staffPay",    label: "Staff Pay",   emoji: "💷", module: "staffPay",      flag: "staffPay",   tier: "premium" },
     { id: "hype",        label: "Hype System", emoji: "🔥", module: "hype",          flag: "hype",       tier: "premium" },
-    { id: "giveaways",   label: "Giveaways",   emoji: "🎉", module: "giveaways",     flag: null,         tier: "premium" },
     { id: "events",      label: "Events",      emoji: "📋", module: "events",        flag: null,         tier: "premium" },
     { id: "branding",    label: "Branding",    emoji: "🎨", module: "branding",      flag: "branding",   tier: "premium" },
     { id: "suggestions", label: "Suggestions", emoji: "🔔", module: null,            flag: null,         comingSoon: true },
@@ -1656,146 +2047,224 @@
     polls:       "Run quick role-gated polls.",
     moderation:  "Ban, kick, timeout, URL filter.",
     tickets:     "Manage support tickets easily.",
-    credits:     "In-server credits with expiry.",
     payments:    "Accept PayPal payments securely.",
     staffPay:    "Pay your staff automatically.",
     hype:        "Build hype and engage your community.",
-    giveaways:   "Run community giveaways.",
     events:      "Dino, Number & Vault credit events.",
     branding:    "Customize bot text, colors and more.",
     suggestions: "Collect member suggestions.",
     sticky:      "Keep a message pinned to the bottom.",
   };
 
+  // Setup Hub "mark as done" persistence. Flagged categories use the backend
+  // override (it syncs with Discord /setup + the overview ring). The handful of
+  // flagless categories (polls, events, suggestions, sticky) have no
+  // backend flag to store against, so their manual "done" lives in localStorage,
+  // keyed per guild.
+  function hubLocalKey(gid) { return `arkoris:setupDone:${gid}`; }
+  function hubLocalDone(gid) {
+    try { return new Set(JSON.parse(localStorage.getItem(hubLocalKey(gid)) || "[]")); }
+    catch { return new Set(); }
+  }
+  function hubSetLocalDone(gid, id, value) {
+    const set = hubLocalDone(gid);
+    if (value) set.add(id); else set.delete(id);
+    try { localStorage.setItem(hubLocalKey(gid), JSON.stringify([...set])); } catch (_) {}
+  }
+
+  // True when EVERY Setup Hub card is done (flagged ones via backend flags,
+  // flagless ones via localStorage). This is the signal for hiding the hub
+  // entirely once a server is fully configured.
+  function hubAllDone(flags) {
+    const f = flags || {};
+    const localDone = hubLocalDone(state.selectedGuildId);
+    return SETUP_HUB.every((c) => c.flag ? !!f[c.flag] : localDone.has(c.id));
+  }
+  // Cache the latest setup status per guild so the sidebar — which renders
+  // before any tab fetch — can decide whether to show the Setup Hub without a
+  // fetch of its own. Refreshed whenever Overview / Setup Hub pull /overview.
+  function cacheSetupStatus(gid, setup) {
+    // Bind to the guild the data was fetched FOR, and drop a response that
+    // resolved after the user already switched guilds (cross-guild bleed guard).
+    if (gid !== state.selectedGuildId) return;
+    state.setupStatus = { guildId: gid, setup: setup || {} };
+  }
+  async function ensureSetupStatus() {
+    if (state.setupStatus && state.setupStatus.guildId === state.selectedGuildId) return state.setupStatus.setup;
+    const gid = state.selectedGuildId;
+    try { const o = await data.overview(gid); cacheSetupStatus(gid, o.setup); }
+    catch { cacheSetupStatus(gid, (state.setupStatus && state.setupStatus.setup) || {}); }
+    return (state.setupStatus && state.setupStatus.guildId === state.selectedGuildId) ? state.setupStatus.setup : {};
+  }
+
   async function loadSetupHub(content) {
     try {
-      const o = await data.overview(state.selectedGuildId);
+      const gid = state.selectedGuildId;
+      const o = await data.overview(gid);
+      cacheSetupStatus(gid, o.setup);
       const flags = o.setup?.flags || {};
-      const isPremium = !!o.premiumActive;
-      const setup = o.setup || { percent: 0, total: 0, completedCount: 0 };
+      const overrides = o.setup?.overrides || {};
+      const guild = state.guilds.find((g) => g.id === state.selectedGuildId) || {};
+      const isPremium = !!o.premiumActive || (guild.plan && guild.plan !== "free")
+        || o.plan === "premium" || o.plan === "monthly" || o.plan === "lifetime";
+      const localDone = hubLocalDone(state.selectedGuildId);
       clear(content);
 
-      // ── Two-column shell: main (hero + grid) + right rail ──────────
-      const shell = h("div", { class: "hub-shell" });
-      const main = h("div", { class: "hub-main" });
-      const rail = h("aside", { class: "hub-rail" });
-      shell.append(main, rail);
-      content.append(shell);
+      // Done = auto-detected / backend-overridden (flagged) OR locally marked
+      // (flagless). Manual = something we let the user undo (an explicit mark).
+      const isDone = (cat) => cat.flag ? !!flags[cat.flag] : localDone.has(cat.id);
+      const isManual = (cat) => cat.flag ? !!overrides[cat.flag] : localDone.has(cat.id);
+      const isLocked = (cat) => cat.tier === "premium" && !isPremium;
+      const todo = SETUP_HUB.filter((c) => !isDone(c));
+      const doneCats = SETUP_HUB.filter((c) => isDone(c));
 
-      // Hero band
-      main.append(
-        h("div", { class: "hub-hero" },
-          h("div", { class: "hub-hero-body" },
-            h("div", { class: "hub-hero-eyebrow" }, "/ SETUP"),
-            h("h1", { class: "hub-hero-title" }, "Setup Hub"),
-            h("div", { class: "hub-hero-rule" }),
-            h("p", { class: "hub-hero-desc" },
-              "Configure and customize your server with Arkoris's powerful modules. Every card writes to the same database as ",
-              h("code", null, "/setup"), " in Discord.")
-          ),
-          h("div", { class: "hub-hero-glow", "aria-hidden": "true" })
-        )
-      );
+      // Persist a "done" mark (or undo it), then re-render this tab in place.
+      async function markDone(cat, value, btn) {
+        if (btn) btn.disabled = true;
+        let stillConfigured = false;
+        // Latest known flags, so we can detect when this was the final step.
+        let flagsAfter = (state.setupStatus && state.setupStatus.setup && state.setupStatus.setup.flags) || flags;
+        if (cat.flag) {
+          try {
+            const res = await data.setupOverride(gid, cat.flag, value);
+            // The route returns the fresh setup status. Undo only clears the
+            // manual mark — if the module is genuinely configured in Discord it
+            // stays done, so don't claim we moved it back.
+            if (res && res.flags) { flagsAfter = res.flags; cacheSetupStatus(gid, res); }
+            if (!value && res && res.flags && res.flags[cat.flag]) stillConfigured = true;
+          } catch (e) { toast("error", "Couldn't update — try again."); if (btn) btn.disabled = false; return; }
+        } else {
+          hubSetLocalDone(gid, cat.id, value);
+        }
 
-      // Module card grid
-      const grid = h("div", { class: "hub-grid" });
-      SETUP_HUB.forEach((cat) => {
-        const isConfigured = cat.flag ? !!flags[cat.flag] : null;
-        const isLocked = cat.tier === "premium" && !isPremium;
-        const card = h("div", {
-          class: `hub-card ${isConfigured ? "configured" : ""} ${isLocked ? "locked" : ""}`,
-        });
-        const iconWrap = h("div", { class: "hub-card-icon" });
-        iconWrap.appendChild(iconSvg(TAB_ICONS[cat.module] || "grid"));
-        const go = () => {
-          if (cat.comingSoon) {
-            toast("warn", `${cat.label} is configured in Discord via /setup for now.`, 4500);
-            return;
-          }
-          if (cat.module) { state.activeTab = cat.module; render(); }
-        };
-        // Native .append() (unlike h()) does not skip null children — it
-        // coerces them to the literal text "null". Filter first so free /
-        // unconfigured cards don't render a stray "null null".
-        card.append(
-          ...[
-            cat.tier === "premium" ? h("span", { class: "hub-card-tier" }, "PRO") : null,
-            isConfigured === true ? h("span", { class: "hub-card-check" }, "✓") : null,
-            iconWrap,
-            h("div", { class: "hub-card-name" }, cat.label),
-            h("div", { class: "hub-card-desc" }, SETUP_HUB_DESC[cat.id] || "Configure this module."),
-            h("button", { type: "button", class: "hub-card-btn", onclick: go },
-              cat.comingSoon ? "Discord only" : "Configure",
-              h("span", { class: "hub-card-btn-arrow" }, "›")),
-          ].filter(Boolean)
-        );
-        // Whole card is clickable too
-        card.addEventListener("click", (e) => { if (!e.target.closest(".hub-card-btn")) go(); });
-        grid.appendChild(card);
-      });
-      main.append(grid);
+        // Final step done → the hub is about to disappear; take the user to the
+        // Overview rather than re-render a hub that's being removed.
+        if (value && hubAllDone(flagsAfter)) {
+          state.activeTab = "overview";
+          toast("success", "Setup complete — every module is configured. The Setup Hub is now hidden.");
+          render();
+          return;
+        }
 
-      // ── Right rail ────────────────────────────────────────────────
-      // Bot status
-      rail.append(
-        h("div", { class: "hub-rail-card" },
-          h("div", { class: "hub-rail-label" }, "Bot Status"),
-          h("div", { class: "hub-status-row" },
-            h("div", { class: "hub-status-badge" }, "✓"),
-            h("div", null,
-              h("div", { class: "hub-status-main" }, o.botInstalled ? "Online" : "Not installed"),
-              h("div", { class: "hub-status-sub" }, o.botInstalled ? "All systems operational" : "Invite the bot to this server")
-            )
-          )
-        )
-      );
-
-      // Server info — real data only
-      const g = o.guild || {};
-      const created = g.createdAt ? new Date(g.createdAt) : null;
-      const planLabel = o.plan === "lifetime" ? "Lifetime"
-                      : (o.plan === "premium" || o.plan === "monthly") ? "Premium" : "Free";
-      rail.append(
-        h("div", { class: "hub-rail-card" },
-          h("div", { class: "hub-rail-label" }, "Server Info"),
-          h("div", { class: "hub-info-row" }, h("span", null, "Server"),  h("strong", null, g.name || "—")),
-          g.memberCount != null
-            ? h("div", { class: "hub-info-row" }, h("span", null, "Members"), h("strong", null, g.memberCount.toLocaleString()))
-            : null,
-          created
-            ? h("div", { class: "hub-info-row" }, h("span", null, "Created"), h("strong", null, created.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })))
-            : null,
-          h("div", { class: "hub-info-row" }, h("span", null, "Plan"), h("strong", null, planLabel)),
-          h("div", { class: "hub-info-row" }, h("span", null, "Setup"), h("strong", null, `${setup.percent || 0}% · ${setup.completedCount || 0}/${setup.total || 0}`))
-        )
-      );
-
-      // Quick actions (real)
-      rail.append(
-        h("div", { class: "hub-rail-card" },
-          h("div", { class: "hub-rail-label" }, "Quick Actions"),
-          h("div", { class: "hub-rail-actions" },
-            renderHubAction("activity", "Overview",     () => { state.activeTab = "overview"; render(); }),
-            renderHubAction("fileText", "Audit Log",    () => { state.activeTab = "audit"; render(); }),
-            renderHubAction("plug",     "Invite Bot",   cfg.links?.inviteBot),
-            renderHubAction("lifeRing", "Join Support", cfg.links?.supportDiscord)
-          )
-        )
-      );
-
-      // Go Premium (only when not premium)
-      if (!isPremium) {
-        rail.append(
-          h("div", { class: "hub-rail-card hub-premium" },
-            h("div", { class: "hub-premium-head" },
-              h("span", { class: "hub-premium-crown" }, "♛"),
-              h("span", null, "Go Premium")
-            ),
-            h("p", null, "Unlock Payments, Staff Pay, Hype, Branding, Tickets, Events and more."),
-            btn("Upgrade Now", { kind: "btn-primary", onclick: () => { state.activeTab = "premium"; render(); } })
-          )
-        );
+        if (value) toast("success", `Marked ${cat.label} as done.`);
+        else if (stillConfigured) toast("info", `${cat.label} is still configured in Discord — change it there to move it back.`);
+        else toast("success", `Moved ${cat.label} back to setup.`);
+        // Re-render, then restore keyboard focus — the activated button was just
+        // destroyed, so park focus somewhere sensible (Completed after a mark,
+        // the to-do grid after an undo) instead of dropping it to <body>.
+        await loadSetupHub(content);
+        const tgt = value
+          ? content.querySelector(".dsx-hub-done-head")
+          : content.querySelector(".dsx-hub-card-main");
+        (tgt || content.querySelector(".dsx-hub-done-head") || content.querySelector(".dsx-hub-card-main"))?.focus();
       }
+
+      const wrap = h("div", { class: "dsx-hub" });
+
+      // Header — hub-local tally (counts both backend flags and local marks).
+      wrap.append(
+        h("header", { class: "dsx-hub-head" },
+          h("div", null,
+            h("h1", { class: "dsx-hub-title" }, "Setup Hub"),
+            h("p", { class: "dsx-hub-sub" },
+              "What's left to configure. Finished modules move to Completed below — most save straight to the bot, same as ",
+              h("code", null, "/setup"), " in Discord; a few optional extras are remembered only in this browser.")
+          ),
+          h("span", { class: "dsx-hub-progress" }, `${doneCats.length} / ${SETUP_HUB.length} set up`)
+        )
+      );
+
+      // To-do grid (or an all-set state when nothing is left).
+      if (todo.length === 0) {
+        const allset = h("div", { class: "dsx-hub-allset" });
+        const ai = h("span", { class: "dsx-hub-allset-ico", "aria-hidden": "true" }); ai.append(iconSvg("check"));
+        allset.append(ai,
+          h("div", { class: "dsx-hub-allset-title" }, "Everything's set up"),
+          h("div", { class: "dsx-hub-allset-sub" }, "Every module is configured. Reopen one from Completed below if you need to change it.")
+        );
+        wrap.append(allset);
+      } else {
+        const grid = h("div", { class: "dsx-hub-grid" });
+        todo.forEach((cat) => {
+          const locked = isLocked(cat);
+          const card = h("div", { class: "dsx-hub-card" + (locked ? " locked" : "") });
+          const main = h("button", {
+            type: "button",
+            class: "dsx-hub-card-main",
+            onclick: () => {
+              if (cat.comingSoon) { toast("warn", `${cat.label} is configured in Discord via /setup for now.`, 4500); return; }
+              if (cat.module) { state.activeTab = cat.module; render(); }
+            },
+          });
+          const ico = h("span", { class: "dsx-hub-card-ico", "aria-hidden": "true" }); ico.append(iconSvg(TAB_ICONS[cat.module] || "grid"));
+          const cta = h("span", { class: "dsx-enter", "aria-hidden": "true" }); cta.append(iconSvg("arrowRight"));
+          main.append(
+            h("div", { class: "dsx-hub-card-top" },
+              ico,
+              h("div", { class: "dsx-hub-card-badges" },
+                cat.tier === "premium" ? h("span", { class: "dsx-nav-pro" }, "PRO") : null
+              )
+            ),
+            h("div", { class: "dsx-hub-card-name" }, cat.label),
+            h("div", { class: "dsx-hub-card-desc" }, SETUP_HUB_DESC[cat.id] || "Configure this module."),
+            h("span", { class: "dsx-hub-card-cta" }, cat.comingSoon ? "Discord only" : "Configure", cta)
+          );
+          card.append(main);
+          // "Mark as done" — hidden on locked premium cards (can't use them yet).
+          if (!locked) {
+            const foot = h("div", { class: "dsx-hub-card-foot" });
+            const mark = h("button", { type: "button", class: "dsx-hub-card-mark",
+              onclick: (ev) => markDone(cat, true, ev.currentTarget) });
+            const mi = h("span", { class: "dsx-hub-card-mark-ico", "aria-hidden": "true" }); mi.append(iconSvg("check"));
+            mark.append(mi, "Mark as done");
+            foot.append(mark);
+            card.append(foot);
+          }
+          grid.appendChild(card);
+        });
+        wrap.append(grid);
+      }
+
+      // Completed — collapsed disclosure; configured items live here, out of the way.
+      if (doneCats.length) {
+        const open = !!state._hubDoneOpen;
+        const section = h("div", { class: "dsx-hub-done" + (open ? " open" : "") });
+        const chev = h("span", { class: "dsx-hub-done-chev", "aria-hidden": "true" }); chev.append(iconSvg("chevron"));
+        const head = h("button", { type: "button", class: "dsx-hub-done-head", "aria-expanded": open ? "true" : "false", "aria-controls": "dsx-hub-done-list" },
+          chev, h("span", { class: "dsx-hub-done-head-label" }, `Completed (${doneCats.length})`)
+        );
+        head.onclick = () => {
+          state._hubDoneOpen = !state._hubDoneOpen;
+          const nowOpen = !!state._hubDoneOpen;
+          section.classList.toggle("open", nowOpen);
+          head.setAttribute("aria-expanded", nowOpen ? "true" : "false");
+        };
+        const list = h("div", { class: "dsx-hub-done-list", id: "dsx-hub-done-list" });
+        doneCats.forEach((cat) => {
+          const manual = isManual(cat);
+          const row = h("div", { class: "dsx-hub-done-row" });
+          const jump = h("button", { type: "button", class: "dsx-hub-done-jump",
+            onclick: () => {
+              if (cat.comingSoon || !cat.module) { toast("warn", `${cat.label} is managed in Discord via /setup.`, 4000); return; }
+              state.activeTab = cat.module; render();
+            } });
+          const ck = h("span", { class: "dsx-hub-done-check", "aria-hidden": "true" }); ck.append(iconSvg("check"));
+          jump.append(ck,
+            h("span", { class: "dsx-hub-done-name" }, cat.label),
+            h("span", { class: "dsx-hub-done-state" }, manual ? "Marked done" : "Configured")
+          );
+          row.append(jump);
+          if (manual) {
+            row.append(h("button", { type: "button", class: "dsx-hub-done-undo",
+              title: "Move back to setup", onclick: (ev) => markDone(cat, false, ev.currentTarget) }, "Undo"));
+          }
+          list.append(row);
+        });
+        section.append(head, list);
+        wrap.append(section);
+      }
+
+      content.append(wrap);
     } catch (e) { renderTabError(content, e); }
   }
 
@@ -1826,54 +2295,159 @@
     clear(content);
     content.append(renderOverviewSkeleton());
     try {
-      // Overview + analytics in parallel. Analytics is best-effort —
-      // if it fails the page still renders with the rest.
+      const gid = state.selectedGuildId;
+      const guild = state.guilds.find((g) => g.id === gid) || {};
+      // Overview + analytics in parallel. Analytics is best-effort.
       const [o, analytics] = await Promise.all([
-        data.overview(state.selectedGuildId),
-        data.analytics(state.selectedGuildId, 7).catch(() => null),
+        data.overview(gid),
+        data.analytics(gid, 7).catch(() => null),
       ]);
+      cacheSetupStatus(gid, o.setup);
       clear(content);
-
-      // Two-column shell: overview content on the left, a live cluster-
-      // population rail on the right (reuses the hub-shell/hub-rail layout).
-      const main = h("div", { class: "hub-main" });
-      const rail = h("aside", { class: "hub-rail" });
-
-      // Activity stat grid — real numbers from the analytics endpoint.
-      // Each card: value, week-over-week delta, sparkline.
-      main.append(renderActivityStatGrid(o, analytics));
-
-      // Analytics chart card
-      if (analytics) main.append(renderAnalyticsCard(analytics));
-
-      // Quick actions
-      main.append(
-        h("div", { class: "dash-card" },
-          h("h3", null, "Quick actions"),
-          h("p", null, "Jump straight into the configuration you need most."),
-          h("div", { class: "dash-quick-actions" },
-            renderQuickAction("welcome",   "hand",     "Configure Welcome",  "Greet new members with a custom embed."),
-            renderQuickAction("roleMenus", "masks",    "Role Menus",         "Build dropdown / button role panels."),
-            renderQuickAction("tickets",   "ticket",   "Tickets",            "Forum-based support tickets."),
-            renderQuickAction("staffPay",  "wallet",   "Staff Pay",          "Per-role pay amounts + tiers."),
-            renderQuickAction("events",    "calendar", "Events",             "Dino / Number / Vault credit events."),
-            renderQuickAction("branding",  "palette",  "Branding",           "Customize the bot's embed look.")
-          )
-        )
-      );
-
-      // Setup progress (ring + checklist) — mirrors the mockup's
-      // "Bot Setup Progress" panel.
-      main.append(renderSetupProgressCard(o));
-
-      // Recent audit (preview, last 6)
-      main.append(renderRecentAuditCard());
-
-      // Right rail — live cluster population (top 5 by game / platform).
-      rail.append(renderLivePopPanel());
-
-      content.append(h("div", { class: "hub-shell" }, main, rail));
+      // Rebuilt Discord-native overview (.dsx-ov-*): a health hero, a compact
+      // weekly-activity row, quick actions, and recent activity. No old
+      // .dash-card / .hub-shell / stat-grid / ring / pop-rail.
+      content.append(h("div", { class: "dsx-ov" },
+        renderOvHealth(o, guild),
+        renderOvStats(analytics),
+        renderOvActions(),
+        renderOvActivity()
+      ));
     } catch (e) { renderTabError(content, e); }
+  }
+
+  // Health-at-a-glance hero: identity + status + setup progress + CTA.
+  function renderOvHealth(o, guild) {
+    const setup = o.setup || {};
+    const pct = Math.max(0, Math.min(100, Math.round(setup.percent || 0)));
+    const setupComplete = hubAllDone(setup.flags);
+    const members = (o.guild && o.guild.memberCount != null) ? o.guild.memberCount : null;
+    const plan = guild.plan || "free";
+    const premium = plan === "premium" || plan === "monthly" || plan === "lifetime";
+    const planLabel = plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
+
+    const bar = h("div", { class: "dsx-ovh-bar" }, h("span", { style: { width: "0%" } }));
+    requestAnimationFrame(() => setTimeout(() => { if (bar.firstChild) bar.firstChild.style.width = pct + "%"; }, 80));
+
+    return h("section", { class: "dsx-ov-health" },
+      h("div", { class: "dsx-ovh-main" },
+        dscGuildIcon(guild, 56),
+        h("div", { class: "dsx-ovh-id" },
+          h("div", { class: "dsx-ovh-name" }, guild.name || "Your server"),
+          h("div", { class: "dsx-ovh-meta" },
+            h("span", { class: "dsx-status" }, h("span", { class: "dsx-dot online" }), "Bot online"),
+            h("span", { class: "dsx-sep", "aria-hidden": "true" }, "·"),
+            h("span", null, members != null ? fmtNum(members) + " members" : "Members syncing")
+          )
+        ),
+        h("span", { class: "dsx-plan" + (premium ? " premium" : "") }, planLabel)
+      ),
+      setupComplete
+        ? h("div", { class: "dsx-ovh-complete" },
+            (() => { const i = h("span", { class: "dsx-ovh-complete-ico", "aria-hidden": "true" }); i.append(iconSvg("check")); return i; })(),
+            h("span", null, "Setup complete — every module is configured"))
+        : h("div", { class: "dsx-ovh-setup" },
+            h("div", { class: "dsx-ovh-setup-head" },
+              h("span", null, "Setup progress"),
+              h("strong", null, pct + "%")
+            ),
+            bar
+          ),
+      setupComplete
+        ? h("button", { type: "button", class: "dsx-btn dsx-btn-ghost",
+            onclick: () => { state._forceHub = true; state.activeTab = "setup-hub"; render(); } },
+            "Reopen Setup Hub")
+        : h("button", { type: "button", class: "dsx-btn dsx-btn-primary",
+            onclick: () => { state.activeTab = "setup-hub"; render(); } },
+            pct >= 100 ? "Review setup" : "Continue setup")
+    );
+  }
+
+  // Compact weekly activity (no big cards / sparklines).
+  function renderOvStats(analytics) {
+    const cards = (analytics && analytics.cards) || {};
+    const mk = (label, c) => {
+      c = c || {};
+      const tile = h("div", { class: "dsx-ov-stat" },
+        h("div", { class: "dsx-ov-stat-v" }, fmtNum(c.week || 0)),
+        h("div", { class: "dsx-ov-stat-l" }, label)
+      );
+      if (typeof c.week === "number" && typeof c.prevWeek === "number") {
+        const d = c.week - c.prevWeek;
+        tile.append(h("div", { class: "dsx-ov-stat-d " + (d >= 0 ? "up" : "down") },
+          (d >= 0 ? "▲ " : "▼ ") + fmtNum(Math.abs(d))));
+      }
+      return tile;
+    };
+    return h("section", { class: "dsx-ov-stats" },
+      mk("Messages this week", cards.messages),
+      mk("Commands this week", cards.commands),
+      mk("/pop uses this week", cards.pop_uses)
+    );
+  }
+
+  // Quick actions to configure (the user's stated priority).
+  function renderOvActions() {
+    const items = [
+      ["welcome",   "hand",     "Welcome",    "Greet new members"],
+      ["roleMenus", "masks",    "Role Menus", "Dropdown / button roles"],
+      ["tickets",   "ticket",   "Tickets",    "Support tickets"],
+      ["staffPay",  "wallet",   "Staff Pay",  "Per-role pay amounts"],
+      ["events",    "calendar", "Events",     "Dino / vault credit events"],
+      ["branding",  "palette",  "Branding",   "Customize embed look"],
+    ];
+    const grid = h("div", { class: "dsx-ov-actions" });
+    items.forEach(([tab, ico, name, desc]) => {
+      const icowrap = h("span", { class: "dsx-action-ico" }); icowrap.append(iconSvg(ico));
+      const arrow = h("span", { class: "dsx-enter", "aria-hidden": "true" }); arrow.append(iconSvg("arrowRight"));
+      grid.append(h("button", { type: "button", class: "dsx-action",
+        onclick: () => { state.activeTab = tab; render(); }, "aria-label": "Configure " + name },
+        icowrap,
+        h("div", { class: "dsx-action-body" },
+          h("div", { class: "dsx-action-name" }, name),
+          h("div", { class: "dsx-action-desc" }, desc)
+        ),
+        arrow
+      ));
+    });
+    return h("section", { class: "dsx-ov-section" },
+      h("h2", { class: "dsx-ov-h" }, "Quick actions"),
+      grid
+    );
+  }
+
+  const OV_ACTION_LABELS = { module_save: "Saved settings", module_reset: "Reset module", panel_post: "Posted a panel", quick_setup: "Ran quick setup", paypal_save: "Saved PayPal", paypal_test: "Tested PayPal", login: "Signed in" };
+  // Recent activity — compact list with empty state.
+  function renderOvActivity() {
+    const host = h("div", { class: "dsx-ov-activity" },
+      h("div", { class: "dsx-ov-act-skel" }), h("div", { class: "dsx-ov-act-skel" }), h("div", { class: "dsx-ov-act-skel" }));
+    data.audit(state.selectedGuildId).then((a) => {
+      clear(host);
+      const entries = (a.entries || []).slice(0, 6);
+      if (!entries.length) {
+        host.append(h("div", { class: "dsx-ov-empty" }, "No recent changes yet. Edits you make here will show up."));
+        return;
+      }
+      entries.forEach((e) => {
+        host.append(h("div", { class: "dsx-act-row" },
+          h("span", { class: "dsx-act-dot " + (e.ok ? "ok" : "fail") }),
+          h("span", { class: "dsx-act-label" }, OV_ACTION_LABELS[e.action] || e.action),
+          h("span", { class: "dsx-act-target" }, e.target || ""),
+          h("span", { class: "dsx-act-time" }, fmtAuditTime(e.ts))
+        ));
+      });
+    }).catch(() => {
+      clear(host);
+      host.append(h("div", { class: "dsx-ov-empty" }, "Activity unavailable right now."));
+    });
+    return h("section", { class: "dsx-ov-section" },
+      h("h2", { class: "dsx-ov-h" }, "Recent activity"),
+      host
+    );
+  }
+  function fmtAuditTime(ts) {
+    try { return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
+    catch (e) { return ""; }
   }
 
   /** Live cluster-population panel for the Overview right rail. Pulls the
@@ -2116,7 +2690,7 @@
     const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
     const area = line + ` L${W} ${H} L0 ${H} Z`;
     return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="spark-svg">`
-      + `<path d="${area}" fill="rgba(43,255,158,0.16)"/>`
+      + `<path d="${area}" fill="rgba(88,101,242,0.16)"/>`
       + `<path d="${line}" fill="none" stroke="var(--dash-red-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
       + `</svg>`;
   }
@@ -2158,8 +2732,8 @@
       + `<circle class="chart-hover-dot" cx="0" cy="0" r="5" style="opacity:0"/>`;
     const svg = `<svg viewBox="0 0 ${W} ${H}" class="area-chart" preserveAspectRatio="xMidYMid meet">`
       + `<defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">`
-      + `<stop offset="0%" stop-color="rgba(43,255,158,0.44)"/>`
-      + `<stop offset="100%" stop-color="rgba(43,255,158,0.02)"/>`
+      + `<stop offset="0%" stop-color="rgba(88,101,242,0.44)"/>`
+      + `<stop offset="100%" stop-color="rgba(88,101,242,0.02)"/>`
       + `</linearGradient></defs>`
       + grid
       + `<path d="${area}" fill="url(#areaGrad)"/>`
@@ -2381,145 +2955,171 @@
     if (!dayStr) return "—";
     return new Date(dayStr + "T00:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
+  // Inclusive [from,to] slice of a {day,value}[] series. ISO YYYY-MM-DD strings
+  // compare correctly as plain strings, so no Date parsing needed.
+  function sliceByDate(series, from, to) {
+    return (series || []).filter((p) => p.day && p.day >= from && p.day <= to);
+  }
 
   async function loadAnalytics(content) {
-    clear(content);
-    content.append(renderGenericSkeleton());
-    const days = analyticsDays();
     try {
-      const a = await data.analytics(state.selectedGuildId, days);
+      // Pull the full retained window (90d) ONCE, then slice it client-side so
+      // the user can pick any specific date range without re-hitting the backend
+      // (which only understands a trailing "last N days").
+      const gid = state.selectedGuildId;
+      let raw = state._anRaw && state._anRaw.guildId === gid ? state._anRaw.data : null;
+      if (!raw) {
+        clear(content);
+        content.append(renderGenericSkeleton());
+        raw = await data.analytics(gid, 90);
+        if (gid !== state.selectedGuildId) return; // guild switched mid-fetch; drop the stale response
+        state._anRaw = { guildId: gid, data: raw };
+        state._anFrom = null; state._anTo = null; // new guild → forget prior dates
+      }
       clear(content);
 
-      // ── Hero + range toggle + export ──────────────────────────────
-      const rangeBtns = h("div", { class: "analytics-range" });
-      [[7, "7 days"], [14, "14 days"], [30, "30 days"]].forEach(([d, label]) => {
-        rangeBtns.appendChild(h("button", {
+      // Available window: derive the day axis from the member series (fall back
+      // to the messages series), so the date pickers can't exceed real data.
+      const axis = (raw.memberSeries && raw.memberSeries.length ? raw.memberSeries
+        : (raw.series && raw.series.messages) || []).map((p) => p.day).filter(Boolean).sort();
+      const minDay = axis[0] || null;
+      const maxDay = axis[axis.length - 1] || null;
+      const dayAt = (fromEnd) => axis.length >= fromEnd ? axis[axis.length - fromEnd] : (minDay || maxDay);
+
+      // Default to the last 7 available days; clamp any chosen range to the window.
+      if (!state._anFrom || !state._anTo) { state._anTo = maxDay; state._anFrom = dayAt(7); }
+      if (minDay && state._anFrom < minDay) state._anFrom = minDay;
+      if (maxDay && state._anTo > maxDay) state._anTo = maxDay;
+      if (state._anFrom > state._anTo) state._anFrom = state._anTo;
+      const from = state._anFrom, to = state._anTo;
+
+      const wrap = h("div", { class: "dsx-an" });
+
+      // Quick presets set [last-Nd .. latest]; the date inputs pick anything.
+      const presets = h("div", { class: "dsx-an-range" });
+      [[7, "7d"], [14, "14d"], [30, "30d"], [90, "90d"]].forEach(([d, label]) => {
+        const pFrom = dayAt(d);
+        const active = from === pFrom && to === maxDay;
+        presets.appendChild(h("button", {
           type: "button",
-          class: "analytics-range-btn" + (d === days ? " active" : ""),
-          onclick: () => { state._analyticsDays = d; loadAnalytics(content); },
+          class: "dsx-an-range-btn" + (active ? " active" : ""),
+          onclick: () => { state._anFrom = pFrom; state._anTo = maxDay; loadAnalytics(content); },
         }, label));
       });
-      const exportBtn = h("button", {
-        type: "button",
-        class: "btn btn-ghost analytics-export-btn",
-        onclick: () => exportAnalyticsCsv(a),
-      }, "↓ Export CSV");
-      content.append(
-        h("div", { class: "dash-module-hero" },
-          (() => { const i = h("div", { class: "dash-module-hero-ico" }); i.appendChild(iconSvg("poll")); return i; })(),
-          h("div", { class: "dash-module-hero-body" },
-            h("div", { class: "dash-module-hero-row" },
-              h("h2", { class: "dash-module-hero-title" }, "Analytics"),
-              h("span", { class: "dash-status-pill" }, `Last ${days} days`)
-            ),
-            h("p", { class: "dash-module-hero-desc" },
-              "Real activity recorded across your server. Everything updates automatically as the bot is used.")
+
+      const mkDate = (label, val, onpick) => h("label", { class: "dsx-an-date" },
+        h("span", { class: "dsx-an-date-lbl" }, label),
+        h("input", { type: "date", class: "dsx-an-date-in", value: val || "",
+          min: minDay || null, max: maxDay || null,
+          onchange: (ev) => { const v = ev.target.value; if (v) onpick(v); else loadAnalytics(content); } })
+      );
+      const dates = h("div", { class: "dsx-an-dates" },
+        mkDate("From", from, (v) => { state._anFrom = v; if (state._anTo && v > state._anTo) state._anTo = v; loadAnalytics(content); }),
+        mkDate("To", to, (v) => { state._anTo = v; if (state._anFrom && v < state._anFrom) state._anFrom = v; loadAnalytics(content); })
+      );
+
+      // Slice every series to the chosen window once.
+      const filtered = {
+        members: raw.members,
+        memberSeries: sliceByDate(raw.memberSeries, from, to),
+        series: {
+          messages:    sliceByDate(raw.series && raw.series.messages, from, to),
+          commands:    sliceByDate(raw.series && raw.series.commands, from, to),
+          voice_joins: sliceByDate(raw.series && raw.series.voice_joins, from, to),
+          welcomes:    sliceByDate(raw.series && raw.series.welcomes, from, to),
+          pop_uses:    sliceByDate(raw.series && raw.series.pop_uses, from, to),
+        },
+        donations: raw.donations ? { series: sliceByDate(raw.donations.series, from, to) } : null,
+        cards: raw.cards,
+      };
+
+      const exportBtn = h("button", { type: "button", class: "dsx-an-export", onclick: () => exportAnalyticsCsv(filtered, from, to) }, "Export CSV");
+      wrap.append(
+        h("header", { class: "dsx-an-head" },
+          h("div", null,
+            h("h1", { class: "dsx-an-title" }, "Analytics"),
+            h("p", { class: "dsx-an-sub" }, "Real activity across your server. Pick a metric to chart, and choose any date range.")
           ),
-          h("div", { class: "analytics-hero-actions" }, rangeBtns, exportBtn)
+          h("div", { class: "dsx-an-actions" }, presets, dates, exportBtn)
         )
       );
 
-      const counters = ["messages", "commands", "voice_joins", "welcomes", "pop_uses"];
-      const anyData = counters.some((m) => ((a.cards && a.cards[m] && a.cards[m].total) || 0) > 0);
+      // Metric-selector chart — the whole view (no rectangular card wall)
+      wrap.append(renderAnalyticsChart(filtered, from, to));
 
-      // ── Summary cards (every metric) ──────────────────────────────
-      const grid = h("div", { class: "dash-stat-grid" });
-      // Members card (gauge)
-      const memberGrowth = (a.memberSeries && a.memberSeries.length > 1)
-        ? (a.memberSeries[a.memberSeries.length - 1].value - a.memberSeries[0].value)
-        : null;
-      grid.appendChild(renderActivityCard({
-        label: "Members",
-        value: a.members != null ? fmtNum(a.members) : "—",
-        delta: memberGrowth,
-        deltaSuffix: ` in ${days}d`,
-        iconName: "user",
-        series: a.memberSeries,
-      }));
-      counters.forEach((m) => {
-        const c = (a.cards && a.cards[m]) || { total: 0, week: 0, prevWeek: 0 };
-        grid.appendChild(renderActivityCard({
-          label: METRIC_META[m].label,
-          value: fmtNum(c.total),
-          sub: "all-time total",
-          iconName: METRIC_META[m].iconName,
-          series: a.series && a.series[m],
-        }));
-      });
-      // Donations card — real money from completed payments
-      const don = a.donations || { total: 0, count: 0, currency: "USD", series: [] };
-      grid.appendChild(renderActivityCard({
-        label: "Donations",
-        value: fmtMoney(don.total, don.currency),
-        sub: `${don.count} payment${don.count === 1 ? "" : "s"}`,
-        iconName: "coin",
-        series: don.series,
-      }));
-      content.append(grid);
-
-      // ── Main interactive chart ────────────────────────────────────
-      content.append(renderAnalyticsBigChart(a, counters));
-
-      // ── Member growth chart ───────────────────────────────────────
-      if (a.memberSeries && a.memberSeries.some((p) => p.value > 0)) {
-        content.append(
-          h("div", { class: "dash-card" },
-            h("h3", null, "Member growth"),
-            h("p", null, `Server member count over the last ${days} days.`),
-            areaChartWrap(a.memberSeries, "Members")
-          )
-        );
-      }
-
-      // ── Donations / revenue ───────────────────────────────────────
-      content.append(renderDonationsCard(a.donations, days));
-
-      // ── Busiest hours heatmap ─────────────────────────────────────
-      content.append(renderHeatmapCard(a.heatmap));
-
-      // ── Top channels ──────────────────────────────────────────────
-      content.append(renderTopChannelsCard(a.topChannels));
-
-      // ── Per-metric breakdown ──────────────────────────────────────
-      const breakdown = h("div", { class: "dash-card" },
-        h("h3", null, "Metric breakdown"),
-        h("p", null, "Totals, averages, and peak days for every tracked metric.")
-      );
-      const bgrid = h("div", { class: "analytics-breakdown" });
-      counters.forEach((m) => {
-        const series = (a.series && a.series[m]) || [];
-        const c = (a.cards && a.cards[m]) || { total: 0, week: 0, prevWeek: 0 };
-        const peak = seriesPeak(series);
-        const delta = c.week - c.prevWeek;
-        const up = delta >= 0;
-        bgrid.appendChild(
-          h("div", { class: "analytics-bd-card" },
-            h("div", { class: "analytics-bd-head" },
-              icon(METRIC_META[m].iconName, "analytics-mini-ico"),
-              h("div", { class: "analytics-bd-name" }, METRIC_META[m].label)
-            ),
-            h("div", { class: "analytics-bd-rows" },
-              renderBdRow("All-time", fmtNum(c.total)),
-              renderBdRow("This week", fmtNum(c.week)),
-              renderBdRow("Week change", h("span", { class: "dash-stat-delta " + (up ? "up" : "down"), style: { fontSize: "0.78rem" } },
-                (up ? "▲ " : "▼ ") + fmtNum(Math.abs(delta)))),
-              renderBdRow("Daily average", fmtNum(Math.round(seriesAvg(series)))),
-              renderBdRow("Peak day", peak.value > 0 ? `${fmtNum(peak.value)} · ${fmtDay(peak.day)}` : "—")
-            )
-          )
-        );
-      });
-      breakdown.append(bgrid);
-      content.append(breakdown);
-
-      if (!anyData) {
-        // Friendly note pinned under the hero when nothing's recorded yet
-        content.querySelector(".dash-module-hero").after(
-          notice("info", "Analytics are still warming up",
-            "Tracking started when the bot was last updated. As your members chat, run commands and join voice, these charts fill in automatically.")
-        );
-      }
+      content.append(wrap);
     } catch (e) { renderTabError(content, e); }
+  }
+
+  // Interactive analytics chart: click a metric to chart its series over the
+  // selected range. Defaults to Members so member growth is shown first.
+  function renderAnalyticsChart(a, from, to) {
+    // A real guild's member count is never 0, so a 0 in the (zero-filled) member
+    // series means an offline / pre-tracking day — scan back to the last real
+    // value rather than showing "Latest: 0" for a historical end-date.
+    const lastVal = (s) => { for (let i = (s ? s.length : 0) - 1; i >= 0; i--) { if ((s[i].value || 0) > 0) return s[i].value; } return 0; };
+    // Members shows the latest count within the range; counters show the
+    // in-range total — both computed from the already date-sliced series.
+    const metrics = [
+      { key: "members",     label: "Members",     series: a.memberSeries || [],                     total: lastVal(a.memberSeries), totalLabel: "Latest" },
+      { key: "messages",    label: "Messages",    series: (a.series && a.series.messages) || [] },
+      { key: "commands",    label: "Commands",    series: (a.series && a.series.commands) || [] },
+      { key: "pop_uses",    label: "/pop uses",   series: (a.series && a.series.pop_uses) || [] },
+      { key: "voice_joins", label: "Voice joins", series: (a.series && a.series.voice_joins) || [] },
+      { key: "welcomes",    label: "Welcomes",    series: (a.series && a.series.welcomes) || [] },
+    ];
+    const startKey = state._anMetric && metrics.some((m) => m.key === state._anMetric) ? state._anMetric : "members";
+
+    const card = h("div", { class: "dsx-an-chart" });
+    const pills = h("div", { class: "dsx-an-pills", role: "tablist", "aria-label": "Metric" });
+    const windowLabel = h("div", { class: "dsx-an-window" }, from && to ? `${fmtDay(from)} – ${fmtDay(to)}` : "All time");
+    const summary = h("div", { class: "dsx-an-summary" });
+    const host = h("div", { class: "dsx-an-host" });
+
+    function sumStat(label, value) {
+      return h("div", { class: "dsx-an-sum" },
+        h("div", { class: "dsx-an-sum-v" }, value),
+        h("div", { class: "dsx-an-sum-l" }, label));
+    }
+
+    function draw(m) {
+      state._anMetric = m.key; // remember the choice across date changes / re-renders
+      pills.querySelectorAll(".dsx-an-pill").forEach((p) => {
+        const on = p.dataset.key === m.key;
+        p.classList.toggle("active", on);
+        p.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      clear(summary); clear(host);
+      const series = m.series || [];
+      const hasData = series.some((p) => (p.value || 0) > 0);
+      if (!hasData) {
+        host.append(h("div", { class: "dsx-an-empty" },
+          "No " + m.label.toLowerCase() + " data for this range yet — it fills in as the bot is used."));
+      } else {
+        host.append(areaChartWrap(series, m.label));
+      }
+      const total = m.total != null ? m.total : seriesSum(series);
+      const peak = seriesPeak(series);
+      summary.append(
+        sumStat(m.totalLabel || "Total", fmtNum(total)),
+        sumStat("Daily avg", fmtNum(Math.round(seriesAvg(series)))),
+        sumStat("Peak", peak.value > 0 ? fmtNum(peak.value) + " · " + fmtDay(peak.day) : "—")
+      );
+    }
+
+    metrics.forEach((m) => {
+      const on = m.key === startKey;
+      pills.appendChild(h("button", {
+        type: "button", role: "tab", "data-key": m.key,
+        class: "dsx-an-pill" + (on ? " active" : ""),
+        "aria-selected": on ? "true" : "false",
+        onclick: () => draw(m),
+      }, m.label));
+    });
+
+    card.append(h("div", { class: "dsx-an-chart-head" }, pills, windowLabel), summary, host);
+    draw(metrics.find((m) => m.key === startKey) || metrics[0]);
+    return card;
   }
 
   /** Currency formatter with a safe fallback for odd codes. */
@@ -2660,7 +3260,7 @@
   }
 
   /** Build a CSV of the daily series + donations and trigger a download. */
-  function exportAnalyticsCsv(a) {
+  function exportAnalyticsCsv(a, from, to) {
     try {
       const counters = ["messages", "commands", "voice_joins", "welcomes", "pop_uses"];
       const days = (a.series && a.series.messages) ? a.series.messages.map((p) => p.day) : [];
@@ -2684,7 +3284,8 @@
       const safeName = ((guild && guild.name) || "server").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
       const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
-      const link = h("a", { href: url, download: `analytics-${safeName}-${a.days}d.csv` });
+      const range = from && to ? `${from}_to_${to}` : `${a.days || ""}d`;
+      const link = h("a", { href: url, download: `analytics-${safeName}-${range}.csv` });
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -2853,14 +3454,14 @@
   }
 
   function mapFlagToModule(flag) {
-    const map = { welcome: "welcome", autoRoles: "autoRoles", roleMenus: "roleMenus", population: "population", branding: "branding", payments: "payments", staffPay: "staffPay", hype: "hype", tickets: "tickets", xp: "xp", pets: "pets", credits: "credits", moderation: "moderation" };
+    const map = { welcome: "welcome", autoRoles: "autoRoles", roleMenus: "roleMenus", population: "population", branding: "branding", payments: "payments", staffPay: "staffPay", hype: "hype", tickets: "tickets", xp: "xp", moderation: "moderation" };
     return map[flag] || "overview";
   }
   function prettyName(s) {
     return ({
       welcome: "Welcome", autoRoles: "Auto Roles", roleMenus: "Role Menus", population: "/pop Cluster",
       branding: "Branding", payments: "Payments", staffPay: "Staff Pay", hype: "Hype",
-      tickets: "Tickets", xp: "XP / Leaderboards", pets: "Pets", credits: "Credits", moderation: "Moderation"
+      tickets: "Tickets", xp: "XP / Leaderboards", moderation: "Moderation"
     }[s]) || s;
   }
 
@@ -2912,6 +3513,19 @@
         if (mod.name === "ark") return renderArkInfo(content);
         if (mod.name === "logs") return loadAudit(content);
       }
+
+      // Welcome → live-preview canvas (edit the message in the Discord preview).
+      if (mod.name === "welcome") return renderWelcomeCanvas(content, mod, m.values);
+      if (mod.name === "autoRoles") return renderAutoRolesCanvas(content, mod, m.values);
+      if (mod.name === "xp") return renderXpCanvas(content, mod, m.values);
+      if (mod.name === "polls") return renderPollsCanvas(content, mod, m.values);
+      if (mod.name === "moderation") return renderModerationCanvas(content, mod, m.values);
+      if (mod.name === "hype") return renderHypeCanvas(content, mod, m.values);
+      if (mod.name === "events") return renderEventsCanvas(content, mod, m.values);
+      if (mod.name === "tickets") return renderTicketsCanvas(content, mod, m.values);
+      if (mod.name === "staffPay") return renderStaffPayCanvas(content, mod, m.values);
+      if (mod.name === "payments") return renderPaymentsCanvas(content, mod, m.values);
+      if (mod.name === "serverTemplates") return renderServerTemplatesCanvas(content, mod, m.values);
 
       // Generic schema-driven form
       renderModuleForm(content, mod, m.values);
@@ -2968,10 +3582,11 @@
       { name: "Rewards",                fields: ["rewardsMode", "rewardType", "reward1stCredits", "reward2ndCredits", "reward3rdCredits", "reward1stEggs", "reward2ndEggs", "reward3rdEggs"] },
     ],
     hype: [
-      { name: "Basic",              fields: ["enabled", "rewardChannelId"] },
-      { name: "Name / tag triggers",fields: ["tagKeywords", "creditAmount", "creditExpiryDays"] },
-      { name: "Reward role",        fields: ["rewardRoleId"] },
-      { name: "Other triggers",     fields: ["rewardInvites", "rewardBoosts", "preventDuplicates"] },
+      { name: "Branding",      fields: ["brand_name"] },
+      { name: "Name reward",   fields: ["name_enabled", "name_keywords", "name_credits", "name_channel_id", "name_cooldown_hours", "name_role_id"] },
+      { name: "Tag reward",    fields: ["tag_enabled", "tag_keywords", "tag_credits", "tag_channel_id", "tag_cooldown_hours", "tag_role_id", "tag_guild_id"] },
+      { name: "Invite reward", fields: ["invite_enabled", "invite_credits", "invite_channel_id"] },
+      { name: "Boost reward",  fields: ["boost_channel_id"] },
     ],
     events: [
       { name: "Basic",        fields: ["enabled", "announceChannelId", "trackChannelId"] },
@@ -2997,22 +3612,8 @@
       { name: "URL filter", fields: ["urlFilterEnabled", "whitelistDomains"] },
       { name: "Auto-action",fields: ["maxWarnings"] },
     ],
-    giveaways: [
-      { name: "Basic",   fields: ["enabled", "defaultChannelId"] },
-      { name: "Hosts",   fields: ["allowedRoleIds"] },
-      { name: "Logging", fields: ["logChannelId"] },
-    ],
     autoRoles: [
       { name: "Basic", fields: ["enabled", "roleIds", "ignoreBots"] },
-    ],
-    pets: [
-      { name: "Basic",    fields: ["enabled"] },
-      { name: "Channels", fields: ["showLeaderboard", "leaderboardChannelId", "displayChannelId"] },
-    ],
-    credits: [
-      { name: "Basic",  fields: ["enabled", "publicBalance"] },
-      { name: "Admin",  fields: ["adminRoleIds"] },
-      { name: "Expiry & logging", fields: ["defaultExpiryDays", "logChannelId"] },
     ],
   };
 
@@ -3184,6 +3785,988 @@
       h("div", { class: "dc-embed-footer" }, `${guildName}`)
     );
     return shell;
+  }
+
+  // Welcome module as a live-preview canvas (like the Embed Builder): the title
+  // and message are edited IN the styled Discord message; channel / colour /
+  // image / toggles are compact controls right under it.
+  function renderWelcomeCanvas(content, mod, values) {
+    const wv = Object.assign({ enabled: true, channelId: "", title: "", message: "", mentionUser: true, embedColor: "#dc2626", imageUrl: "" }, values || {});
+    const baseline = JSON.stringify(wv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, wv))));
+
+    const guildName = (state.guilds.find((g) => g.id === state.selectedGuildId)?.name) || "your server";
+    const username = state.user?.username || "newmember";
+    const statusBox = h("div");
+
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(wv) === baseline; }
+
+    const okColor = (c) => /^#[0-9a-f]{6}$/i.test(c || "") ? c : "#5865f2";
+    const plainOK = (() => { try { const d = document.createElement("div"); d.contentEditable = "plaintext-only"; return d.contentEditable === "plaintext-only"; } catch { return false; } })();
+    // contenteditable bound to wv[key], styled like the Embed Builder canvas.
+    function wEdit(cls, key, ph, multiline) {
+      const el = h("div", { class: "eb-editable " + cls });
+      el.contentEditable = plainOK ? "plaintext-only" : "true";
+      el.spellcheck = false;
+      el.setAttribute("role", "textbox");
+      el.setAttribute("aria-label", ph);
+      if (ph) el.setAttribute("data-ph", ph);
+      el.textContent = wv[key] || "";
+      el.addEventListener("input", () => { wv[key] = (el.innerText || "").replace(/\n$/, ""); markDirty(); });
+      el.addEventListener("paste", (ev) => { ev.preventDefault(); const t = (ev.clipboardData || window.clipboardData).getData("text") || ""; try { document.execCommand("insertText", false, t); } catch (_) { el.textContent += t; } });
+      if (!multiline) el.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); el.blur(); } });
+      return el;
+    }
+    // Clean pill toggle.
+    function wSwitch(label, getV, setV) {
+      const cb = h("input", { type: "checkbox", checked: getV() ? true : null });
+      cb.addEventListener("change", () => setV(cb.checked));
+      return h("label", { class: "w-switch" }, cb, h("span", { class: "w-sw-track" }, h("span", { class: "w-sw-thumb" })), h("span", { class: "w-sw-label" }, label));
+    }
+
+    // ---- The Discord welcome message (Embed Builder look) ----
+    const mentionLine = h("div", { class: "eb-msg-content w-mention-line" }, h("span", { class: "w-mention" }, "@" + username));
+    const imageEl = h("img", { class: "eb-e-image", alt: "", onerror: "this.style.display='none'" });
+    function syncMention() { mentionLine.style.display = wv.mentionUser !== false ? "" : "none"; }
+    function syncImage() { if (/^https:\/\//i.test(wv.imageUrl || "")) { imageEl.src = wv.imageUrl; imageEl.style.display = ""; } else { imageEl.style.display = "none"; } }
+    const inner = h("div", { class: "eb-embed-inner" },
+      wEdit("eb-e-title", "title", "Welcome title", false),
+      wEdit("eb-e-desc", "message", "Welcome message — use {user} and {server}", true),
+      imageEl,
+      h("div", { class: "eb-e-footer" }, h("span", null, guildName)));
+    const box = h("div", { class: "eb-embed", style: { borderColor: okColor(wv.embedColor) } }, inner);
+    const device = h("div", { class: "eb-discord w-discord" }, mentionLine, box);
+    syncMention(); syncImage();
+
+    // ---- Controls ----
+    const chSel = renderChannelSelect("w-channel", "channelId", state.channels || [], wv.channelId);
+    chSel.classList.add("w-select");
+    chSel.addEventListener("change", () => { wv.channelId = chSel.value; markDirty(); });
+    const colorIn = h("input", { type: "color", class: "w-color", value: okColor(wv.embedColor), title: "Accent colour" });
+    colorIn.addEventListener("input", () => { wv.embedColor = colorIn.value; box.style.borderColor = colorIn.value; markDirty(); });
+    const imgIn = h("input", { type: "url", class: "w-input", value: wv.imageUrl || "", placeholder: "Image URL (optional)" });
+    imgIn.addEventListener("input", () => { wv.imageUrl = imgIn.value; markDirty(); });
+    imgIn.addEventListener("change", syncImage);
+    imgIn.addEventListener("blur", syncImage);
+
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), chSel),
+      wSwitch("Welcome enabled", () => wv.enabled !== false, (v) => { wv.enabled = v; markDirty(); }));
+    const appearance = h("div", { class: "w-appearance" },
+      h("label", { class: "w-app" }, h("span", { class: "w-app-lbl" }, "Accent"), colorIn),
+      h("label", { class: "w-app w-app-grow" }, h("span", { class: "w-app-lbl" }, "Image"), imgIn),
+      wSwitch("Mention the member", () => wv.mentionUser !== false, (v) => { wv.mentionUser = v; syncMention(); markDirty(); }));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, h("code", null, "{user}"), " mentions the new member · ", h("code", null, "{server}"), " is the server name — both are filled in when someone joins."));
+
+    const resetBtn = h("button", { type: "button", class: "btn btn-ghost", onclick: () => doResetModule(mod, content) }, "Reset to default");
+    const bar = h("div", { class: "dash-sticky-actions" }, saveBtn, resetBtn, h("span", { class: "dash-unsaved" }, h("span", { class: "dot" }), "Unsaved changes"), h("div", { class: "filler" }), h("span", { style: { fontSize: "0.78rem", color: "var(--dash-muted-2)" } }, mod.tier === "premium" ? "Premium" : "Free", " module"));
+    saveBtn.addEventListener("click", async () => {
+      saveBtn.disabled = true; saveBtn.textContent = "Saving…";
+      try {
+        await data.saveModule(state.selectedGuildId, mod.name, wv);
+        toast("success", `${mod.label} saved`);
+        const stat = document.getElementById("dash-save-status"); if (stat) { stat.classList.add("show"); setTimeout(() => stat.classList.remove("show"), 1800); }
+        loadModule(content, mod.name);
+      } catch (e) {
+        saveBtn.textContent = "Save changes"; saveBtn.disabled = false;
+        if (e.code === 403 && e.data && e.data.error === "premium_required") { statusBox.append(notice("warn", "Premium required", (e.data && e.data.message) || "Activate Premium with /subscribe in Discord.")); return; }
+        toast("error", e.message || "Save failed");
+        statusBox.append(notice("error", "Save failed", e.message));
+      }
+    });
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live welcome message"), h("span", { class: "w-canvas-hint" }, "Click the title or text to edit")),
+      topbar, device, appearance, tip, statusBox, bar));
+  }
+
+  // Shared pill toggle for the module canvases.
+  function mcSwitch(label, getV, setV) {
+    const cb = h("input", { type: "checkbox", checked: getV() ? true : null });
+    cb.addEventListener("change", () => setV(cb.checked));
+    return h("label", { class: "w-switch" }, cb, h("span", { class: "w-sw-track" }, h("span", { class: "w-sw-thumb" })), h("span", { class: "w-sw-label" }, label));
+  }
+  function roleHex(r) { return (r && typeof r.color === "number" && r.color) ? "#" + r.color.toString(16).padStart(6, "0") : "#b9bbbe"; }
+  // Shared module-canvas save bar (Save / Reset + dirty tracking) — wires the
+  // primary button to data.saveModule(av) and re-loads on success.
+  function mcSaveBar(mod, content, getPayload, saveBtn, statusBox) {
+    const resetBtn = h("button", { type: "button", class: "btn btn-ghost", onclick: () => doResetModule(mod, content) }, "Reset to default");
+    saveBtn.addEventListener("click", async () => {
+      saveBtn.disabled = true; saveBtn.textContent = "Saving…";
+      try {
+        await data.saveModule(state.selectedGuildId, mod.name, getPayload());
+        toast("success", `${mod.label} saved`);
+        const stat = document.getElementById("dash-save-status"); if (stat) { stat.classList.add("show"); setTimeout(() => stat.classList.remove("show"), 1800); }
+        loadModule(content, mod.name);
+      } catch (e) {
+        saveBtn.textContent = "Save changes"; saveBtn.disabled = false;
+        if (e.code === 403 && e.data && e.data.error === "premium_required") { statusBox.append(notice("warn", "Premium required", (e.data && e.data.message) || "Activate Premium with /subscribe in Discord.")); return; }
+        toast("error", e.message || "Save failed");
+        statusBox.append(notice("error", "Save failed", e.message));
+      }
+    });
+    return h("div", { class: "dash-sticky-actions" }, saveBtn, resetBtn, h("span", { class: "dash-unsaved" }, h("span", { class: "dot" }), "Unsaved changes"), h("div", { class: "filler" }), h("span", { style: { fontSize: "0.78rem", color: "var(--dash-muted-2)" } }, mod.tier === "premium" ? "Premium" : "Free", " module"));
+  }
+
+  // Auto Roles as a live-preview canvas: a "member joined → gets these roles"
+  // Discord card whose role list is the editable control.
+  function renderAutoRolesCanvas(content, mod, values) {
+    const av = Object.assign({ enabled: false, roleIds: [], ignoreBots: true }, values || {});
+    av.roleIds = Array.isArray(av.roleIds) ? av.roleIds.slice() : [];
+    const baseline = JSON.stringify(av);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, av))));
+
+    const username = state.user?.username || "newmember";
+    const allRoles = (state.roles || []).filter((r) => r.id && r.name !== "@everyone");
+    const roleById = (id) => allRoles.find((r) => r.id === id);
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(av) === baseline; }
+
+    const rolesHost = h("div", { class: "ar-roles" });
+    function renderRoles() {
+      clear(rolesHost);
+      if (!av.roleIds.length) rolesHost.append(h("span", { class: "ar-empty" }, "No roles yet — pick one →"));
+      av.roleIds.forEach((id) => {
+        const r = roleById(id), col = roleHex(r);
+        rolesHost.append(h("span", { class: "ar-chip", style: { borderColor: col } },
+          h("span", { class: "ar-chip-dot", style: { background: col } }),
+          h("span", { class: "ar-chip-name" }, r ? r.name : "unknown role"),
+          h("button", { type: "button", class: "ar-chip-x", title: "Remove role", onclick: () => { av.roleIds = av.roleIds.filter((x) => x !== id); markDirty(); renderRoles(); } }, "✕")));
+      });
+      const remaining = allRoles.filter((r) => !av.roleIds.includes(r.id));
+      if (remaining.length) {
+        const sel = h("select", { class: "ar-add" }, h("option", { value: "" }, "+ Add a role"), ...remaining.map((r) => h("option", { value: r.id }, r.name)));
+        sel.addEventListener("change", () => { if (sel.value) { av.roleIds.push(sel.value); markDirty(); renderRoles(); } });
+        rolesHost.append(sel);
+      }
+    }
+    renderRoles();
+
+    const preview = h("div", { class: "eb-discord ar-preview" },
+      h("div", { class: "ar-join" }, h("span", { class: "ar-join-ico", "aria-hidden": "true" }, "👋"), h("span", null, h("strong", { class: "ar-join-name" }, "@" + username), " just joined the server")),
+      h("div", { class: "ar-given-lbl" }, "Automatically given:"),
+      rolesHost);
+
+    const controls = h("div", { class: "w-appearance" },
+      mcSwitch("Auto roles enabled", () => av.enabled === true, (v) => { av.enabled = v; markDirty(); }),
+      mcSwitch("Skip bot accounts", () => av.ignoreBots !== false, (v) => { av.ignoreBots = v; markDirty(); }));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Every new member gets these roles the instant they join. Keep the Arkoris role ", h("strong", null, "above"), " them in Server Settings or it can't assign them."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Add or remove the roles new members receive")),
+      preview, controls, tip, statusBox, mcSaveBar(mod, content, () => av, saveBtn, statusBox)));
+  }
+
+  // ---- Shared module-canvas field helpers (reused by every module canvas) ----
+  function mcField(label, control, hint) {
+    return h("label", { class: "mc-field" },
+      h("span", { class: "mc-field-lbl" }, label),
+      control,
+      hint ? h("span", { class: "mc-hint" }, hint) : null);
+  }
+  function mcNumber(getV, setV, opts) {
+    opts = opts || {};
+    const inp = h("input", { type: "number", class: "mc-num" });
+    if (opts.min != null) inp.min = String(opts.min);
+    if (opts.max != null) inp.max = String(opts.max);
+    inp.value = String(getV());
+    const clamp = (n) => { if (isNaN(n)) n = opts.min != null ? opts.min : 0; if (opts.min != null && n < opts.min) n = opts.min; if (opts.max != null && n > opts.max) n = opts.max; return n; };
+    inp.addEventListener("input", () => { const n = parseInt(inp.value, 10); if (!isNaN(n)) setV(clamp(n)); });
+    inp.addEventListener("blur", () => { const n = clamp(parseInt(inp.value, 10)); inp.value = String(n); setV(n); });
+    return inp;
+  }
+  function mcSelect(options, getV, setV) {
+    const sel = h("select", { class: "mc-select" }, ...options.map((o) => h("option", { value: o.value }, o.label)));
+    sel.value = String(getV());
+    sel.addEventListener("change", () => setV(sel.value));
+    return sel;
+  }
+  function mcSection(label, ...kids) {
+    return h("div", { class: "mc-section" }, label ? h("div", { class: "mc-section-lbl" }, label) : null, ...kids);
+  }
+  // Channel/role chip multi-select (e.g. "don't earn XP here"). kind: 'channel'|'role'.
+  function mcChips(kind, getIds, setIds, markDirty, opts) {
+    opts = opts || {};
+    const host = h("div", { class: "ar-roles mc-chips" });
+    const pool = kind === "role"
+      ? (state.roles || []).filter((r) => r.id && r.name !== "@everyone")
+      : (state.channels || []).filter((c) => c && c.name);
+    const byId = (id) => pool.find((x) => x.id === id);
+    function draw() {
+      clear(host);
+      const ids = getIds();
+      if (!ids.length && opts.empty) host.append(h("span", { class: "ar-empty" }, opts.empty));
+      ids.forEach((id) => {
+        const item = byId(id);
+        const col = kind === "role" ? roleHex(item) : "#8b8d91";
+        host.append(h("span", { class: "ar-chip", style: { borderColor: col } },
+          kind === "role"
+            ? h("span", { class: "ar-chip-dot", style: { background: col } })
+            : h("span", { class: "mc-chip-hash" }, "#"),
+          h("span", { class: "ar-chip-name" }, item ? item.name : "unknown"),
+          h("button", { type: "button", class: "ar-chip-x", title: "Remove", onclick: () => { setIds(getIds().filter((x) => x !== id)); markDirty(); draw(); } }, "✕")));
+      });
+      const remaining = pool.filter((x) => !getIds().includes(x.id));
+      if (remaining.length) {
+        const sel = h("select", { class: "ar-add" }, h("option", { value: "" }, opts.add || "+ Add"), ...remaining.map((x) => h("option", { value: x.id }, (kind === "channel" ? "#" : "") + x.name)));
+        sel.addEventListener("change", () => { if (sel.value) { setIds(getIds().concat([sel.value])); markDirty(); draw(); } });
+        host.append(sel);
+      }
+    }
+    draw();
+    return host;
+  }
+
+  // XP & Leaderboards as a live-preview canvas: a level-up announcement +
+  // weekly leaderboard preview, with the XP-shaping + reward controls below.
+  function renderXpCanvas(content, mod, values) {
+    const xv = Object.assign({
+      enabled: false, xpMin: 5, xpMax: 15, cooldownSec: 60,
+      ignoredChannels: [], ignoredRoles: [],
+      levelUpAnnounce: true, levelUpChannelId: "",
+      weeklyResetDay: "mon", weeklyChannelId: "",
+      rewardsMode: "disabled", rewardType: "none",
+      reward1stCredits: 0, reward2ndCredits: 0, reward3rdCredits: 0,
+      reward1stEggs: 0, reward2ndEggs: 0, reward3rdEggs: 0,
+    }, values || {});
+    xv.ignoredChannels = Array.isArray(xv.ignoredChannels) ? xv.ignoredChannels.slice() : [];
+    xv.ignoredRoles = Array.isArray(xv.ignoredRoles) ? xv.ignoredRoles.slice() : [];
+    const baseline = JSON.stringify(xv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, xv))));
+
+    const username = state.user?.username || "newmember";
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(xv) === baseline; }
+
+    const DAYS = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+
+    // ---- Live preview: level-up bubble + weekly leaderboard embed ----
+    const device = h("div", { class: "eb-discord xp-preview" });
+    function drawPreview() {
+      clear(device);
+      if (xv.levelUpAnnounce !== false) {
+        const where = chName(xv.levelUpChannelId);
+        device.append(h("div", { class: "xp-lvl" },
+          h("span", { class: "xp-lvl-ico", "aria-hidden": "true" }, "🎉"),
+          h("span", { class: "xp-lvl-txt" }, h("strong", { class: "xp-lvl-name" }, "@" + username), " just reached ", h("strong", null, "Level 12"), "!"),
+          where ? h("span", { class: "xp-lvl-ch" }, "#" + where) : null));
+      } else {
+        device.append(h("div", { class: "xp-lvl xp-lvl-off" }, "Level-up announcements are off — members still earn XP silently."));
+      }
+      const rows = [["🥇", "Aria", "4,820"], ["🥈", "Kade", "3,910"], ["🥉", "Nyx", "2,540"]];
+      device.append(h("div", { class: "eb-embed xp-lb", style: { borderColor: "#f0b232" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "xp-lb-title" }, "🏆 Weekly Leaderboard"),
+          ...rows.map(([m, n, xp]) => h("div", { class: "xp-lb-row" },
+            h("span", { class: "xp-lb-medal" }, m), h("span", { class: "xp-lb-name" }, n), h("span", { class: "xp-lb-xp" }, xp + " XP"))),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Resets every " + DAYS[xv.weeklyResetDay || "mon"])))));
+    }
+    drawPreview();
+
+    // ---- Top bar: enabled (the two channels live in their own sections) ----
+    const lvlCh = renderChannelSelect("xp-lvlch", "levelUpChannelId", state.channels || [], xv.levelUpChannelId);
+    lvlCh.classList.add("mc-select");
+    lvlCh.addEventListener("change", () => { xv.levelUpChannelId = lvlCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("span", { class: "poll-topbar-lbl" }, "Chatting earns XP — level-ups and the weekly leaderboard post to the channels below"),
+      mcSwitch("XP enabled", () => xv.enabled === true, (v) => { xv.enabled = v; markDirty(); }));
+
+    // ---- XP rate ----
+    const rateGrid = h("div", { class: "mc-grid" },
+      mcField("XP per message — min", mcNumber(() => xv.xpMin, (v) => { xv.xpMin = v; markDirty(); }, { min: 1, max: 100 })),
+      mcField("XP per message — max", mcNumber(() => xv.xpMax, (v) => { xv.xpMax = v; markDirty(); }, { min: 1, max: 200 })),
+      mcField("Cooldown", mcNumber(() => xv.cooldownSec, (v) => { xv.cooldownSec = v; markDirty(); }, { min: 0, max: 600 }), "seconds between earns"));
+    const rateSection = mcSection("How XP is earned", rateGrid);
+
+    // ---- Level-up announcements (its own channel, separate from the weekly board) ----
+    const levelSection = mcSection("Level-up announcements",
+      h("div", { class: "mc-grid" },
+        mcField("Level-up channel", lvlCh, "Where level-up messages are posted")),
+      h("div", { class: "mc-switch-row" }, mcSwitch("Announce level-ups", () => xv.levelUpAnnounce !== false, (v) => { xv.levelUpAnnounce = v; drawPreview(); markDirty(); })));
+
+    // ---- Ignored channels / roles ----
+    const ignoreSection = mcSection("Where XP doesn't count",
+      h("div", { class: "mc-grid" },
+        mcField("Ignored channels", mcChips("channel", () => xv.ignoredChannels, (a) => { xv.ignoredChannels = a; }, markDirty, { empty: "Every channel earns XP", add: "+ Ignore a channel" })),
+        mcField("Ignored roles", mcChips("role", () => xv.ignoredRoles, (a) => { xv.ignoredRoles = a; }, markDirty, { empty: "Every role earns XP", add: "+ Ignore a role" }))));
+
+    // ---- Weekly leaderboard ----
+    const weeklyCh = renderChannelSelect("xp-weeklych", "weeklyChannelId", state.channels || [], xv.weeklyChannelId);
+    weeklyCh.classList.add("mc-select");
+    weeklyCh.addEventListener("change", () => { xv.weeklyChannelId = weeklyCh.value; markDirty(); });
+    const weeklySection = mcSection("Weekly leaderboard",
+      h("div", { class: "mc-grid" },
+        mcField("Reset day", mcSelect(
+          [["mon", "Monday"], ["tue", "Tuesday"], ["wed", "Wednesday"], ["thu", "Thursday"], ["fri", "Friday"], ["sat", "Saturday"], ["sun", "Sunday"]].map(([value, label]) => ({ value, label })),
+          () => xv.weeklyResetDay, (v) => { xv.weeklyResetDay = v; drawPreview(); markDirty(); })),
+        mcField("Weekly leaderboard channel", weeklyCh)));
+
+    // ---- Weekly rewards (conditional detail) ----
+    const rewardHost = h("div", { class: "xp-rewards-host" });
+    function drawRewards() {
+      clear(rewardHost);
+      if (xv.rewardsMode === "disabled") {
+        rewardHost.append(h("div", { class: "mc-hint mc-hint-block" }, "Set weekly rewards to Manual or Automatic to hand out prizes to the top 3 each week."));
+        return;
+      }
+      rewardHost.append(mcField("Reward type", mcSelect(
+        [["none", "None"], ["credits", "Credits"], ["eggs", "Pet eggs"], ["both", "Credits + eggs"]].map(([value, label]) => ({ value, label })),
+        () => xv.rewardType, (v) => { xv.rewardType = v; markDirty(); drawRewards(); })));
+      const showC = xv.rewardType === "credits" || xv.rewardType === "both";
+      const showE = xv.rewardType === "eggs" || xv.rewardType === "both";
+      if (!showC && !showE) { rewardHost.append(h("div", { class: "mc-hint mc-hint-block" }, "Pick a reward type to set prize amounts.")); return; }
+      const grid = h("div", { class: "xp-rewards" });
+      [["🥇", "1st"], ["🥈", "2nd"], ["🥉", "3rd"]].forEach(([medal, ord]) => {
+        const row = h("div", { class: "xp-reward-row" }, h("span", { class: "xp-reward-place" }, medal + " " + ord));
+        if (showC) row.append(h("span", { class: "xp-reward-cell" }, mcNumber(() => xv["reward" + ord + "Credits"], (v) => { xv["reward" + ord + "Credits"] = v; markDirty(); }, { min: 0, max: 100000 }), h("span", { class: "xp-reward-unit" }, "credits")));
+        if (showE) row.append(h("span", { class: "xp-reward-cell" }, mcNumber(() => xv["reward" + ord + "Eggs"], (v) => { xv["reward" + ord + "Eggs"] = v; markDirty(); }, { min: 0, max: 100 }), h("span", { class: "xp-reward-unit" }, "eggs")));
+        grid.append(row);
+      });
+      rewardHost.append(grid);
+    }
+    drawRewards();
+    const rewardSection = mcSection("Weekly rewards",
+      h("div", { class: "mc-grid" },
+        mcField("Hand out rewards", mcSelect(
+          [["disabled", "Off"], ["manual", "Manual (you approve)"], ["auto", "Automatic"]].map(([value, label]) => ({ value, label })),
+          () => xv.rewardsMode, (v) => { xv.rewardsMode = v; markDirty(); drawRewards(); }))),
+      rewardHost);
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Members earn a random ", h("strong", null, "XP min–max"), " per message, once per cooldown. The weekly board ranks the most active members and resets on your chosen day."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What members see when they level up")),
+      device, topbar, rateSection, levelSection, ignoreSection, weeklySection, rewardSection, tip, statusBox,
+      mcSaveBar(mod, content, () => xv, saveBtn, statusBox)));
+  }
+
+  // Polls as a live-preview canvas: a Discord poll with live-result bars; the
+  // editable control is which roles may start a poll.
+  function renderPollsCanvas(content, mod, values) {
+    const pv = Object.assign({ enabled: true, allowedRoleIds: [] }, values || {});
+    pv.allowedRoleIds = Array.isArray(pv.allowedRoleIds) ? pv.allowedRoleIds.slice() : [];
+    const baseline = JSON.stringify(pv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, pv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(pv) === baseline; }
+
+    const opts = [["Ragnarok", 52], ["The Island", 31], ["Aberration", 17]];
+    const poll = h("div", { class: "eb-discord poll-preview" },
+      h("div", { class: "poll-q" }, "📊 Which map should we wipe to next?"),
+      ...opts.map(([label, pct]) => h("div", { class: "poll-opt" },
+        h("div", { class: "poll-opt-fill", style: { width: pct + "%" } }),
+        h("div", { class: "poll-opt-row" }, h("span", { class: "poll-opt-label" }, label), h("span", { class: "poll-opt-pct" }, pct + "%")))),
+      h("div", { class: "poll-foot" }, "47 votes · ends in 22h"));
+
+    const topbar = h("div", { class: "w-topbar" },
+      h("span", { class: "poll-topbar-lbl" }, "Results update live as members vote"),
+      mcSwitch("Polls enabled", () => pv.enabled !== false, (v) => { pv.enabled = v; markDirty(); }));
+
+    const roleSection = mcSection("Who can start a poll",
+      mcChips("role", () => pv.allowedRoleIds, (a) => { pv.allowedRoleIds = a; }, markDirty, { empty: "Everyone can start a poll", add: "+ Allow a role" }));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Hosts run ", h("code", null, "/poll"), " to post one. Leave host roles empty to let anyone start a poll, or restrict it to staff."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "A poll members see in chat")),
+      poll, topbar, roleSection, tip, statusBox, mcSaveBar(mod, content, () => pv, saveBtn, statusBox)));
+  }
+
+  // Reusable tag/keyword input (chips + free-text add) for module canvases.
+  function mcKeywords(getList, setList, markDirty, opts) {
+    opts = opts || {};
+    const host = h("div", { class: "mc-kw" });
+    const inp = h("input", { type: "text", class: "mc-kw-input", placeholder: opts.placeholder || "Type and press Enter…" });
+    function drawChips() {
+      host.querySelectorAll(".mc-kw-chip").forEach((n) => n.remove());
+      getList().forEach((kw) => {
+        const chip = h("span", { class: "ar-chip mc-kw-chip" },
+          h("span", { class: "ar-chip-name" }, kw),
+          h("button", { type: "button", class: "ar-chip-x", title: "Remove", onclick: () => { setList(getList().filter((x) => x !== kw)); markDirty(); drawChips(); } }, "✕"));
+        host.insertBefore(chip, inp);
+      });
+    }
+    const add = () => {
+      let v = (inp.value || "").trim().toLowerCase();
+      if (opts.stripUrl) v = v.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+      if (v && !getList().includes(v)) { setList(getList().concat([v])); markDirty(); drawChips(); }
+      inp.value = "";
+    };
+    inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === ",") { ev.preventDefault(); add(); } });
+    inp.addEventListener("blur", add);
+    host.append(inp);
+    drawChips();
+    return host;
+  }
+
+  // Moderation as a live-preview canvas: a mod-log entry + (optional) URL-filter
+  // notice, with mod-roles, link-filter, and warning controls below.
+  function renderModerationCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, modLogChannelId: "", modRoleIds: [], urlFilterEnabled: false, whitelistDomains: [], maxWarnings: 3 }, values || {});
+    mv.modRoleIds = Array.isArray(mv.modRoleIds) ? mv.modRoleIds.slice() : [];
+    mv.whitelistDomains = Array.isArray(mv.whitelistDomains) ? mv.whitelistDomains.slice() : [];
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const modField = (label, val) => h("div", { class: "mod-field" }, h("span", { class: "mod-field-l" }, label), h("span", { class: "mod-field-v" }, val));
+
+    // ---- Live preview: a mod-log entry + (optional) URL-filter notice ----
+    const device = h("div", { class: "eb-discord mod-preview" });
+    function drawPreview() {
+      clear(device);
+      device.append(h("div", { class: "eb-embed mod-log", style: { borderColor: "#f0b232" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "mod-log-title" }, "⚠️ Warning issued"),
+          h("div", { class: "mod-log-grid" },
+            modField("Member", "@toxicraptor"),
+            modField("Moderator", "@" + (state.user?.username || "staff")),
+            modField("Reason", "Spamming in chat"),
+            modField("Warnings", "2 / " + (mv.maxWarnings != null ? mv.maxWarnings : 3))),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Logged to #" + (chName(mv.modLogChannelId) || "mod-log"))))));
+      if (mv.urlFilterEnabled) {
+        device.append(h("div", { class: "mod-urlnotice" },
+          h("span", { class: "mod-urlnotice-ico", "aria-hidden": "true" }, "🔗"),
+          h("span", null, "Deleted a link from ", h("strong", null, "@newbie"), " — domain not on the allow-list.")));
+      }
+    }
+    drawPreview();
+
+    // ---- Top bar: mod-log channel + enabled ----
+    const logCh = renderChannelSelect("mod-logch", "modLogChannelId", state.channels || [], mv.modLogChannelId);
+    logCh.classList.add("w-select");
+    logCh.addEventListener("change", () => { mv.modLogChannelId = logCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), logCh),
+      mcSwitch("Moderation enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const modRoleSection = mcSection("Who can moderate",
+      mcChips("role", () => mv.modRoleIds, (a) => { mv.modRoleIds = a; }, markDirty, { empty: "Uses Discord's built-in permissions", add: "+ Add a mod role" }));
+
+    const filterSection = mcSection("Link filter",
+      h("div", { class: "mc-switch-row" }, mcSwitch("Delete links from non-whitelisted domains", () => mv.urlFilterEnabled === true, (v) => { mv.urlFilterEnabled = v; drawPreview(); markDirty(); })),
+      mcField("Allowed domains", mcKeywords(() => mv.whitelistDomains, (a) => { mv.whitelistDomains = a; }, markDirty, { placeholder: "e.g. youtube.com — Enter to add", stripUrl: true }), "Links to these domains are never deleted"));
+
+    const warnSection = mcSection("Warnings",
+      h("div", { class: "mc-grid" },
+        mcField("Warnings before auto-action", mcNumber(() => mv.maxWarnings, (v) => { mv.maxWarnings = v; drawPreview(); markDirty(); }, { min: 0, max: 20 }), "0 turns the warning cap off")));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Mods use ", h("code", null, "/warn"), ", ", h("code", null, "/timeout"), ", ", h("code", null, "/kick"), " and ", h("code", null, "/ban"), ". Every action is posted to the mod-log channel above."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "What lands in your mod-log")),
+      device, topbar, modRoleSection, filterSection, warnSection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Reusable single-role <select> bound to model[key] for module canvases.
+  function mcRoleSelect(getV, setV, noneLabel) {
+    const roles = (state.roles || []).filter((r) => r.id && r.name !== "@everyone");
+    const sel = h("select", { class: "mc-select" }, h("option", { value: "" }, noneLabel || "— none —"), ...roles.map((r) => h("option", { value: r.id }, r.name)));
+    sel.value = getV() || "";
+    sel.addEventListener("change", () => setV(sel.value));
+    return sel;
+  }
+
+  // Hype as a live-preview canvas: a segmented Name/Tag/Invite/Boost selector,
+  // each its own reward post preview + config (enable, keywords, credits,
+  // channel, cooldown, role). Keys match the bot's hype_configs columns.
+  function renderHypeCanvas(content, mod, values) {
+    const mv = Object.assign({
+      brand_name: "",
+      name_enabled: false, name_keywords: [], name_credits: 0, name_channel_id: "", name_cooldown_hours: 0, name_role_id: "",
+      tag_enabled: false, tag_keywords: [], tag_credits: 0, tag_channel_id: "", tag_cooldown_hours: 0, tag_role_id: "", tag_guild_id: "",
+      invite_enabled: false, invite_credits: 0, invite_channel_id: "",
+      boost_channel_id: "",
+    }, values || {});
+    mv.name_keywords = Array.isArray(mv.name_keywords) ? mv.name_keywords.slice() : [];
+    mv.tag_keywords = Array.isArray(mv.tag_keywords) ? mv.tag_keywords.slice() : [];
+    const baseline = JSON.stringify(mv);
+
+    const anyOn = () => mv.name_enabled || mv.tag_enabled || mv.invite_enabled || !!mv.boost_channel_id;
+    content.append(renderModuleHero(mod, statusBadgeFor(anyOn() ? "configured" : "missing")));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const roleById = (id) => (state.roles || []).find((r) => r.id === id);
+    const username = state.user?.username || "member";
+
+    // Each reward detector + which fields it has.
+    const DETS = {
+      name:   { emoji: "👤", label: "Name", color: "#eb459e", title: "Name reward", hasKw: true, hasCd: true, hasRole: true,
+                en: "name_enabled", kw: "name_keywords", cr: "name_credits", ch: "name_channel_id", cd: "name_cooldown_hours", role: "name_role_id",
+                msg: (kw) => ["added ", h("code", { class: "hype-kw" }, kw || "[keyword]"), " to their name"] },
+      tag:    { emoji: "🏷️", label: "Tag", color: "#5865f2", title: "Tag reward", hasKw: true, hasCd: true, hasRole: true, hasGuild: true,
+                en: "tag_enabled", kw: "tag_keywords", cr: "tag_credits", ch: "tag_channel_id", cd: "tag_cooldown_hours", role: "tag_role_id",
+                msg: () => ["repped the server tag"] },
+      invite: { emoji: "📨", label: "Invite", color: "#57f287", title: "Invite reward",
+                en: "invite_enabled", cr: "invite_credits", ch: "invite_channel_id",
+                msg: () => ["invited a new member"] },
+      boost:  { emoji: "🚀", label: "Boost", color: "#f47fff", title: "Boost reward", noCredits: true,
+                ch: "boost_channel_id",
+                msg: () => ["boosted the server"] },
+    };
+    let active = "name";
+    const detOn = (d) => d.en ? !!mv[d.en] : !!mv[d.ch];
+
+    // ---- Live preview: the reward post for the active detector ----
+    const device = h("div", { class: "eb-discord hype-preview" });
+    function drawPreview() {
+      clear(device);
+      const d = DETS[active];
+      const kw = d.kw ? (mv[d.kw] && mv[d.kw][0]) : null;
+      const cr = d.cr ? (mv[d.cr] || 0) : 0;
+      const role = d.role && mv[d.role] ? roleById(mv[d.role]) : null;
+      const kids = [
+        h("div", { class: "hype-head" }, h("span", { class: "hype-ico", "aria-hidden": "true" }, "✨"), h("span", null, d.title)),
+        h("div", { class: "hype-msg" }, h("strong", null, "@" + username), " ", ...d.msg(kw)),
+      ];
+      if (!d.noCredits) {
+        kids.push(h("div", { class: "hype-award" },
+          h("span", { class: "hype-credits" }, "+" + cr + " credit" + (cr === 1 ? "" : "s")),
+          role ? h("span", { class: "hype-role" }, "+ @" + role.name) : null));
+      } else {
+        kids.push(h("div", { class: "hype-award" }, h("span", { class: "hype-role" }, "🎉 Thank-you posted")));
+      }
+      kids.push(h("div", { class: "eb-e-footer" }, h("span", null, detOn(d) ? ("Posts to #" + (chName(mv[d.ch]) || "hype")) : "Off — turn it on below")));
+      device.append(h("div", { class: "eb-embed hype-card", style: { borderColor: d.color } }, h("div", { class: "eb-embed-inner" }, ...kids)));
+    }
+
+    // ---- Segmented detector selector (green dot = enabled) ----
+    const tabs = h("div", { class: "ev-tabs" });
+    function renderTabs() {
+      clear(tabs);
+      Object.keys(DETS).forEach((k) => {
+        const d = DETS[k];
+        const b = h("button", { type: "button", class: "ev-tab" + (k === active ? " active" : "") + (detOn(d) ? " hype-tab-on" : ""), onclick: () => { active = k; renderTabs(); drawPreview(); drawDetector(); } }, d.emoji + " " + d.label);
+        if (k === active) b.style.setProperty("--ev-accent", d.color);
+        tabs.append(b);
+      });
+    }
+
+    // ---- Per-detector config ----
+    const detectorHost = h("div");
+    function drawDetector() {
+      clear(detectorHost);
+      const d = DETS[active];
+      const rows = [];
+      if (d.en) {
+        rows.push(h("div", { class: "mc-switch-row" }, mcSwitch(d.title + " enabled", () => mv[d.en] === true, (v) => { mv[d.en] = v; renderTabs(); drawPreview(); markDirty(); })));
+      }
+      if (d.hasKw) {
+        rows.push(mcField(d.label + " keywords", mcKeywords(() => mv[d.kw], (a) => { mv[d.kw] = a; }, () => { markDirty(); drawPreview(); }, { placeholder: "Type a keyword — Enter to add" }), "Members with one of these in their name are rewarded"));
+      }
+      const grid = [];
+      if (d.cr) grid.push(mcField("Credits per reward", mcNumber(() => mv[d.cr], (v) => { mv[d.cr] = v; drawPreview(); markDirty(); }, { min: 0, max: 1000000 })));
+      if (d.ch) {
+        const sel = renderChannelSelect("hype-" + active + "-ch", d.ch, state.channels || [], mv[d.ch]);
+        sel.classList.add("mc-select");
+        sel.addEventListener("change", () => { mv[d.ch] = sel.value; renderTabs(); drawPreview(); markDirty(); });
+        grid.push(mcField("Reward channel", sel, d.noCredits ? "Set a channel to enable boost thank-yous" : null));
+      }
+      if (d.hasCd) grid.push(mcField("Cooldown (hours)", mcNumber(() => mv[d.cd], (v) => { mv[d.cd] = v; markDirty(); }, { min: 0, max: 8760 }), "0 = once per season"));
+      if (grid.length) rows.push(h("div", { class: "mc-grid" }, ...grid));
+      if (d.hasRole) rows.push(mcField("Reward role", mcRoleSelect(() => mv[d.role], (v) => { mv[d.role] = v; drawPreview(); markDirty(); }, "— no role —")));
+      if (d.hasGuild) {
+        const gi = h("input", { type: "text", class: "mc-num", value: mv.tag_guild_id || "", placeholder: "Blank = this server", maxlength: 32 });
+        gi.addEventListener("input", () => { mv.tag_guild_id = gi.value.trim(); markDirty(); });
+        rows.push(mcField("Tag server ID (advanced)", gi, "Reward members repping another server's tag"));
+      }
+      detectorHost.append(mcSection(d.title, ...rows));
+    }
+
+    drawPreview(); renderTabs(); drawDetector();
+
+    // ---- Brand name (applies to every reward embed) ----
+    const brandIn = h("input", { type: "text", class: "mc-num", value: mv.brand_name || "", placeholder: "Defaults to the server name", maxlength: 64 });
+    brandIn.addEventListener("input", () => { mv.brand_name = brandIn.value; markDirty(); });
+    const brandSection = mcSection("Branding", h("div", { class: "mc-grid" }, mcField("Brand name", brandIn, "Shown in every hype reward embed")));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Each reward works on its own — pick a tab, turn it on, and set its credits, channel and role. Members earn the moment Arkoris spots the activity."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Pick a reward type to set it up")),
+      tabs, device, detectorHost, brandSection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Events as a live-preview canvas: a segmented Dino/Number/Vault selector
+  // drives both the announcement preview and that type's reward fields.
+  function renderEventsCanvas(content, mod, values) {
+    const mv = Object.assign({
+      enabled: false, announceChannelId: "", trackChannelId: "", pingRoleId: "", allowedRoleIds: [],
+      dinoBase: 5, dinoBump: 1, dinoPer: 50, numberBase: 5, numberBump: 1, numberPer: 100, vaultBase: 5, vaultBump: 1, vaultPer: 50,
+    }, values || {});
+    mv.allowedRoleIds = Array.isArray(mv.allowedRoleIds) ? mv.allowedRoleIds.slice() : [];
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const roleById = (id) => (state.roles || []).find((r) => r.id === id);
+
+    const TYPES = {
+      dino: { emoji: "🦖", label: "Dino", color: "#57f287", title: "Dino Guessing Event", blurb: "Guess which dino is hidden", baseKey: "dinoBase", bumpKey: "dinoBump", perKey: "dinoPer", noun: "wrong guesses" },
+      number: { emoji: "🔢", label: "Number", color: "#5865f2", title: "Number Guess", blurb: "Guess the secret number", baseKey: "numberBase", bumpKey: "numberBump", perKey: "numberPer", noun: "wrong guesses" },
+      vault: { emoji: "🔐", label: "Vault", color: "#faa61a", title: "Vault Crack", blurb: "Crack the vault code", baseKey: "vaultBase", bumpKey: "vaultBump", perKey: "vaultPer", noun: "wrong attempts" },
+    };
+    let active = "dino";
+
+    // ---- Live preview: event announcement (themed by active type) ----
+    const device = h("div", { class: "eb-discord event-preview" });
+    function drawPreview() {
+      clear(device);
+      const t = TYPES[active];
+      const base = mv[t.baseKey] != null ? mv[t.baseKey] : 0;
+      const bump = mv[t.bumpKey] != null ? mv[t.bumpKey] : 0;
+      const per = mv[t.perKey] != null ? mv[t.perKey] : 1;
+      const role = mv.pingRoleId ? roleById(mv.pingRoleId) : null;
+      device.append(h("div", { class: "eb-embed event-card", style: { borderColor: t.color } },
+        h("div", { class: "eb-embed-inner" },
+          role ? h("div", { class: "event-ping" }, "🔔 ", h("span", { class: "w-mention" }, "@" + role.name)) : null,
+          h("div", { class: "event-head" }, h("span", { class: "event-emoji", "aria-hidden": "true" }, t.emoji), h("span", null, t.title)),
+          h("div", { class: "event-blurb" }, t.blurb + " — first correct answer wins the pot."),
+          h("div", { class: "event-prize", style: { borderColor: t.color } },
+            h("span", { class: "event-prize-amt", style: { color: t.color } }, "🏆 " + base + " credits"),
+            h("span", { class: "event-prize-sub" }, bump > 0 ? ("grows +" + bump + " every " + per + " " + t.noun) : "fixed prize")),
+          h("div", { class: "event-foot-line" }, "Guess in #" + (chName(mv.trackChannelId) || "events")),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Announced in #" + (chName(mv.announceChannelId) || "events"))))));
+    }
+
+    // ---- Segmented event-type selector ----
+    const tabs = h("div", { class: "ev-tabs" });
+    function renderTabs() {
+      clear(tabs);
+      Object.keys(TYPES).forEach((k) => {
+        const t = TYPES[k];
+        const b = h("button", { type: "button", class: "ev-tab" + (k === active ? " active" : ""), onclick: () => { active = k; renderTabs(); drawPreview(); drawRewards(); } }, t.emoji + " " + t.label);
+        if (k === active) b.style.setProperty("--ev-accent", t.color);
+        tabs.append(b);
+      });
+    }
+
+    // ---- Active type's reward fields ----
+    const rewardHost = h("div");
+    function drawRewards() {
+      clear(rewardHost);
+      const t = TYPES[active];
+      const perLabel = t.noun.charAt(0).toUpperCase() + t.noun.slice(1) + " per bump";
+      rewardHost.append(mcSection(t.label + " reward",
+        h("div", { class: "mc-grid" },
+          mcField("Base prize (credits)", mcNumber(() => mv[t.baseKey], (v) => { mv[t.baseKey] = v; drawPreview(); markDirty(); }, { min: 0, max: 10000 })),
+          mcField("Added per interval", mcNumber(() => mv[t.bumpKey], (v) => { mv[t.bumpKey] = v; drawPreview(); markDirty(); }, { min: 0, max: 10000 })),
+          mcField(perLabel, mcNumber(() => mv[t.perKey], (v) => { mv[t.perKey] = v; drawPreview(); markDirty(); }, { min: 1, max: 10000 }))),
+        h("div", { class: "mc-hint mc-hint-block" }, "Switch the tab above to set rewards for the other event types.")));
+    }
+
+    drawPreview(); renderTabs(); drawRewards();
+
+    // ---- Top bar: announce channel + enabled ----
+    const annCh = renderChannelSelect("ev-annch", "announceChannelId", state.channels || [], mv.announceChannelId);
+    annCh.classList.add("w-select");
+    annCh.addEventListener("change", () => { mv.announceChannelId = annCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), annCh),
+      mcSwitch("Events enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    // ---- Where it runs ----
+    const trackCh = renderChannelSelect("ev-trackch", "trackChannelId", state.channels || [], mv.trackChannelId);
+    trackCh.classList.add("mc-select");
+    trackCh.addEventListener("change", () => { mv.trackChannelId = trackCh.value; drawPreview(); markDirty(); });
+    const whereSection = mcSection("Where it runs",
+      h("div", { class: "mc-grid" },
+        mcField("Guess channel", trackCh, "Where players type their guesses"),
+        mcField("Event ping role", mcRoleSelect(() => mv.pingRoleId, (v) => { mv.pingRoleId = v; drawPreview(); markDirty(); }, "— no ping —"))),
+      mcField("Who can start events", mcChips("role", () => mv.allowedRoleIds, (a) => { mv.allowedRoleIds = a; }, markDirty, { empty: "Server admins only", add: "+ Add a host role" })));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Hosts run ", h("code", null, "/event-start"), " to launch one. The prize pot grows with every wrong guess, so the longer it runs the bigger the payout."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Pick an event type to preview")),
+      tabs, device, topbar, whereSection, rewardHost, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Reusable single-category <select> bound to model[key] for module canvases.
+  function mcCategorySelect(getV, setV, noneLabel) {
+    const cats = state.categories || [];
+    const sel = h("select", { class: "mc-select" }, h("option", { value: "" }, noneLabel || "— none —"), ...cats.map((c) => h("option", { value: c.id }, c.name)));
+    sel.value = getV() || "";
+    sel.addEventListener("change", () => setV(sel.value));
+    return sel;
+  }
+
+  // Tickets as a live-preview canvas: the ticket panel members click + a
+  // staff-flow line that reflects the claim / auto-close / staff-role settings.
+  function renderTicketsCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, panelChannelId: "", ticketCategoryId: "", staffRoleIds: [], logChannelId: "", autoCloseHours: 0, claimEnabled: true }, values || {});
+    mv.staffRoleIds = Array.isArray(mv.staffRoleIds) ? mv.staffRoleIds.slice() : [];
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const catName = (id) => { const c = (state.categories || []).find((x) => x.id === id); return c ? c.name : null; };
+    const roleById = (id) => (state.roles || []).find((r) => r.id === id);
+
+    // ---- Live preview: ticket panel + staff-flow line ----
+    const device = h("div", { class: "eb-discord ticket-preview" });
+    function drawPreview() {
+      clear(device);
+      const cat = mv.ticketCategoryId ? catName(mv.ticketCategoryId) : null;
+      const staffNames = mv.staffRoleIds.map((id) => roleById(id)).filter(Boolean).map((r) => "@" + r.name);
+      device.append(h("div", { class: "eb-embed ticket-card", style: { borderColor: "#5865f2" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "ticket-head" }, h("span", { class: "ticket-emoji", "aria-hidden": "true" }, "🎫"), h("span", null, "Support")),
+          h("div", { class: "ticket-desc" }, "Need help? Open a ticket and our staff team will assist you privately."),
+          h("div", { class: "ticket-open" }, "📩 Open a ticket"),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Panel in #" + (chName(mv.panelChannelId) || "support") + " · tickets under " + (cat || "Support"))))));
+      const flow = [];
+      flow.push(staffNames.length ? (staffNames.join(", ") + " get pinged") : "Staff get pinged");
+      if (mv.claimEnabled !== false) flow.push("staff can claim it");
+      if ((mv.autoCloseHours | 0) > 0) flow.push("auto-closes after " + mv.autoCloseHours + "h idle");
+      device.append(h("div", { class: "ticket-flow" },
+        h("span", { class: "ticket-flow-ico", "aria-hidden": "true" }, "→"),
+        h("span", null, "When opened: " + flow.join(" · "))));
+    }
+    drawPreview();
+
+    // ---- Top bar: panel channel + enabled ----
+    const panelCh = renderChannelSelect("tk-panelch", "panelChannelId", state.channels || [], mv.panelChannelId);
+    panelCh.classList.add("w-select");
+    panelCh.addEventListener("change", () => { mv.panelChannelId = panelCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), panelCh),
+      mcSwitch("Tickets enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const catSection = mcSection("Tickets open under",
+      mcField("Category", mcCategorySelect(() => mv.ticketCategoryId, (v) => { mv.ticketCategoryId = v; drawPreview(); markDirty(); }, "— pick a category —"), "New ticket channels are created in this category"));
+
+    const staffSection = mcSection("Staff",
+      mcField("Staff roles", mcChips("role", () => mv.staffRoleIds, (a) => { mv.staffRoleIds = a; }, () => { markDirty(); drawPreview(); }, { empty: "No staff roles yet", add: "+ Add a staff role" }), "Pinged when a ticket opens and given access to it"),
+      h("div", { class: "mc-switch-row" }, mcSwitch("Let staff claim a ticket", () => mv.claimEnabled !== false, (v) => { mv.claimEnabled = v; drawPreview(); markDirty(); })));
+
+    const logCh = renderChannelSelect("tk-logch", "logChannelId", state.channels || [], mv.logChannelId);
+    logCh.classList.add("mc-select");
+    logCh.addEventListener("change", () => { mv.logChannelId = logCh.value; markDirty(); });
+    const lifeSection = mcSection("Lifecycle",
+      h("div", { class: "mc-grid" },
+        mcField("Ticket log channel", logCh, "Transcripts are archived here on close"),
+        mcField("Auto-close after (hours)", mcNumber(() => mv.autoCloseHours, (v) => { mv.autoCloseHours = v; drawPreview(); markDirty(); }, { min: 0, max: 720 }), "0 = never auto-close")));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Members click the button to open a private ticket channel. Staff handle it, then close it to archive a transcript to the log channel."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "The panel members use to get help")),
+      device, topbar, catSection, staffSection, lifeSection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Staff Pay as a live-preview canvas: a monthly staff-earnings summary embed.
+  // Only real control is the forum channel + enabled, so the preview leads.
+  function renderStaffPayCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, forumChannelId: "" }, values || {});
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+
+    // ---- Live preview: monthly staff-earnings summary ----
+    const device = h("div", { class: "eb-discord staffpay-preview" });
+    function drawPreview() {
+      clear(device);
+      const rows = [["Aria", "24 tickets", "£120"], ["Kade", "17 tickets", "£85"], ["Nyx", "8 tickets", "£40"]];
+      device.append(h("div", { class: "eb-embed staffpay-card", style: { borderColor: "#3ba55d" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "sp-title" }, "💼 Staff Earnings · June 2026"),
+          ...rows.map(([n, sub, amt]) => h("div", { class: "sp-row" },
+            h("div", { class: "sp-id" }, h("span", { class: "sp-name" }, "@" + n), h("span", { class: "sp-sub" }, sub)),
+            h("span", { class: "sp-amt" }, amt))),
+          h("div", { class: "eb-e-footer" }, h("span", null, "Logged in #" + (chName(mv.forumChannelId) || "staff-pay"))))));
+    }
+    drawPreview();
+
+    // ---- Top bar: forum channel + enabled ----
+    const forumCh = renderChannelSelect("sp-forumch", "forumChannelId", state.channels || [], mv.forumChannelId);
+    forumCh.classList.add("w-select");
+    forumCh.addEventListener("change", () => { mv.forumChannelId = forumCh.value; drawPreview(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), forumCh),
+      mcSwitch("Staff Pay enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Arkoris tallies each staff member's ticket work and posts a monthly earnings thread to the forum channel above — no spreadsheets needed."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "The monthly summary Arkoris posts")),
+      device, topbar, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Payments as a live-preview canvas: a payment panel with inline-editable
+  // instructions + PayPal/card buttons; currency & log channel are controls.
+  function renderPaymentsCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false, defaultCurrency: "GBP", logChannelId: "", instructions: "" }, values || {});
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+    const chName = (id) => { const c = (state.channels || []).find((x) => x.id === id); return c ? c.name : null; };
+    const symbols = { GBP: "£", USD: "$" };
+    const plainOK = (() => { try { const d = document.createElement("div"); d.contentEditable = "plaintext-only"; return d.contentEditable === "plaintext-only"; } catch { return false; } })();
+
+    // ---- Live preview: payment panel (instructions are edited inline) ----
+    const instrEl = h("div", { class: "eb-editable pay-instructions" });
+    instrEl.contentEditable = plainOK ? "plaintext-only" : "true";
+    instrEl.spellcheck = false;
+    instrEl.setAttribute("role", "textbox");
+    instrEl.setAttribute("aria-label", "Payment instructions");
+    instrEl.setAttribute("data-ph", "Payment instructions members see…");
+    instrEl.textContent = mv.instructions || "";
+    instrEl.addEventListener("input", () => { mv.instructions = (instrEl.innerText || "").replace(/\n$/, ""); markDirty(); });
+    instrEl.addEventListener("paste", (ev) => { ev.preventDefault(); const t = (ev.clipboardData || window.clipboardData).getData("text") || ""; try { document.execCommand("insertText", false, t); } catch (_) { instrEl.textContent += t; } });
+
+    const sampleAmt = h("span", { class: "pay-sample-amt" });
+    const logFooter = h("span");
+    const curFooter = h("span");
+    function syncCurrency() { const sym = symbols[mv.defaultCurrency] || "£"; sampleAmt.textContent = sym + "10.00"; curFooter.textContent = "prices in " + (mv.defaultCurrency || "GBP"); }
+    function syncLogFooter() { logFooter.textContent = "Confirmations logged to #" + (chName(mv.logChannelId) || "payments"); }
+    syncCurrency(); syncLogFooter();
+
+    const device = h("div", { class: "eb-discord pay-preview" },
+      h("div", { class: "eb-embed pay-card", style: { borderColor: "#3ba55d" } },
+        h("div", { class: "eb-embed-inner" },
+          h("div", { class: "pay-head" }, h("span", { class: "pay-emoji", "aria-hidden": "true" }, "💳"), h("span", null, "Payments")),
+          instrEl,
+          h("div", { class: "pay-sample" }, "Starter perks · ", sampleAmt),
+          h("div", { class: "pay-buttons" }, h("div", { class: "pay-btn paypal" }, "PayPal"), h("div", { class: "pay-btn card" }, "Pay by card")),
+          h("div", { class: "eb-e-footer" }, h("span", null, logFooter, " · ", curFooter)))));
+
+    // ---- Top bar: log channel + enabled ----
+    const logCh = renderChannelSelect("pay-logch", "logChannelId", state.channels || [], mv.logChannelId);
+    logCh.classList.add("w-select");
+    logCh.addEventListener("change", () => { mv.logChannelId = logCh.value; syncLogFooter(); markDirty(); });
+    const topbar = h("div", { class: "w-topbar" },
+      h("div", { class: "w-topbar-channel" }, h("span", { class: "w-hash" }, "#"), logCh),
+      mcSwitch("Payments enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const curSection = mcSection("Currency",
+      h("div", { class: "mc-grid" },
+        mcField("Default currency", mcSelect(
+          [["GBP", "GBP (£)"], ["USD", "USD ($)"]].map(([value, label]) => ({ value, label })),
+          () => mv.defaultCurrency, (v) => { mv.defaultCurrency = v; syncCurrency(); markDirty(); }))));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Connect PayPal or Stripe with ", h("code", null, "/payments setup"), " in Discord. Members pay from the panel and Arkoris auto-confirms, then logs it to the channel above."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Click the text to edit your instructions")),
+      device, topbar, curSection, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+  }
+
+  // Server Templates as a live-preview canvas: a segmented preset selector that
+  // previews the channel tree + roles each template would build.
+  function renderServerTemplatesCanvas(content, mod, values) {
+    const mv = Object.assign({ enabled: false }, values || {});
+    const baseline = JSON.stringify(mv);
+    content.append(renderModuleHero(mod, statusBadgeFor(detectModuleStatus(mod, mv))));
+
+    const statusBox = h("div");
+    const saveBtn = h("button", { type: "button", class: "btn btn-primary", disabled: true }, "Save changes");
+    function markDirty() { saveBtn.disabled = JSON.stringify(mv) === baseline; }
+
+    const TEMPLATES = {
+      gaming: { emoji: "🎮", label: "Gaming", channels: [{ cat: "INFORMATION", items: ["# rules", "# announcements"] }, { cat: "COMMUNITY", items: ["# general", "# clips", "🔊 Game Night"] }], roles: ["Admin", "Moderator", "Member", "Booster"] },
+      support: { emoji: "🛟", label: "Support", channels: [{ cat: "INFO", items: ["# welcome", "# faq"] }, { cat: "SUPPORT", items: ["# open-a-ticket", "# staff-chat"] }], roles: ["Staff", "Support", "Member"] },
+      ark: { emoji: "🦖", label: "ARK Cluster", channels: [{ cat: "CLUSTER", items: ["# server-status", "# rates", "🔊 Tribe VC"] }, { cat: "COMMUNITY", items: ["# general", "# trading", "# bug-reports"] }], roles: ["Admin", "Helper", "Survivor", "Donor"] },
+    };
+    let active = "gaming";
+
+    // ---- Live preview: the channel tree + roles a template builds ----
+    const device = h("div", { class: "template-preview" });
+    function drawPreview() {
+      clear(device);
+      const t = TEMPLATES[active];
+      const chCount = t.channels.reduce((n, c) => n + c.items.length, 0);
+      const channelsCol = h("div", { class: "tpl-channels" });
+      t.channels.forEach((c) => {
+        channelsCol.append(h("div", { class: "tpl-cat" }, c.cat));
+        c.items.forEach((it) => channelsCol.append(h("div", { class: "tpl-ch" }, it)));
+      });
+      const rolesCol = h("div", { class: "tpl-roles" },
+        h("div", { class: "tpl-roles-lbl" }, "Roles"),
+        h("div", { class: "tpl-roles-list" }, ...t.roles.map((r) => h("span", { class: "tpl-role" }, r))));
+      device.append(h("div", { class: "tpl-card" },
+        h("div", { class: "tpl-cols" }, channelsCol, rolesCol),
+        h("div", { class: "tpl-foot" }, "Creates " + chCount + " channels · " + t.roles.length + " roles when applied")));
+    }
+
+    // ---- Segmented template selector ----
+    const tabs = h("div", { class: "ev-tabs" });
+    function renderTabs() {
+      clear(tabs);
+      Object.keys(TEMPLATES).forEach((k) => {
+        const t = TEMPLATES[k];
+        const b = h("button", { type: "button", class: "ev-tab" + (k === active ? " active" : ""), onclick: () => { active = k; renderTabs(); drawPreview(); } }, t.emoji + " " + t.label);
+        if (k === active) b.style.setProperty("--ev-accent", "#5865f2");
+        tabs.append(b);
+      });
+    }
+    drawPreview(); renderTabs();
+
+    const topbar = h("div", { class: "w-topbar" },
+      h("span", { class: "poll-topbar-lbl" }, "Preset channel, role & permission layouts you can apply in one command"),
+      mcSwitch("Server Templates enabled", () => mv.enabled === true, (v) => { mv.enabled = v; markDirty(); }));
+
+    const tip = h("div", { class: "w-tip" },
+      (() => { const i = h("span", { class: "w-tip-ico" }); i.appendChild(iconSvg("sparkle")); return i; })(),
+      h("div", null, "Run ", h("code", null, "/setup template"), " in Discord to apply a preset. Arkoris creates the channels, roles and permissions for you — your existing channels are left untouched."));
+
+    content.append(h("div", { class: "dash-card w-canvas" },
+      h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "Pick a template to see what it builds")),
+      tabs, device, topbar, tip, statusBox,
+      mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
   }
 
   /** Mark the form as dirty/clean by comparing live values to baseline. */
@@ -3857,51 +5440,52 @@
         }
       }).catch(() => {});
 
-      // Empty state — owns the create CTA when no menus exist
+      // Empty state — show an example Discord preview alongside the create CTA
       if (!menus.length) {
+        const sample = { name: "Ping Roles", description: "Pick the pings you want to get", type: "dropdown", options: [
+          { roleId: "", label: "Announcements", description: "Server news & updates", emoji: "📢" },
+          { roleId: "", label: "Events", description: "Get pinged for events", emoji: "🎉" },
+          { roleId: "", label: "Giveaways", description: "Never miss a drop", emoji: "🎁" },
+        ] };
+        const spv = renderRoleMenuPreview(sample, { name: sample.name, description: sample.description, type: sample.type });
+        spv.draw();
         content.append(
-          h("div", { class: "dash-card", style: { textAlign: "center", padding: "44px 24px" } },
-            h("div", { style: { fontSize: "2.4rem", marginBottom: "10px" } }, "🎭"),
-            h("h4", { style: { margin: "0 0 6px", fontSize: "1.08rem" } }, "No role menus yet"),
-            h("p", { style: { color: "var(--text-muted)", margin: "0 0 20px", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" } },
-              "Create one to let members pick roles from a dropdown or button panel. You can post it to any channel and update it any time."),
-            h("button", { type: "button", class: "btn btn-primary", onclick: () => openCreateMenuModal(content) },
-              "+ Create your first menu")
-          )
+          h("div", { class: "dash-card" },
+            h("div", { class: "w-canvas-head" },
+              h("span", { class: "w-canvas-label" }, "Example role menu"),
+              h("span", { class: "w-canvas-hint" }, "What members see in Discord")),
+            h("div", { class: "rm-pv-sample" }, spv.device),
+            h("div", { class: "rm-pv-emptymsg" },
+              h("h4", null, "No role menus yet"),
+              h("p", null, "Create one to let members pick roles from a dropdown or button panel — post it to any channel and update it any time."),
+              h("button", { type: "button", class: "btn btn-primary", onclick: () => openCreateMenuModal(content) }, "+ Create your first menu")))
         );
         return;
       }
 
-      // Menu cards
-      const grid = h("div", { class: "rm-list" });
+      // Menu cards — each is a live Discord preview
+      const grid = h("div", { class: "rm-pv-list" });
       menus.forEach((m) => grid.appendChild(renderMenuCard(m, content)));
       content.append(grid);
     } catch (e) { renderTabError(content, e); }
   }
 
+  // Each saved menu renders as its actual Discord panel preview, with a compact
+  // header (name / channel / type / status) and an Edit button into the editor.
   function renderMenuCard(m, content) {
     const ch = (state.channels || []).find((c) => c.id === m.channelId);
-    const card = h("button", { type: "button", class: "rm-card", onclick: () => { _rmEditingId = m.id; renderActiveTab(content); } },
-      h("div", { class: "rm-card-top" },
-        h("div", { class: "rm-card-icon" }, m.type === "button" ? "▢" : "▾"),
-        h("div", { class: "rm-card-info" },
-          h("div", { class: "rm-card-name" }, m.name),
-          h("div", { class: "rm-card-sub" },
-            ch ? `${ch.type === 15 ? "📋" : "#"} ${ch.name}` : "(channel missing)",
-            " · ",
-            `${m.options.length} option${m.options.length === 1 ? "" : "s"}`
-          )
-        ),
-        m.posted
-          ? h("span", { class: "rm-tag posted" }, "Posted")
-          : h("span", { class: "rm-tag draft" }, "Draft")
-      ),
-      h("div", { class: "rm-card-meta" },
-        h("span", { class: "rm-meta-pill" }, m.type === "button" ? "Buttons" : "Dropdown"),
-        h("span", { class: "rm-card-arrow" }, "→")
-      )
-    );
-    return card;
+    const pv = renderRoleMenuPreview(m, { name: m.name, description: m.description || "", type: m.type });
+    pv.draw();
+    return h("div", { class: "dash-card rm-pv-card" },
+      h("div", { class: "rm-pv-cardhead" },
+        h("div", { class: "rm-pv-cardinfo" },
+          h("div", { class: "rm-pv-cardname" }, m.name),
+          h("div", { class: "rm-pv-cardsub" },
+            (ch ? `${ch.type === 15 ? "📋" : "#"} ${ch.name}` : "(no channel)") +
+            ` · ${m.options.length} option${m.options.length === 1 ? "" : "s"} · ${m.type === "button" ? "Buttons" : "Dropdown"}`)),
+        m.posted ? h("span", { class: "rm-tag posted" }, "Posted") : h("span", { class: "rm-tag draft" }, "Draft"),
+        h("button", { type: "button", class: "btn btn-primary rm-pv-edit", onclick: () => { _rmEditingId = m.id; renderActiveTab(content); } }, "Edit →")),
+      pv.device);
   }
 
   async function openCreateMenuModal(content) {
@@ -3962,15 +5546,74 @@
         )
       );
 
-      // Menu settings form
-      content.append(renderMenuSettings(m, content));
+      // Live Discord preview of the panel (matches how it actually posts)
+      const live = { name: m.name, description: m.description || "", type: m.type };
+      const pv = renderRoleMenuPreview(m, live);
+      content.append(h("div", { class: "dash-card rm-preview-card" },
+        h("div", { class: "w-canvas-head" },
+          h("span", { class: "w-canvas-label" }, "Live preview"),
+          h("span", { class: "w-canvas-hint" }, "Exactly how this panel posts in Discord")),
+        pv.device));
+      pv.draw();
+
+      // Menu settings form (wired to update the preview as you type)
+      content.append(renderMenuSettings(m, content, live, pv.draw));
 
       // Options editor
       content.append(renderOptionsEditor(m, content));
     } catch (e) { renderTabError(content, e); }
   }
 
-  function renderMenuSettings(m, content) {
+  // Read-only Discord render of a role-menu panel: an embed (title = name,
+  // description = description) followed by a dropdown or button row — the same
+  // shape roleMenuService posts. `live` holds the (possibly unsaved) name /
+  // description / type so the settings form can update the preview live.
+  function renderRoleMenuPreview(m, live) {
+    const device = h("div", { class: "eb-discord rm-preview" });
+    function draw() {
+      clear(device);
+      const opts = m.options || [];
+      const inner = h("div", { class: "eb-embed-inner" },
+        h("div", { class: "eb-e-title" }, live.name || "Role Menu"),
+        h("div", { class: "eb-e-desc" }, live.description || "Pick the roles you want."));
+      device.append(h("div", { class: "eb-embed", style: { borderColor: "#dc2626" } }, inner));
+      if (!opts.length) {
+        device.append(h("div", { class: "rm-pv-empty" }, "Add role options below — they'll show up here."));
+        return;
+      }
+      if (live.type === "button") {
+        // Buttons chunk into rows of 5, Secondary style (matches the bot).
+        for (let i = 0; i < opts.length; i += 5) {
+          const row = h("div", { class: "eb-comp-preview-row" });
+          opts.slice(i, i + 5).forEach((o) => {
+            const b = h("div", { class: "eb-d-btn secondary" });
+            if (o.emoji) b.append(h("span", { class: "eb-d-btn-emoji" }, o.emoji + " "));
+            b.append(h("span", { class: "eb-d-btn-label" }, o.label));
+            row.append(b);
+          });
+          device.append(row);
+        }
+      } else {
+        const wrap = h("div", { class: "eb-d-select-wrap" });
+        wrap.append(h("div", { class: "eb-d-select" },
+          h("span", { class: "eb-d-select-ph" }, "🎭 Select roles…"),
+          h("span", { class: "rm-pv-arrow" }, "▾")));
+        const list = h("div", { class: "eb-d-options" });
+        opts.forEach((o) => {
+          list.append(h("div", { class: "eb-d-option" },
+            o.emoji ? h("span", { class: "eb-d-opt-emoji" }, o.emoji) : null,
+            h("div", { class: "eb-d-opt-text" },
+              h("div", { class: "eb-d-opt-label" }, o.label),
+              o.description ? h("div", { class: "eb-d-opt-desc" }, o.description) : null)));
+        });
+        wrap.append(list);
+        device.append(wrap);
+      }
+    }
+    return { device, draw };
+  }
+
+  function renderMenuSettings(m, content, live, drawPreview) {
     const nameInput = h("input", { id: "rm-edit-name", type: "text", value: m.name, maxlength: 64 });
     const descInput = h("input", { id: "rm-edit-desc", type: "text", value: m.description || "", maxlength: 256 });
     const typeSelect = h("select", { id: "rm-edit-type" },
@@ -3978,6 +5621,13 @@
       h("option", { value: "button", selected: m.type === "button" || null }, "Buttons (one per role)")
     );
     const channelSelect = renderChannelSelect("rm-edit-channel", "channel", state.channels || [], m.channelId);
+
+    // Live-update the Discord preview as the panel's text / type change.
+    if (live && drawPreview) {
+      nameInput.addEventListener("input", () => { live.name = nameInput.value; drawPreview(); });
+      descInput.addEventListener("input", () => { live.description = descInput.value; drawPreview(); });
+      typeSelect.addEventListener("change", () => { live.type = typeSelect.value; drawPreview(); });
+    }
 
     const card = h("div", { class: "dash-card" },
       h("h4", { style: { margin: "0 0 12px" } }, "Menu settings"),
@@ -4936,8 +6586,313 @@
     }
   }
 
+  // Preview-only mock mode: append ?mock=1 to the URL to render the picker with
+  // sample servers and skip the backend. Lets us iterate on dashboard UI states
+  // locally (npm run dev) without a live session. Harmless in production: the
+  // page is password-gated, and this only shows fake data when explicitly asked.
+  function maybeRenderMock() {
+    const m = location.search.match(/[?&]mock=([a-z0-9]+)/i);
+    if (!m) return false;
+    const mode = m[1].toLowerCase(); // "1" = picker, "overview" = in-server overview
+    state.user = { id: "0", username: "previewuser", globalName: "Preview User", avatar: null };
+    state.guilds = [
+      { id: "100000000000000001", name: "Velated PVP",          icon: null, owner: true,  plan: "premium" },
+      { id: "100000000000000002", name: "Ark Legends Cluster",  icon: null, owner: false, plan: "free" },
+      { id: "100000000000000003", name: "The Island Survivors", icon: null, owner: true,  plan: "lifetime" },
+      { id: "100000000000000004", name: "Ragnarok Raiders",     icon: null, owner: false, plan: "free" },
+      { id: "100000000000000005", name: "Genesis Tribe",        icon: null, owner: true,  plan: "monthly" },
+    ];
+
+    // Stub the data layer so in-server views render without a backend.
+    const MOCK_MODULES = [
+      { name: "welcome", label: "Welcome", tier: "free" }, { name: "autoRoles", label: "Auto Roles", tier: "free" },
+      { name: "roleMenus", label: "Role Menus", tier: "free" }, { name: "xp", label: "XP / Leaderboards", tier: "free" },
+      { name: "polls", label: "Polls", tier: "free" }, { name: "moderation", label: "Moderation", tier: "free" },
+      { name: "hype", label: "Hype", tier: "premium" }, { name: "events", label: "Events", tier: "premium" },
+      { name: "tickets", label: "Tickets", tier: "premium" },
+      { name: "staffPay", label: "Staff Pay", tier: "premium" }, { name: "ark", label: "ARK Management", tier: "premium" },
+      { name: "logs", label: "Logs", tier: "free" }, { name: "payments", label: "Payments", tier: "premium" },
+      { name: "branding", label: "Branding", tier: "premium" }, { name: "serverTemplates", label: "Server Templates", tier: "premium" },
+    ];
+    state.modules = MOCK_MODULES;
+    data.modules = async () => ({ modules: MOCK_MODULES });
+    // Mutable so ?mock= "Mark as done" visibly updates the Setup Hub. Includes
+    // credits/hype so those flagged cards are testable as to-do + markable.
+    const mockBaseFlags = { welcome: true, autoRoles: true, roleMenus: false, tickets: true, staffPay: false, branding: true, ark: true, payments: false, events: true, xp: true, moderation: false, hype: false };
+    const mockOverrides = {};
+    const mockStatus = () => {
+      const flags = Object.assign({}, mockBaseFlags);
+      for (const k of Object.keys(mockOverrides)) flags[k] = true;
+      const total = Object.keys(flags).length;
+      const completed = Object.values(flags).filter(Boolean).length;
+      return { percent: Math.round((completed / total) * 100), total, flags, overrides: Object.assign({}, mockOverrides) };
+    };
+    data.setupOverride = async (gid, moduleKey, done) => {
+      if (done) mockOverrides[moduleKey] = true; else delete mockOverrides[moduleKey];
+      return mockStatus(); // mirror the real route, which returns the fresh status
+    };
+    data.overview = async () => ({
+      guild: { memberCount: 1247 },
+      premiumActive: true, plan: "premium", botInstalled: true,
+      setup: mockStatus(),
+    });
+    // 90 days of deterministic synthetic data so the date pickers + presets have
+    // a real window to slice (no Math.random — stable across reloads).
+    const mkDays = (n) => {
+      const out = []; const base = new Date("2026-06-09T00:00:00Z");
+      for (let i = n - 1; i >= 0; i--) out.push(new Date(base.getTime() - i * 86400000).toISOString().slice(0, 10));
+      return out;
+    };
+    const MOCK_DAYS = mkDays(90);
+    const synth = (b, amp, period, seed) => MOCK_DAYS.map((day, i) => ({ day, value: Math.max(0, Math.round(b + amp * Math.sin(i / period) + ((i * 37 + seed) % 13) - 6)) }));
+    const memberSeries = MOCK_DAYS.map((day, i) => ({ day, value: 1000 + Math.round(i * 2.75 + 9 * Math.sin(i / 5)) }));
+    data.analytics = async () => ({
+      days: 90, members: memberSeries[memberSeries.length - 1].value, memberSeries,
+      cards: {
+        messages: { total: 18432, week: 4210, prevWeek: 3870 }, commands: { total: 2304, week: 540, prevWeek: 610 },
+        pop_uses: { total: 892, week: 210, prevWeek: 180 }, voice_joins: { total: 430, week: 96, prevWeek: 88 },
+        welcomes: { total: 312, week: 74, prevWeek: 65 },
+      },
+      series: {
+        messages: synth(560, 120, 6, 3), commands: synth(78, 22, 5, 7),
+        voice_joins: synth(14, 5, 7, 1), welcomes: synth(10, 4, 8, 5),
+        pop_uses: synth(30, 12, 6, 9),
+      },
+    });
+    data.audit = async () => ({ entries: [
+      { ts: "2026-05-17T19:29:34Z", ok: true,  action: "module_save", target: "branding" },
+      { ts: "2026-05-17T18:39:24Z", ok: true,  action: "module_save", target: "welcome" },
+      { ts: "2026-05-17T18:12:01Z", ok: true,  action: "panel_post",  target: "roleMenus" },
+      { ts: "2026-05-17T17:49:46Z", ok: false, action: "paypal_test", target: "payments" },
+    ] });
+    // Module-form stubs (for ?mock=welcome etc.)
+    data.channels = async () => ({ channels: [
+      { id: "1", name: "general", type: 0 }, { id: "2", name: "welcome", type: 0 },
+      { id: "3", name: "announcements", type: 0 }, { id: "4", name: "mod-logs", type: 0 },
+      { id: "5", name: "level-up", type: 0 }, { id: "6", name: "bot-spam", type: 0 },
+      { id: "7", name: "staff-pay", type: 0 },
+    ] });
+    data.categories = async () => ({ categories: [{ id: "10", name: "INFORMATION" }, { id: "11", name: "COMMUNITY" }] });
+    data.roles = async () => ({ roles: [{ id: "20", name: "Member" }, { id: "21", name: "Admin" }, { id: "22", name: "Staff" }] });
+    // Embed Builder stubs (for ?mock=embed) — no backend in mock.
+    data.embTplList = async () => ({ templates: [{ id: 1, name: "Welcome banner", messageContent: "", allowedMentions: "default", embedJson: [], componentsJson: [] }, { id: 2, name: "Server rules", messageContent: "", allowedMentions: "default", embedJson: [], componentsJson: [] }] });
+    data.embDraftGet = async () => ({ draft: null });
+    data.embDraftSave = async () => ({ ok: true });
+    data.embTplDelete = async () => ({ ok: true });
+    data.emojis = async () => ({ emojis: [{ id: "1001", name: "pog", animated: false }, { id: "1002", name: "kekw", animated: false }, { id: "1003", name: "blobdance", animated: true }, { id: "1004", name: "pepega", animated: false }] });
+    // Role Menus stubs — a dropdown menu + a button menu (?mock=rolemenus list,
+    // ?mock=rolemenu detail editor).
+    const RM_MENUS = [
+      { id: 1, name: "Ping Roles", description: "Pick the pings you want to get", type: "dropdown", channelId: "3", posted: true, options: [
+        { id: 11, roleId: "20", label: "Announcements", description: "Server news & updates", emoji: "📢" },
+        { id: 12, roleId: "22", label: "Events", description: "Get pinged for events", emoji: "🎉" },
+        { id: 13, roleId: "21", label: "Giveaways", description: "Never miss a drop", emoji: "🎁" },
+      ] },
+      { id: 2, name: "Game Roles", description: "Tap a game to get its role", type: "button", channelId: "1", posted: false, options: [
+        { id: 21, roleId: "20", label: "ARK", description: "", emoji: "🦖" },
+        { id: 22, roleId: "22", label: "Minecraft", description: "", emoji: "⛏️" },
+        { id: 23, roleId: "21", label: "Valheim", description: "", emoji: "🛡️" },
+      ] },
+    ];
+    const rmFind = (id) => RM_MENUS.find((x) => String(x.id) === String(id)) || RM_MENUS[0];
+    data.rmList = async () => ({ menus: RM_MENUS });
+    data.rmGet = async (gid, id) => ({ menu: rmFind(id) });
+    data.rmCreate = async (gid, body) => ({ menu: Object.assign({ id: 99, posted: false, options: [] }, body) });
+    data.rmUpdate = async (gid, id, body) => { const m = rmFind(id); Object.assign(m, body); return { menu: m }; };
+    data.rmOptAdd = async (gid, id, body) => { const m = rmFind(id); const o = Object.assign({ id: 900 + m.options.length }, body); m.options.push(o); return { option: o }; };
+    data.rmOptDelete = async (gid, id, oid) => { const m = rmFind(id); m.options = m.options.filter((o) => String(o.id) !== String(oid)); return { ok: true }; };
+    data.rmPost = async () => ({ summary: "Posted to #announcements" });
+    data.rmDelete = async () => ({ ok: true });
+    const MOD_DEFS = {
+      roleMenus: { module: { name: "roleMenus", label: "Role Menus", customUi: true, tier: "free", quickSetupAvailable: false }, values: {} },
+      welcome: {
+        module: {
+          name: "welcome", label: "Welcome", description: "Greet new members with a custom embed when they join.", tier: "free",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled", help: "Turn welcome messages on or off." },
+            { key: "channelId", type: "channel", label: "Welcome channel", help: "Where greetings are posted." },
+            { key: "title", type: "text", label: "Embed title", max: 256 },
+            { key: "message", type: "textarea", label: "Message", help: "Use {user} to mention the new member.", max: 2000 },
+            { key: "mentionUser", type: "boolean", label: "Mention the new member" },
+            { key: "embedColor", type: "hex", label: "Embed color" },
+            { key: "imageUrl", type: "image-url", label: "Image URL" },
+          ],
+        },
+        values: { enabled: true, channelId: "2", title: "Welcome to the server!", message: "Hey {user}, glad you're here — check the rules and have fun!", mentionUser: true, embedColor: "#5865f2", imageUrl: "" },
+      },
+      branding: {
+        module: {
+          name: "branding", label: "Branding", customUi: true, tier: "premium", description: "Customize the look of every Arkoris embed across the server.",
+          fields: [
+            { key: "primaryColor", type: "hex", label: "Primary color", help: "Accent color used on embeds." },
+            { key: "footerText", type: "text", label: "Footer text", max: 2048 },
+            { key: "footerIcon", type: "image-url", label: "Footer icon URL" },
+            { key: "thumbnail", type: "image-url", label: "Default thumbnail URL" },
+            { key: "showTimestamp", type: "boolean", label: "Show timestamp on embeds" },
+          ],
+        },
+        values: { primaryColor: "#5865f2", footerText: "Velated PVP · Powered by Arkoris", footerIcon: "", thumbnail: "", showTimestamp: true },
+      },
+      ark: { module: { name: "ark", label: "ARK Server Suite", customUi: true, tier: "premium" }, values: {} },
+      autoRoles: {
+        module: {
+          name: "autoRoles", label: "Auto Roles", tier: "free", description: "Assign roles automatically to new members.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "roleIds", type: "roles", label: "Auto Roles", help: "Roles granted on join." },
+            { key: "ignoreBots", type: "boolean", label: "Skip bot accounts" },
+          ],
+        },
+        values: { enabled: true, roleIds: ["20", "22"], ignoreBots: true },
+      },
+      xp: {
+        module: {
+          name: "xp", label: "XP & Leaderboards", tier: "free", description: "Message-based XP, levels, weekly leaderboard. No quests.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "xpMin", type: "integer", label: "XP per message — min" },
+            { key: "xpMax", type: "integer", label: "XP per message — max" },
+            { key: "cooldownSec", type: "integer", label: "Cooldown (seconds)" },
+            { key: "ignoredChannels", type: "channels", label: "Ignored channels" },
+            { key: "ignoredRoles", type: "roles", label: "Ignored roles" },
+            { key: "levelUpAnnounce", type: "boolean", label: "Announce level-ups" },
+            { key: "levelUpChannelId", type: "channel", label: "Level-up channel" },
+            { key: "weeklyResetDay", type: "choice", label: "Weekly reset day" },
+            { key: "weeklyChannelId", type: "channel", label: "Weekly leaderboard channel" },
+            { key: "rewardsMode", type: "choice", label: "Weekly rewards" },
+            { key: "rewardType", type: "choice", label: "Reward type" },
+          ],
+        },
+        values: { enabled: true, xpMin: 5, xpMax: 15, cooldownSec: 60, ignoredChannels: ["6"], ignoredRoles: [], levelUpAnnounce: true, levelUpChannelId: "5", weeklyResetDay: "mon", weeklyChannelId: "3", rewardsMode: "auto", rewardType: "both", reward1stCredits: 500, reward2ndCredits: 250, reward3rdCredits: 100, reward1stEggs: 3, reward2ndEggs: 2, reward3rdEggs: 1 },
+      },
+      polls: {
+        module: {
+          name: "polls", label: "Polls", tier: "free", description: "Quick role-gated polls with live results.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "allowedRoleIds", type: "roles", label: "Allowed host roles" },
+          ],
+        },
+        values: { enabled: true, allowedRoleIds: ["22"] },
+      },
+      moderation: {
+        module: {
+          name: "moderation", label: "Moderation", tier: "free", description: "Ban, kick, timeout, URL filter, whitelist.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "modLogChannelId", type: "channel", label: "Mod log channel" },
+            { key: "modRoleIds", type: "roles", label: "Mod roles" },
+            { key: "urlFilterEnabled", type: "boolean", label: "URL filter enabled" },
+            { key: "whitelistDomains", type: "keywords", label: "Whitelisted domains" },
+            { key: "maxWarnings", type: "integer", label: "Warning cap before auto-action" },
+          ],
+        },
+        values: { enabled: true, modLogChannelId: "4", modRoleIds: ["22"], urlFilterEnabled: true, whitelistDomains: ["youtube.com", "twitch.tv", "arkoris.net"], maxWarnings: 3 },
+      },
+      hype: {
+        module: {
+          name: "hype", label: "Hype", tier: "premium", description: "Reward name/tag/invite/boost activity with credits.",
+          fields: [
+            { key: "brand_name", type: "text", label: "Brand name" },
+            { key: "name_enabled", type: "boolean", label: "Name reward enabled" },
+            { key: "name_keywords", type: "keywords", label: "Name keywords" },
+            { key: "name_credits", type: "integer", label: "Name reward credits" },
+            { key: "name_channel_id", type: "channel", label: "Name reward channel" },
+            { key: "name_cooldown_hours", type: "integer", label: "Name cooldown (hours)" },
+            { key: "name_role_id", type: "role", label: "Name reward role" },
+            { key: "tag_enabled", type: "boolean", label: "Tag reward enabled" },
+            { key: "tag_keywords", type: "keywords", label: "Tag keywords" },
+            { key: "tag_credits", type: "integer", label: "Tag reward credits" },
+            { key: "tag_channel_id", type: "channel", label: "Tag reward channel" },
+            { key: "tag_cooldown_hours", type: "integer", label: "Tag cooldown (hours)" },
+            { key: "tag_role_id", type: "role", label: "Tag reward role" },
+            { key: "tag_guild_id", type: "text", label: "Tag server ID" },
+            { key: "invite_enabled", type: "boolean", label: "Invite reward enabled" },
+            { key: "invite_credits", type: "integer", label: "Invite reward credits" },
+            { key: "invite_channel_id", type: "channel", label: "Invite reward channel" },
+            { key: "boost_channel_id", type: "channel", label: "Boost reward channel" },
+          ],
+        },
+        values: { brand_name: "Velated PVP", name_enabled: true, name_keywords: ["velated", "vel"], name_credits: 25, name_channel_id: "3", name_cooldown_hours: 168, name_role_id: "22", tag_enabled: true, tag_keywords: [], tag_credits: 50, tag_channel_id: "3", tag_cooldown_hours: 0, tag_role_id: "20", tag_guild_id: "", invite_enabled: true, invite_credits: 10, invite_channel_id: "1", boost_channel_id: "1" },
+      },
+      events: {
+        module: {
+          name: "events", label: "Events", tier: "premium", description: "Dino / Number / Vault guessing events with credit rewards.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "announceChannelId", type: "channel", label: "Event announce channel" },
+            { key: "trackChannelId", type: "channel", label: "Guess channel" },
+            { key: "pingRoleId", type: "role", label: "Event ping role" },
+            { key: "allowedRoleIds", type: "roles", label: "Allowed host roles" },
+          ],
+        },
+        values: { enabled: true, announceChannelId: "3", trackChannelId: "1", pingRoleId: "20", allowedRoleIds: ["22"], dinoBase: 50, dinoBump: 5, dinoPer: 25, numberBase: 30, numberBump: 2, numberPer: 100, vaultBase: 100, vaultBump: 10, vaultPer: 50 },
+      },
+      tickets: {
+        module: {
+          name: "tickets", label: "Tickets", tier: "premium", description: "Forum-based support tickets, staff workflows, transcripts.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "panelChannelId", type: "channel", label: "Ticket panel channel" },
+            { key: "ticketCategoryId", type: "category", label: "Ticket category" },
+            { key: "staffRoleIds", type: "roles", label: "Staff roles" },
+            { key: "logChannelId", type: "channel", label: "Ticket log channel" },
+            { key: "autoCloseHours", type: "integer", label: "Auto-close after (hours, 0=off)" },
+            { key: "claimEnabled", type: "boolean", label: "Allow staff claim" },
+          ],
+        },
+        values: { enabled: true, panelChannelId: "3", ticketCategoryId: "11", staffRoleIds: ["22"], logChannelId: "4", autoCloseHours: 48, claimEnabled: true },
+      },
+      staffPay: {
+        module: {
+          name: "staffPay", label: "Staff Pay", tier: "premium", description: "Track staff earnings and monthly logs.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "forumChannelId", type: "channel", label: "Staff Pay forum channel" },
+          ],
+        },
+        values: { enabled: true, forumChannelId: "7" },
+      },
+      payments: {
+        module: {
+          name: "payments", label: "Payments", tier: "premium", description: "Per-server PayPal & Stripe payments with auto-confirm.",
+          fields: [
+            { key: "enabled", type: "boolean", label: "Enabled" },
+            { key: "defaultCurrency", type: "choice", label: "Default currency" },
+            { key: "logChannelId", type: "channel", label: "Payment log channel" },
+            { key: "instructions", type: "textarea", label: "Payment instructions" },
+          ],
+        },
+        values: { enabled: true, defaultCurrency: "GBP", logChannelId: "4", instructions: "Pick a package below and pay with PayPal or card. Your perks are applied automatically once payment clears." },
+      },
+      serverTemplates: {
+        module: {
+          name: "serverTemplates", label: "Server Templates", tier: "premium", description: "Apply preset channel/role/permission templates.",
+          fields: [{ key: "enabled", type: "boolean", label: "Enabled" }],
+        },
+        values: { enabled: true },
+      },
+    };
+    data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
+
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", polls: "polls", moderation: "moderation", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus", rolemenu: "roleMenus" };
+    if (TAB_FOR[mode]) {
+      state.selectedGuildId = state.guilds[0].id;
+      state.activeTab = TAB_FOR[mode];
+    }
+    if (mode === "rolemenu") _rmEditingId = 1; // ?mock=rolemenu → detail editor; ?mock=rolemenus → list of previews
+    if (mode === "upsell") {
+      data.module = async () => ({ tierLocked: true, module: { name: "tickets", label: "Tickets", tier: "premium", description: "Forum-based support tickets with staff claim, logging, and auto-close." } });
+      state.selectedGuildId = state.guilds[0].id;
+      state.activeTab = "tickets";
+    }
+    render();
+    return true;
+  }
+
   async function boot() {
     clear(root);
+    if (maybeRenderMock()) return;
     // Premium skeleton while we fetch identity + guild list.
     root.append(renderPickerBootSkeleton());
     await consumeAuthHandoff();
@@ -5023,6 +6978,8 @@
     state.channels = null; // reset cached lists for new guild
     state.categories = null;
     state.roles = null;
+    state.setupStatus = null; // never carry one guild's setup completeness to another
+    state._forceHub = false;
     render();
   }
 
@@ -5035,6 +6992,7 @@
     state.channels = null;
     state.categories = null;
     state.roles = null;
+    state.setupStatus = null;
     render();
   }
 

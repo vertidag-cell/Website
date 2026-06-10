@@ -9,3 +9,7 @@
 /package.json         404
 /package-lock.json    404
 /functions/*          404
+
+# The old private-preview URL — the redesign is the live dashboard now.
+/dashboard-next.html  /dashboard.html  301
+/dashboard-next       /dashboard.html  301

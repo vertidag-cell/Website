@@ -54,18 +54,16 @@ export default {
       return new Response("Not found", { status: 404 });
     }
 
-    // Dashboard preview — mirrors functions/_middleware.js. The password gate is
-    // currently DISABLED (re-prompt on every Discord-login round-trip was too
-    // annoying). Page is reachable by URL but noindex + robots-blocked, and real
-    // data still needs Discord login. To re-enable: uncomment requirePreviewAuth.
+    // Dashboard page — mirrors functions/_middleware.js. Served no-store so
+    // deploys show immediately; the JS/CSS links carry ?v=N cache-busters.
+    // (The old /dashboard-next preview + Basic Auth gate are gone — the
+    // redesign IS the dashboard now.)
     const lower = path.toLowerCase();
     if (lower === "/dashboard-next" || lower === "/dashboard-next.html") {
-      // const gate = requirePreviewAuth(request, env);
-      // if (gate) return gate;
-      return noStore(await env.ASSETS.fetch(request)); // never cache the preview page
+      return Response.redirect("https://arkoris.net/dashboard.html", 301);
     }
-    if (lower === "/dashboard-next-app.js" || lower === "/dashboard-next.css") {
-      return noStore(await env.ASSETS.fetch(request)); // preview assets: always fresh
+    if (lower === "/dashboard" || lower === "/dashboard.html") {
+      return noStore(await env.ASSETS.fetch(request));
     }
 
     return env.ASSETS.fetch(request);
@@ -79,40 +77,5 @@ function noStore(res) {
   return fresh;
 }
 
-// Returns a 401/503 Response to short-circuit, or null when authorized.
-function requirePreviewAuth(request, env) {
-  const expected = env && env.PREVIEW_PASS;
-  const expectedUser = (env && env.PREVIEW_USER) || "admin";
-  if (!expected) {
-    return new Response(
-      "Dashboard preview is locked. Set the PREVIEW_PASS environment variable on the Worker to enable it.",
-      { status: 503, headers: { "Cache-Control": "no-store" } }
-    );
-  }
-  const header = request.headers.get("Authorization") || "";
-  if (header.startsWith("Basic ")) {
-    let decoded = "";
-    try { decoded = atob(header.slice(6)); } catch { decoded = ""; }
-    const sep = decoded.indexOf(":");
-    const user = sep >= 0 ? decoded.slice(0, sep) : "";
-    const pass = sep >= 0 ? decoded.slice(sep + 1) : "";
-    if (timingSafeEqual(user, expectedUser) && timingSafeEqual(pass, expected)) {
-      return null;
-    }
-  }
-  return new Response("Authentication required.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Arkoris Dashboard Preview", charset="UTF-8"',
-      "Cache-Control": "no-store",
-    },
-  });
-}
-
-function timingSafeEqual(a, b) {
-  a = String(a); b = String(b);
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return result === 0;
-}
+// (requirePreviewAuth + its timing-safe compare were removed with the
+// /dashboard-next preview — the redesign is the live dashboard now.)
