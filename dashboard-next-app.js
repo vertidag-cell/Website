@@ -37,6 +37,25 @@
      API client with timeout + structured errors
      ============================================================ */
   const API_TIMEOUT_MS = 8000;
+  const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+  let csrfToken = "";
+
+  async function getCsrfToken() {
+    if (csrfToken) return csrfToken;
+    try {
+      const res = await fetch(API_BASE + "/auth/csrf", {
+        method: "GET",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) return "";
+      const body = await res.json().catch(() => null);
+      csrfToken = (body && body.csrfToken) || "";
+      return csrfToken;
+    } catch {
+      return "";
+    }
+  }
 
   async function api(path, opts) {
     opts = opts || {};
@@ -44,17 +63,23 @@
     // /api/* and /auth/* paths, which Cloudflare Pages Functions proxy
     // to the backend. An absolute API_BASE is only used for local dev.
     const url = API_BASE + path;
+    const method = (opts.method || "GET").toUpperCase();
+    const headers = opts.body
+      ? { "Content-Type": "application/json", Accept: "application/json" }
+      : { Accept: "application/json" };
+    if (UNSAFE_METHODS.has(method)) {
+      const token = await getCsrfToken();
+      if (token) headers["X-Arkoris-CSRF"] = token;
+    }
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
     let res;
     try {
       res = await fetch(url, {
-        method: opts.method || "GET",
+        method,
         credentials: "include",
         signal: ctrl.signal,
-        headers: opts.body
-          ? { "Content-Type": "application/json", Accept: "application/json" }
-          : { Accept: "application/json" },
+        headers,
         body: opts.body ? JSON.stringify(opts.body) : undefined,
       });
     } catch (e) {
@@ -71,6 +96,10 @@
     } catch {}
     if (DEBUG) console.log(`[dashboard] ${path} → ${res.status}`, body || "");
     if (res.ok) return body;
+    if (res.status === 403 && body?.error === "csrf_failed" && !opts._csrfRetry) {
+      csrfToken = "";
+      return api(path, Object.assign({}, opts, { _csrfRetry: true }));
+    }
     const err = new Error((body?.error) || (body?.message) || res.statusText || `HTTP ${res.status}`);
     err.code = res.status;
     err.data = body;

@@ -8,9 +8,8 @@
 // custom domain) falls straight through to context.next(), so normal serving,
 // /api/* and /auth/* proxying are completely unaffected.
 //
-// It ALSO gates the private dashboard preview (/dashboard-next.html) behind
-// HTTP Basic Auth. See the preview block below. Only that one page is gated;
-// every other path is served exactly as before.
+// It ALSO gates the private dashboard preview (/dashboard-next.html and its
+// JS/CSS) behind HTTP Basic Auth. Every other path is served exactly as before.
 export async function onRequest(context) {
   const url = new URL(context.request.url);
 
@@ -19,24 +18,16 @@ export async function onRequest(context) {
   }
 
   // --- Dashboard preview --------------------------------------------------
-  // The redesigned dashboard lives at /dashboard-next.html. The HTTP Basic Auth
-  // password gate is currently DISABLED (the re-prompt on every Discord-login
-  // round-trip was too annoying while iterating). The page is reachable by URL,
-  // but it's still noindex + robots-disallowed, and the real dashboard data
-  // requires Discord login (OAuth-gated backend) — so no server data is exposed,
-  // only the in-progress redesign UI / mock screens.
-  //
-  // To RE-ENABLE the password: uncomment the requirePreviewAuth() lines below
-  // (the helper is still defined further down) and set PREVIEW_PASS on the Pages
-  // project. We still serve the page no-store so deploys always show fresh.
+  // The redesigned dashboard lives at /dashboard-next.html. Keep both the page
+  // and its preview-only assets locked unless PREVIEW_PASS is configured.
   if (isPreviewPage(url.pathname)) {
-    // const gate = requirePreviewAuth(context.request, context.env);
-    // if (gate) return gate;
+    const gate = requirePreviewAuth(context.request, context.env);
+    if (gate) return gate;
     return noStore(await context.next());
   }
-  // Preview-only JS/CSS: public, but also no-store so we never serve a stale
-  // build while iterating on the redesign (no ?v= bumping needed).
   if (isPreviewAsset(url.pathname)) {
+    const gate = requirePreviewAuth(context.request, context.env);
+    if (gate) return gate;
     return noStore(await context.next());
   }
 

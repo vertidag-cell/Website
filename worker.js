@@ -24,10 +24,13 @@ const ALLOWED_AUTH_PATHS = new Set([
 function proxy(request, url, env) {
   const target = BACKEND + url.pathname + url.search;
   const proxied = new Request(target, request);
+  // Do not leak same-origin Basic Auth credentials from the dashboard preview
+  // gate to the Square Cloud backend. Dashboard auth uses cookies, not this.
+  proxied.headers.delete("Authorization");
   // Shared secret so the Square Cloud backend can verify the request actually
   // came through this Cloudflare proxy (arkoris.net) and reject direct hits to
   // the squareweb.app origin. Set PROXY_SECRET on BOTH this Worker and the
-  // backend; until then the backend fails open and nothing changes.
+  // backend to activate backend checks.
   if (env && env.PROXY_SECRET) proxied.headers.set("X-Arkoris-Proxy", env.PROXY_SECRET);
   return fetch(proxied, { redirect: "manual" });
 }
@@ -54,17 +57,17 @@ export default {
       return new Response("Not found", { status: 404 });
     }
 
-    // Dashboard preview — mirrors functions/_middleware.js. The password gate is
-    // currently DISABLED (re-prompt on every Discord-login round-trip was too
-    // annoying). Page is reachable by URL but noindex + robots-blocked, and real
-    // data still needs Discord login. To re-enable: uncomment requirePreviewAuth.
+    // Dashboard preview — mirrors functions/_middleware.js. Keep both the page
+    // and its preview-only assets locked unless PREVIEW_PASS is configured.
     const lower = path.toLowerCase();
     if (lower === "/dashboard-next" || lower === "/dashboard-next.html") {
-      // const gate = requirePreviewAuth(request, env);
-      // if (gate) return gate;
+      const gate = requirePreviewAuth(request, env);
+      if (gate) return gate;
       return noStore(await env.ASSETS.fetch(request)); // never cache the preview page
     }
     if (lower === "/dashboard-next-app.js" || lower === "/dashboard-next.css") {
+      const gate = requirePreviewAuth(request, env);
+      if (gate) return gate;
       return noStore(await env.ASSETS.fetch(request)); // preview assets: always fresh
     }
 

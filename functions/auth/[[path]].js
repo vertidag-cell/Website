@@ -30,8 +30,11 @@ export async function onRequest(context) {
   // with a 302 back to the dashboard. Those redirects must reach the browser.
   const target = BACKEND + url.pathname + url.search;
   const proxied = new Request(target, request);
+  // Do not leak same-origin Basic Auth credentials from the dashboard preview
+  // gate to the Square Cloud backend. Dashboard auth uses cookies, not this.
+  proxied.headers.delete('Authorization');
   // Shared secret proving this request came through the arkoris.net proxy.
-  // Set PROXY_SECRET on the Pages project + backend to activate; fails open until then.
+  // Set PROXY_SECRET on the Pages project + backend to activate backend checks.
   if (context.env && context.env.PROXY_SECRET) proxied.headers.set('X-Arkoris-Proxy', context.env.PROXY_SECRET);
   return fetch(proxied, { redirect: 'manual' });
 }

@@ -5,8 +5,8 @@
  * Required env vars:
  *   DISCORD_CLIENT_ID
  *   DISCORD_CLIENT_SECRET
- *   DISCORD_REDIRECT_URI       e.g. https://your-backend.example.com/auth/discord/callback
- *   DASHBOARD_FRONTEND_URL     e.g. https://50bf9296.website-1h0.pages.dev
+ *   DISCORD_REDIRECT_URI       e.g. https://arkoris.net/auth/discord/callback
+ *   DASHBOARD_FRONTEND_URL     e.g. https://arkoris.net
  */
 
 const express = require("express");
@@ -47,7 +47,7 @@ function createAuthRouter(opts) {
         oauth.fetchGuilds(tokens.access_token),
       ]);
 
-      req.session.user = {
+      const sessionUser = {
         id: me.id,
         username: me.username,
         globalName: me.global_name || me.username,
@@ -55,14 +55,21 @@ function createAuthRouter(opts) {
       };
       // Cache the raw guilds list (id, name, icon, owner, permissions) for
       // permission checks. We do NOT store the access token long-term.
-      req.session.guilds = (guilds || []).map((g) => ({
+      const sessionGuilds = (guilds || []).map((g) => ({
         id: g.id,
         name: g.name,
         icon: g.icon,
         owner: !!g.owner,
         permissions: g.permissions,
       }));
-      req.session.tokenExpiresAt = Date.now() + (tokens.expires_in || 0) * 1000;
+      const tokenExpiresAt = Date.now() + (tokens.expires_in || 0) * 1000;
+
+      // Rotate the anonymous OAuth-state session into an authenticated session.
+      await regenerateSession(req);
+      req.session.user = sessionUser;
+      req.session.guilds = sessionGuilds;
+      req.session.tokenExpiresAt = tokenExpiresAt;
+      req.session.csrfToken = crypto.randomBytes(32).toString("hex");
 
       if (typeof opts.audit === "function") {
         opts.audit({ userId: me.id, action: "login" });
@@ -92,6 +99,12 @@ function frontend(req) {
   let f = process.env.DASHBOARD_FRONTEND_URL || "/";
   if (!f.endsWith("/")) f += "/";
   return f;
+}
+
+function regenerateSession(req) {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((err) => (err ? reject(err) : resolve()));
+  });
 }
 
 module.exports = createAuthRouter;

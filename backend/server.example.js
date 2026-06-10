@@ -14,6 +14,12 @@ const cors = require("cors");
 //    repo into your bot project at e.g. src/web/dashboard/ and adjust
 //    these paths).
 const createSessionMiddleware = require("./sessionMiddleware");
+const {
+  createCorsOptions,
+  createCsrfRouter,
+  requireCsrfProtection,
+  requireProxySecret,
+} = require("./securityMiddleware");
 const createAuthRouter = require("./authRoutes");
 const createDashboardRouter = require("./dashboardRoutes");
 
@@ -61,12 +67,12 @@ const app = express();
 
 // 4) Add CORS + JSON + session + trust proxy (Square Cloud runs behind a proxy)
 app.set("trust proxy", 1);
-app.use(cors({
-  origin: process.env.DASHBOARD_ALLOWED_ORIGIN,
-  credentials: true,
-}));
+app.use(["/auth", "/api"], requireProxySecret());
+app.use(cors(createCorsOptions()));
 app.use(express.json({ limit: "32kb" }));
 app.use(createSessionMiddleware());
+app.use("/auth", createCsrfRouter());
+app.use(["/auth", "/api/dashboard"], requireCsrfProtection());
 
 // 5) Mount the dashboard
 app.use("/auth", createAuthRouter({ audit }));
