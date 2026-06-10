@@ -67,7 +67,10 @@
     } catch {}
     if (DEBUG) console.log(`[dashboard] ${path} → ${res.status}`, body || "");
     if (res.ok) return body;
-    const err = new Error((body?.error) || (body?.message) || res.statusText || `HTTP ${res.status}`);
+    // Only ever surface STRING candidates — a structured {error:{...}} payload
+    // would otherwise coerce into the user-visible "[object Object]".
+    const msg = [body?.error, body?.message, res.statusText].find((v) => typeof v === "string" && v) || `HTTP ${res.status}`;
+    const err = new Error(msg);
     err.code = res.status;
     err.data = body;
     throw err;
