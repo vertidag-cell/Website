@@ -146,6 +146,7 @@
     // Utility / state
     lock:      'M5 11a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM8 9V7a4 4 0 1 1 8 0v2',
     sparkle:   'M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M15 15l4 4M5 19l4-4M15 9l4-4',
+    terminal:  'M4 17l6-5-6-5M12 19h8',
     arrowRight:'M5 12h14M13 5l7 7-7 7',
     check:     'M20 6L9 17l-5-5',
     chevron:   'M6 9l6 6 6-6',
@@ -186,6 +187,7 @@
     welcome:      "hand",
     autoRoles:    "shield",
     roleMenus:    "masks",
+    customCommands: "terminal",
     polls:        "poll",
     moderation:   "shield",
     xp:           "trophy",
@@ -413,6 +415,11 @@
     rmOptUpdate: (gid, id, oid, body) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}/options/${oid}`, { method: "PATCH", body }),
     rmOptDelete: (gid, id, oid) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}/options/${oid}`, { method: "DELETE" }),
     rmPost: (gid, id) => api(`/api/dashboard/guilds/${gid}/role-menus/${id}/post`, { method: "POST" }),
+    // Custom command CRUD
+    ccList: (gid) => api(`/api/dashboard/guilds/${gid}/custom-commands`),
+    ccCreate: (gid, body) => api(`/api/dashboard/guilds/${gid}/custom-commands`, { method: "POST", body }),
+    ccUpdate: (gid, id, body) => api(`/api/dashboard/guilds/${gid}/custom-commands/${id}`, { method: "PATCH", body }),
+    ccDelete: (gid, id) => api(`/api/dashboard/guilds/${gid}/custom-commands/${id}`, { method: "DELETE" }),
     // Staff Tiers (per-role pay amounts) — premium only
     tierList:   (gid)         => api(`/api/dashboard/guilds/${gid}/staff-tiers`),
     tierCreate: (gid, body)   => api(`/api/dashboard/guilds/${gid}/staff-tiers`, { method: "POST", body }),
@@ -888,7 +895,7 @@
     // explicitly mapped falls into "Discord Server" so nothing ever disappears.
     const CATEGORY_OF = {
       // Discord Server
-      welcome: "discord", autoRoles: "discord", roleMenus: "discord", xp: "discord",
+      welcome: "discord", autoRoles: "discord", roleMenus: "discord", customCommands: "discord", xp: "discord",
       hype: "discord", moderation: "discord",
       events: "discord",
       // Tickets & Staff
@@ -3550,6 +3557,7 @@
         if (mod.name === "branding") return renderBrandingForm(content, mod, m.values);
         if (mod.name === "population") return renderPopulationView(content);
         if (mod.name === "roleMenus") return renderRoleMenusInfo(content);
+        if (mod.name === "customCommands") return renderCustomCommandsPage(content, mod);
         if (mod.name === "ark") return renderArkInfo(content);
         if (mod.name === "logs") return loadGameLogs(content);
       }
@@ -5500,6 +5508,264 @@
      ============================================================ */
 
   // Local state for which menu we're editing (null = list view)
+  /* ============================================================
+     Tab: Custom Commands — per-guild prefix commands (CRUD +
+     live Discord preview). Dashboard-only by design: the bot has
+     no /setup surface for these.
+     ============================================================ */
+  let _ccEditing = null; // null = list view, "new" = create, number = edit that id
+  let _ccPrefixes = ["!", "$", "?", ".", "-", ">"];
+  let _ccLimits = { max: 30, used: 0 };
+
+  function ccOkColor(c) { return /^#[0-9a-f]{6}$/i.test(c || "") ? c : "#dc2626"; }
+
+  // A Discord-canvas preview: the member typing the command, then the bot's
+  // reply (plain message or embed). Reuses the Embed Builder canvas classes.
+  function ccPreview(v) {
+    const guildName = (state.guilds.find((g) => g.id === state.selectedGuildId)?.name) || "your server";
+    const username = state.user?.username || "member";
+    const sub = (s) => String(s || "")
+      .replace(/\{user\}/gi, "@" + username)
+      .replace(/\{server\}/gi, guildName)
+      .replace(/\{channel\}/gi, "#general");
+
+    const trigger = h("div", { class: "cc-pv-trigger" },
+      h("span", { class: "cc-pv-user" }, "@" + username),
+      h("span", { class: "cc-pv-cmd" }, (v.prefix || "!") + (v.name || "command")));
+
+    const botRow = h("div", { class: "dc-embed-bot" },
+      h("div", { class: "dc-embed-bot-avatar" }),
+      h("div", { class: "dc-embed-bot-name" }, "Arkoris"),
+      h("span", { class: "dc-embed-bot-tag" }, "APP"));
+
+    let body;
+    if (v.responseType === "embed") {
+      const e = v.embed || {};
+      const hasImg = /^https:\/\//i.test(e.imageUrl || "");
+      const hasThumb = /^https:\/\//i.test(e.thumbnailUrl || "");
+      const inner = h("div", { class: "eb-embed-inner cc-pv-inner" + (hasThumb ? " has-thumb" : "") },
+        hasThumb ? h("img", { class: "cc-pv-thumb", src: e.thumbnailUrl, alt: "", onerror: function () { this.style.display = "none"; } }) : null,
+        (e.title || "").trim() ? h("div", { class: "eb-e-title" }, sub(e.title)) : null,
+        (e.description || "").trim() ? h("div", { class: "eb-e-desc" }, sub(e.description)) : null,
+        hasImg ? h("img", { class: "eb-e-image", src: e.imageUrl, alt: "", onerror: function () { this.style.display = "none"; } }) : null,
+        (e.footer || "").trim() ? h("div", { class: "eb-e-footer" }, h("span", null, sub(e.footer))) : null);
+      if (!(e.title || "").trim() && !(e.description || "").trim()) {
+        inner.append(h("div", { class: "eb-e-desc", style: { color: "#949ba4" } }, "Add a title or description…"));
+      }
+      body = h("div", { class: "eb-embed", style: { borderLeftColor: ccOkColor(e.color) } }, inner);
+    } else {
+      body = h("div", { class: "eb-msg-content" }, sub(v.content) || "Your reply text…");
+    }
+    return h("div", { class: "eb-discord cc-pv" }, trigger, botRow, body);
+  }
+
+  async function renderCustomCommandsPage(content, mod) {
+    if (_ccEditing != null) return renderCustomCommandEditor(content, mod);
+    try {
+      clear(content); content.append(renderGenericSkeleton());
+      const r = await data.ccList(state.selectedGuildId);
+      const commands = r.commands || [];
+      if (Array.isArray(r.prefixes) && r.prefixes.length) _ccPrefixes = r.prefixes;
+      if (r.limits) _ccLimits = r.limits;
+      clear(content);
+
+      content.append(renderModuleHero(mod, statusBadgeFor(commands.length ? "configured" : "missing")));
+
+      const atCap = commands.length >= _ccLimits.max;
+      const header = h("div", { class: "dash-card" },
+        h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" } },
+          h("div", null,
+            h("h3", { style: { margin: 0 } }, "Your commands"),
+            h("p", { style: { margin: "4px 0 0", color: "var(--text-muted)" } },
+              `${commands.length} / ${_ccLimits.max} used · members type the prefix + name in any channel and the bot replies.`)),
+          commands.length
+            ? h("button", { type: "button", class: "btn btn-primary", disabled: atCap ? true : null, title: atCap ? "Command limit reached" : null,
+                onclick: () => { _ccEditing = "new"; renderActiveTab(content); } }, "+ New command")
+            : null));
+      content.append(header);
+
+      if (!commands.length) {
+        const sample = ccPreview({ prefix: "!", name: "wiki", responseType: "text", content: "Everything ARK: https://ark.wiki.gg — items, creatures, breeding, commands." });
+        content.append(
+          h("div", { class: "dash-card" },
+            h("div", { class: "w-canvas-head" },
+              h("span", { class: "w-canvas-label" }, "Example custom command"),
+              h("span", { class: "w-canvas-hint" }, "What members see in Discord")),
+            h("div", { class: "cc-pv-sample" }, sample),
+            h("div", { class: "rm-pv-emptymsg" },
+              h("h4", null, "No custom commands yet"),
+              h("p", null, "Create your own — pick a prefix like ! or $, name it, and reply with plain text or a rich embed. Great for FAQs, links, server info."),
+              h("button", { type: "button", class: "btn btn-primary", onclick: () => { _ccEditing = "new"; renderActiveTab(content); } }, "+ Create your first command"))));
+        return;
+      }
+
+      const grid = h("div", { class: "cc-grid" });
+      commands.forEach((c) => {
+        const pv = ccPreview(c);
+        grid.append(h("div", { class: "dash-card cc-card" + (c.enabled ? "" : " disabled") },
+          h("div", { class: "cc-card-head" },
+            h("code", { class: "cc-code" }, c.prefix + c.name),
+            h("span", { class: "cc-tag " + (c.responseType === "embed" ? "embed" : "text") }, c.responseType === "embed" ? "Embed" : "Text"),
+            c.enabled ? null : h("span", { class: "cc-tag off" }, "Disabled"),
+            h("span", { class: "cc-uses" }, `${c.uses} use${c.uses === 1 ? "" : "s"}`),
+            h("button", { type: "button", class: "btn btn-primary cc-edit", onclick: () => { _ccEditing = c.id; renderActiveTab(content); } }, "Edit →")),
+          pv));
+      });
+      content.append(grid);
+    } catch (e) { renderTabError(content, e); }
+  }
+
+  async function renderCustomCommandEditor(content, mod) {
+    try {
+      clear(content); content.append(renderGenericSkeleton());
+      const isNew = _ccEditing === "new";
+      let v = { prefix: "!", name: "", responseType: "text", content: "", enabled: true,
+        embed: { title: "", description: "", color: "#dc2626", imageUrl: "", thumbnailUrl: "", footer: "" } };
+      if (!isNew) {
+        const r = await data.ccList(state.selectedGuildId);
+        const found = (r.commands || []).find((c) => c.id === _ccEditing);
+        if (!found) { _ccEditing = null; return renderCustomCommandsPage(content, mod); }
+        v = {
+          prefix: found.prefix, name: found.name, responseType: found.responseType,
+          content: found.content || "", enabled: found.enabled,
+          embed: Object.assign({ title: "", description: "", color: "#dc2626", imageUrl: "", thumbnailUrl: "", footer: "" }, found.embed || {}),
+        };
+      }
+      clear(content);
+
+      const back = () => { _ccEditing = null; renderActiveTab(content); };
+
+      // ── Header row ──
+      const headTitle = h("h3", { style: { margin: 0 } }, isNew ? "New command" : "Edit command");
+      content.append(h("div", { class: "dash-card" },
+        h("div", { style: { display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" } },
+          h("button", { type: "button", class: "btn btn-ghost", onclick: back }, "← All commands"),
+          h("div", { style: { flex: 1 } }, headTitle),
+          isNew ? null : h("button", { type: "button", class: "btn btn-ghost cc-danger", onclick: async () => {
+            const ok = await modalForm("Delete this command?",
+              h("p", { style: { margin: 0, color: "var(--text-muted)" } }, `Members will no longer be able to use ${v.prefix}${v.name}. This can't be undone.`),
+              { okLabel: "Delete" });
+            if (!ok) return;
+            try {
+              await data.ccDelete(state.selectedGuildId, _ccEditing);
+              toast("success", `Deleted ${v.prefix}${v.name}.`);
+              back();
+            } catch (e) { toast("error", e.message || "Couldn't delete"); }
+          } }, "Delete"))));
+
+      // ── Live preview (updates as you type) ──
+      const pvHost = h("div", { class: "cc-pv-host" });
+      function redraw() { clear(pvHost); pvHost.append(ccPreview(v)); }
+
+      // ── Form ──
+      const fld = (label, node, hint) => h("div", { class: "dash-field" },
+        h("label", null, label), node,
+        hint ? h("div", { class: "cc-hint" }, hint) : null);
+
+      // Trigger: prefix chips + name
+      const prefixRow = h("div", { class: "cc-prefix-row" });
+      function drawPrefixes() {
+        clear(prefixRow);
+        _ccPrefixes.forEach((p) => prefixRow.append(
+          h("button", { type: "button", class: "cc-prefix-chip" + (v.prefix === p ? " active" : ""),
+            onclick: () => { v.prefix = p; drawPrefixes(); redraw(); } }, p)));
+      }
+      drawPrefixes();
+      const nameInput = h("input", { type: "text", value: v.name, placeholder: "e.g. wiki, rules, discord", maxlength: 32, spellcheck: "false" });
+      nameInput.addEventListener("input", () => { v.name = nameInput.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, ""); redraw(); });
+
+      // Response type segmented control
+      const segText = h("button", { type: "button", class: "cc-seg-btn" }, "Text reply");
+      const segEmbed = h("button", { type: "button", class: "cc-seg-btn" }, "Embed reply");
+      const seg = h("div", { class: "cc-seg" }, segText, segEmbed);
+
+      // Text fields
+      const contentTa = h("textarea", { rows: 5, maxlength: 2000, placeholder: "What the bot replies with. Use {user}, {server} and {channel}." }, v.content);
+      contentTa.addEventListener("input", () => { v.content = contentTa.value; redraw(); });
+      const textPane = h("div", null, fld("Reply text", contentTa));
+
+      // Embed fields
+      const e = v.embed;
+      const titleIn = h("input", { type: "text", value: e.title, maxlength: 256, placeholder: "Embed title" });
+      titleIn.addEventListener("input", () => { e.title = titleIn.value; redraw(); });
+      const descTa = h("textarea", { rows: 5, maxlength: 2048, placeholder: "Embed description. {user}, {server} and {channel} work here too." }, e.description);
+      descTa.addEventListener("input", () => { e.description = descTa.value; redraw(); });
+      const colorIn = h("input", { type: "color", value: ccOkColor(e.color), class: "cc-color" });
+      colorIn.addEventListener("input", () => { e.color = colorIn.value; redraw(); });
+      const imgIn = h("input", { type: "url", value: e.imageUrl, placeholder: "https:// … big image under the text (optional)" });
+      imgIn.addEventListener("input", () => { e.imageUrl = imgIn.value.trim(); redraw(); });
+      const thumbIn = h("input", { type: "url", value: e.thumbnailUrl, placeholder: "https:// … small image top-right (optional)" });
+      thumbIn.addEventListener("input", () => { e.thumbnailUrl = thumbIn.value.trim(); redraw(); });
+      const footIn = h("input", { type: "text", value: e.footer, maxlength: 256, placeholder: "Footer text (optional)" });
+      footIn.addEventListener("input", () => { e.footer = footIn.value; redraw(); });
+      const embedPane = h("div", null,
+        fld("Title", titleIn),
+        fld("Description", descTa),
+        fld("Accent color", colorIn),
+        fld("Image URL", imgIn),
+        fld("Thumbnail URL", thumbIn),
+        fld("Footer", footIn));
+
+      const paneHost = h("div", null);
+      function drawType() {
+        segText.classList.toggle("active", v.responseType !== "embed");
+        segEmbed.classList.toggle("active", v.responseType === "embed");
+        clear(paneHost);
+        paneHost.append(v.responseType === "embed" ? embedPane : textPane);
+        redraw();
+      }
+      segText.addEventListener("click", () => { v.responseType = "text"; drawType(); });
+      segEmbed.addEventListener("click", () => { v.responseType = "embed"; drawType(); });
+
+      // Enabled toggle
+      const enCb = h("input", { type: "checkbox", checked: v.enabled ? true : null });
+      enCb.addEventListener("change", () => { v.enabled = enCb.checked; });
+      const enabledRow = h("label", { class: "w-switch", style: { marginTop: "4px" } }, enCb,
+        h("span", { class: "w-sw-track" }, h("span", { class: "w-sw-thumb" })),
+        h("span", { class: "w-sw-label" }, "Command enabled"));
+
+      // Save
+      const saveBtn = h("button", { type: "button", class: "btn btn-primary" }, isNew ? "Create command" : "Save changes");
+      saveBtn.addEventListener("click", async () => {
+        const body = { prefix: v.prefix, name: v.name, responseType: v.responseType, enabled: v.enabled,
+          content: v.content, embed: v.embed };
+        saveBtn.disabled = true;
+        try {
+          if (isNew) {
+            const r = await data.ccCreate(state.selectedGuildId, body);
+            toast("success", `Created ${r.command.prefix}${r.command.name} — it's live now.`);
+          } else {
+            const r = await data.ccUpdate(state.selectedGuildId, _ccEditing, body);
+            toast("success", `Saved ${r.command.prefix}${r.command.name}.`);
+          }
+          back();
+        } catch (err) {
+          toast("error", err.message || "Couldn't save");
+          saveBtn.disabled = false;
+        }
+      });
+
+      const formCard = h("div", { class: "dash-card" },
+        fld("Prefix", prefixRow, "The character members type before the name."),
+        fld("Command name", nameInput, "Lowercase letters, numbers, - and _ only."),
+        fld("Response", seg),
+        paneHost,
+        enabledRow,
+        h("div", { class: "cc-hint", style: { marginTop: "10px" } }, "Placeholders: {user} mentions whoever ran it · {server} = server name · {channel} = current channel."),
+        h("div", { class: "dash-actions", style: { marginTop: "16px" } }, saveBtn,
+          h("button", { type: "button", class: "btn btn-ghost", onclick: back }, "Cancel")));
+
+      const pvCard = h("div", { class: "dash-card cc-pv-card" },
+        h("div", { class: "w-canvas-head" },
+          h("span", { class: "w-canvas-label" }, "Live preview"),
+          h("span", { class: "w-canvas-hint" }, "Updates as you type")),
+        pvHost);
+
+      content.append(h("div", { class: "cc-editor" }, formCard, pvCard));
+      drawType();
+    } catch (e) { renderTabError(content, e); }
+  }
+
   let _rmEditingId = null;
 
   async function renderRoleMenusInfo(content) {
@@ -7017,7 +7283,7 @@
     };
     data.module = async (gid, name) => MOD_DEFS[name] || MOD_DEFS.welcome;
 
-    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", moderation: "moderation", logs: "logs", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus", rolemenu: "roleMenus" };
+    const TAB_FOR = { overview: "overview", setup: "setup-hub", setuphub: "setup-hub", hub: "setup-hub", welcome: "welcome", module: "welcome", analytics: "analytics", branding: "branding", ark: "ark", embed: "embed-builder", embedbuilder: "embed-builder", autoroles: "autoRoles", xp: "xp", moderation: "moderation", logs: "logs", hype: "hype", events: "events", tickets: "tickets", staffpay: "staffPay", payments: "payments", servertemplates: "serverTemplates", rolemenus: "roleMenus", rolemenu: "roleMenus", customcommands: "customCommands", commands: "customCommands" };
     if (TAB_FOR[mode]) {
       state.selectedGuildId = state.guilds[0].id;
       state.activeTab = TAB_FOR[mode];
@@ -7122,6 +7388,8 @@
     state.roles = null;
     state.setupStatus = null; // never carry one guild's setup completeness to another
     state._forceHub = false;
+    _rmEditingId = null; // never carry an open editor across guilds
+    _ccEditing = null;
     render();
   }
 
