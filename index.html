@@ -13,15 +13,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="assets/logo.png?v=2" />
-    <link rel="stylesheet" href="styles.css?v=57" />
-    <style>
-      .servers-teaser .highlight-tier { color: var(--accent); }
-      .servers-teaser-avatars { display: flex; align-items: center; flex: 0 0 auto; padding-left: 4px; }
-      .servers-teaser-avatars .srv-av { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--surface); margin-left: -16px; object-fit: cover; background: rgba(43, 255, 158, 0.12); display: grid; place-items: center; font-weight: 800; color: var(--accent); font-size: 1.05rem; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45); }
-      .servers-teaser-avatars .srv-av:first-child { margin-left: 0; }
-      .servers-teaser:hover .servers-teaser-avatars .srv-av { border-color: rgba(43, 255, 158, 0.4); }
-      @media (max-width: 720px) { .servers-teaser-avatars { margin: 0 auto; } }
-    </style>
+    <link rel="preload" as="image" href="assets/hero.png" fetchpriority="high" />
+    <link rel="stylesheet" href="styles.css?v=58" />
+    <link rel="stylesheet" href="landing.css?v=1" />
   </head>
   <body>
     <!-- Navbar -->
@@ -53,126 +47,285 @@
       </div>
     </header>
 
-    <!-- Hero -->
-    <section class="hero hero-cinematic">
-      <div class="hero-bg-glow" aria-hidden="true"></div>
-      <div class="hero-bg-grid" aria-hidden="true"></div>
-      <div class="hero-scroll-hint" aria-hidden="true">Scroll</div>
-      <div class="container hero-grid">
-        <div>
-          <span class="hero-badge"><span class="dot"></span> Built for ARK PvP &amp; Gaming Communities</span>
-          <h1 data-word-reveal data-reveal-delay="0.7" data-reveal-stagger="0.07">Run Your ARK Discord <span class="accent">Like a Professional Server</span></h1>
-          <p class="lead">
-            Welcome tools, role menus, pets, cluster population, charts, payments &mdash; plus the
-            full ARK command suite: 14-signal anti-cheat review, live in-game logs, player &amp; tribe
-            search, and one-tap rollback. All inside Discord.
-          </p>
-          <div class="hero-ctas">
-            <a class="btn btn-primary btn-lg" data-link="inviteBot" href="#">Invite the Bot</a>
-            <a class="btn btn-ghost btn-lg" href="pop.html">View /pop</a>
-            <a class="btn btn-outline btn-lg" data-link="subscribe" href="#">Subscribe in Discord</a>
-            <a class="btn btn-outline btn-lg" href="demos.html">Watch Demo</a>
-          </div>
-          <div class="trust-badges">
-            <span class="trust-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Free Community Tools</span>
-            <span class="trust-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg> Full Cluster /pop</span>
-            <span class="trust-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Population Charts</span>
-            <span class="trust-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Premium Branding</span>
-            <span class="trust-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Discord.js v14</span>
-          </div>
-        </div>
+    <!-- ── Hero: command deck ─────────────────────────────────────────── -->
+    <section class="lx-hero">
+      <div class="lx-aurora" aria-hidden="true"></div>
+      <canvas id="lx-particles" aria-hidden="true"></canvas>
+      <div class="lx-grid-floor" aria-hidden="true"></div>
 
-        <!-- Hero showcase render -->
-        <div class="hero-stage-wrap">
-          <div class="hero-shot" data-depth="0.05">
-            <span class="hero-shot-glow" aria-hidden="true"></span>
-            <span class="hero-shot-shine" aria-hidden="true"></span>
-            <img src="assets/hero.png" width="1600" height="900" fetchpriority="high"
-                 alt="Arkoris command center — dashboard, modules, and live cluster stats" />
-          </div>
-
-          <!-- Floating feature cards drift around the render -->
-          <div class="float-card float-1 green live" aria-hidden="true"><span class="float-dot"></span> ARK Guard · <span class="fc-live" data-fc="flags">0 flags</span></div>
-          <div class="float-card float-2" aria-hidden="true"><span class="float-dot"></span> PayPal · Stripe</div>
-          <div class="float-card float-3 green live" aria-hidden="true"><span class="float-dot"></span> /pop · <span class="fc-live" data-fc="online">248 online</span></div>
-          <div class="float-card float-4" aria-hidden="true"><span class="float-dot"></span> Nitrado · Rollback</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Free vs Premium snapshot -->
-    <section class="short">
       <div class="container">
-        <div class="section-head" data-animate>
-          <span class="eyebrow">Free vs Premium</span>
-          <h2>Free for Communities. Premium for Server Owners.</h2>
-          <p>Free tools every community needs. Premium server-owner tools when you're ready to monetize.</p>
-        </div>
-        <div class="fvp-grid">
-          <div class="fvp-col free" data-animate>
-            <div class="fvp-head">
-              <span class="fvp-name">Free</span>
-              <span class="trust-badge" style="background:rgba(34,197,94,0.1);color:var(--success);border-color:rgba(34,197,94,0.25)">No card · no limits</span>
+        <div class="lx-hero-grid">
+          <div>
+            <span class="lx-status lx-rise"><span class="pulse"></span> Live · running ARK communities right now</span>
+            <h1 class="lx-title lx-rise" style="animation-delay:.08s">
+              Command your<br />
+              <span class="ghost">ARK empire</span><br />
+              <span class="beam">from Discord.</span>
+            </h1>
+            <p class="lx-lead lx-rise" style="animation-delay:.16s">
+              One bot runs the whole operation &mdash; <b>live cluster population</b>, a
+              <b>14-signal anti-cheat review</b>, in-game logs, player &amp; tribe search,
+              one-tap Nitrado rollback, tickets, payments and premium branding.
+            </p>
+            <div class="lx-ctas lx-rise" style="animation-delay:.24s">
+              <a class="lx-btn-main" data-link="inviteBot" href="#">
+                Invite Arkoris
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </a>
+              <a class="lx-btn-line" href="demos.html">Watch it run</a>
             </div>
-            <h3>Free Community Bot</h3>
-            <p class="fvp-sub">Welcome, role menus, /pop, charts, pets &mdash; forever free.</p>
-            <ul class="fvp-list">
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Welcome messages</li>
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Auto roles</li>
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Role menus (no limits)</li>
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> /pop full cluster</li>
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Population charts</li>
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Basic pets</li>
-            </ul>
-          </div>
-          <div class="fvp-col premium" data-animate data-animate-delay="1">
-            <div class="fvp-head">
-              <span class="fvp-name">Premium</span>
-              <span class="trust-badge" style="background:rgba(43,255,158,0.16);color:var(--red-bright);border-color:rgba(43,255,158,0.35)">For server owners</span>
+            <div class="lx-readout lx-rise" style="animation-delay:.32s">
+              <span>discord.js v14</span>
+              <span>Nitrado API</span>
+              <span>PayPal &amp; Stripe</span>
+              <span>free to start</span>
             </div>
-            <h3>Premium Server Bot</h3>
-            <p class="fvp-sub">Monetization, staff management, custom branding.</p>
-            <ul class="fvp-list">
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Full ARK suite &mdash; <code>/ark</code></li>
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> ARK Guard 14-signal anti-cheat</li>
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Live logs + game-chat relay</li>
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> PayPal &amp; Stripe payments</li>
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> One-tap Nitrado rollback</li>
-              <li><span class="ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span> Premium Branding &amp; Advanced Pets</li>
-            </ul>
+          </div>
+
+          <!-- HUD frame -->
+          <div class="lx-stage lx-rise" style="animation-delay:.2s">
+            <div class="lx-frame">
+              <span class="corner tl" aria-hidden="true"></span>
+              <span class="corner tr" aria-hidden="true"></span>
+              <span class="corner bl" aria-hidden="true"></span>
+              <span class="corner br" aria-hidden="true"></span>
+              <span class="scan" aria-hidden="true"></span>
+              <img src="assets/hero.png" width="1600" height="900" fetchpriority="high"
+                   alt="Arkoris command center — dashboard, modules, and live cluster stats" />
+            </div>
+            <div class="lx-tag t1" aria-hidden="true"><span class="d"></span> ARK GUARD · 14 SIGNALS</div>
+            <div class="lx-tag t2" aria-hidden="true"><span class="d"></span> /pop · <span data-fc="online">248 ONLINE</span></div>
+            <div class="lx-tag t3" aria-hidden="true"><span class="d"></span> PAYPAL · STRIPE</div>
+            <div class="lx-tag t4" aria-hidden="true"><span class="d"></span> NITRADO · ROLLBACK</div>
           </div>
         </div>
-        <div style="text-align:center;margin-top:32px">
-          <a class="btn btn-ghost" href="pricing.html">Compare Plans →</a>
+
+        <!-- Stats bar -->
+        <div class="lx-stats" data-animate>
+          <div class="lx-stat">
+            <div class="v"><em data-lx-servers data-count-to="36">0</em></div>
+            <div class="l">Communities</div>
+          </div>
+          <div class="lx-stat">
+            <div class="v"><span data-count-to="38">0</span><em>+</em></div>
+            <div class="l">Slash commands</div>
+          </div>
+          <div class="lx-stat">
+            <div class="v"><span data-count-to="14">0</span></div>
+            <div class="l">Anti-cheat signals</div>
+          </div>
+          <div class="lx-stat">
+            <div class="v">24<em>/</em>7</div>
+            <div class="l">Always watching</div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Dashboard showcase -->
-    <section class="short stage-reveal">
+    <!-- ── Capability ticker ──────────────────────────────────────────── -->
+    <div class="lx-marquee" aria-hidden="true">
+      <div class="lx-marquee-track">
+        <span>/pop cluster population</span><span>ARK Guard</span><span>live in-game logs</span><span>player &amp; tribe search</span><span>one-tap rollback</span><span>tickets</span><span>PayPal &amp; Stripe</span><span>staff pay</span><span>role menus</span><span>welcome</span><span>pets</span><span>giveaways</span><span>premium branding</span><span>wipes &amp; /grace</span><span>population charts</span>
+        <span>/pop cluster population</span><span>ARK Guard</span><span>live in-game logs</span><span>player &amp; tribe search</span><span>one-tap rollback</span><span>tickets</span><span>PayPal &amp; Stripe</span><span>staff pay</span><span>role menus</span><span>welcome</span><span>pets</span><span>giveaways</span><span>premium branding</span><span>wipes &amp; /grace</span><span>population charts</span>
+      </div>
+    </div>
+
+    <!-- ── Bento: one bot, every system ───────────────────────────────── -->
+    <section class="lx-section">
       <div class="container">
-        <div class="section-head" data-animate>
-          <span class="eyebrow">Web Dashboard</span>
-          <h2>A Real Control Panel for Your Server</h2>
-          <p>Log in with Discord and manage every module, branding, role menus, and payments from a premium web dashboard — no commands required.</p>
+        <div class="lx-head" data-animate>
+          <span class="k">The platform</span>
+          <h2>One bot. Every system your server needs.</h2>
+          <p>Free community tools for everyone. The full ARK operations suite when you go premium. Nothing else to install.</p>
         </div>
-        <div class="showcase" data-animate>
-          <img src="assets/dashboard-preview.png" width="1600" height="900" loading="lazy"
-               alt="Arkoris web dashboard — analytics, setup progress, and quick actions" />
-        </div>
-        <div style="text-align:center;margin-top:20px">
-          <a class="btn btn-primary" data-link="dashboardLogin" href="#">Open the Dashboard →</a>
+
+        <div class="lx-bento">
+          <a class="lx-cell w8" href="features.html" data-animate>
+            <span class="lx-radar" aria-hidden="true"></span>
+            <span class="lx-k">Premium · ARK Suite</span>
+            <h3>ARK Guard — 14-signal anti-cheat review</h3>
+            <p>Gamertag spoof heuristics, dupe patterns, mesh signals, gamerscore checks and more — compiled into evidence your staff reviews. Flags, never auto-accusations. Auto-alerts on your worst actors.</p>
+            <span class="spacer"></span>
+            <span class="lx-more">How the review works</span>
+          </a>
+
+          <a class="lx-cell" href="pop.html" data-animate>
+            <span class="lx-k">Free · Forever</span>
+            <h3>/pop — your whole cluster, live</h3>
+            <p>Live population for every map, auto-drawn 24h charts.</p>
+            <div class="lx-mini-chart" aria-hidden="true">
+              <svg viewBox="0 0 280 90" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="lxPopGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="rgba(43,255,158,0.32)" />
+                    <stop offset="1" stop-color="rgba(43,255,158,0)" />
+                  </linearGradient>
+                </defs>
+                <path class="a" d="M4,66 C40,64 56,52 80,55 S125,70 150,44 S190,18 215,26 S260,12 276,20 L276,90 L4,90 Z" />
+                <path class="s" d="M4,66 C40,64 56,52 80,55 S125,70 150,44 S190,18 215,26 S260,12 276,20" />
+                <circle class="dot" cx="276" cy="20" r="4" />
+              </svg>
+            </div>
+            <span class="spacer"></span>
+            <span class="lx-more">Explore /pop</span>
+          </a>
+
+          <a class="lx-cell" href="premium.html" data-animate>
+            <span class="lx-k">Premium</span>
+            <h3>Payments that confirm themselves</h3>
+            <p>Sell ranks, kits and services in tickets — webhooks flip the embed to PAID the moment money lands.</p>
+            <div class="lx-paychips" aria-hidden="true"><span>PayPal</span><span>Stripe</span><span>auto-confirm</span></div>
+            <span class="spacer"></span>
+            <span class="lx-more">See monetization</span>
+          </a>
+
+          <div class="lx-cell" data-animate>
+            <span class="lx-k">Premium · ARK Suite</span>
+            <h3>Live logs &amp; game-chat relay</h3>
+            <p>Every in-game event in clean forum posts. Staff read the servers in real time.</p>
+            <div class="lx-term" data-lx-term aria-hidden="true">
+              <span class="lines"></span><span class="caret"></span>
+            </div>
+          </div>
+
+          <a class="lx-cell" href="features.html" data-animate>
+            <span class="lx-k">Premium</span>
+            <h3>Tickets, staff pay &amp; logs</h3>
+            <p>Advanced tickets with transcripts, forum-routed staff logs, staff payouts, giveaways, events and moderation — run the whole team from Discord.</p>
+            <span class="spacer"></span>
+            <span class="lx-more">All staff tools</span>
+          </a>
+
+          <a class="lx-cell w6" href="branding.html" data-animate>
+            <span class="lx-k gold">Premium · Branding</span>
+            <h3>The bot wears your brand</h3>
+            <p>Your name, your colors, your logo — on every embed, panel, ticket, /pop board and welcome message. Players see your server, not a bot.</p>
+            <div class="lx-swatch" aria-hidden="true"></div>
+            <span class="spacer"></span>
+            <span class="lx-more">Explore branding</span>
+          </a>
+
+          <a class="lx-cell w6" href="features.html" data-animate>
+            <span class="lx-k">Free · Forever</span>
+            <h3>Community essentials, no card</h3>
+            <p>Welcome messages, auto roles, unlimited role menus, /pop, population charts and pets — free on every server, no limits, no trials that expire on your members.</p>
+            <span class="spacer"></span>
+            <span class="lx-more">Everything free</span>
+          </a>
         </div>
       </div>
     </section>
 
-    <!-- See it in action — featured video -->
-    <section class="short video-showcase">
+    <!-- ── Dashboard showcase ─────────────────────────────────────────── -->
+    <section class="lx-section tight">
       <div class="container">
-        <div class="section-head" data-animate>
-          <span class="eyebrow">See it in action</span>
+        <div class="lx-head center" data-animate>
+          <span class="k">Web dashboard</span>
+          <h2>A real control panel, not a settings page</h2>
+          <p>Log in with Discord and manage every module, role menus, branding and payments from a premium dashboard — no commands required.</p>
+        </div>
+        <div class="lx-show">
+          <span class="lx-show-glow" aria-hidden="true"></span>
+          <div class="lx-browser">
+            <div class="lx-browser-bar" aria-hidden="true">
+              <i></i><i></i><i></i>
+              <span class="url">arkoris.net/dashboard</span>
+            </div>
+            <img src="assets/dashboard-preview.png" width="1600" height="900" loading="lazy"
+                 alt="Arkoris web dashboard — analytics, setup progress, and quick actions" />
+          </div>
+        </div>
+        <div class="lx-center">
+          <a class="lx-btn-main" data-link="dashboardLogin" href="#">Open the Dashboard</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ARK command suite ──────────────────────────────────────────── -->
+    <section class="lx-section">
+      <div class="container">
+        <div class="lx-head" data-animate>
+          <span class="k">ARK command suite</span>
+          <h2>Run your whole cluster from Discord</h2>
+          <p>Premium ARK tools over the Nitrado API — tracking, anti-cheat review, live logs and one-tap rollback.</p>
+        </div>
+        <div class="lx-suite">
+          <div class="lx-suite-card" data-animate>
+            <span class="num">01 / MANAGE</span>
+            <div class="shot"><img src="assets/feat-ark.png?v=2" loading="lazy" width="640" height="360" alt="ARK server management" /></div>
+            <div class="body"><h3>ARK Management</h3><p>Player lookup, server controls, bans, wipes &amp; one-tap Nitrado rollback — all from <code>/ark</code>.</p></div>
+          </div>
+          <div class="lx-suite-card" data-animate>
+            <span class="num">02 / PROTECT</span>
+            <div class="shot"><img src="assets/feat-anticheat.png?v=2" loading="lazy" width="640" height="360" alt="ARK Guard anti-cheat" /></div>
+            <div class="body"><h3>ARK Guard</h3><p>A 14-signal anti-cheat <em>review</em> system with auto-alerts on your worst actors — evidence for staff, never auto-accusations.</p></div>
+          </div>
+          <div class="lx-suite-card" data-animate>
+            <span class="num">03 / OBSERVE</span>
+            <div class="shot"><img src="assets/feat-logging.png?v=2" loading="lazy" width="640" height="360" alt="Live in-game logs" /></div>
+            <div class="body"><h3>Live Logs + Chat Relay</h3><p>Every in-game event in clean forum posts, plus a live game-chat relay so staff read your servers in real time.</p></div>
+          </div>
+          <div class="lx-suite-card" data-animate>
+            <span class="num">04 / INVESTIGATE</span>
+            <div class="shot"><img src="assets/feat-lookup.png?v=2" loading="lazy" width="640" height="360" alt="Player and tribe search" /></div>
+            <div class="body"><h3>Player &amp; Tribe Search</h3><p>Sessions, chat, tribes, name history, Xbox gamerscore &amp; ban status — one search.</p></div>
+          </div>
+        </div>
+        <div class="lx-center">
+          <a class="lx-btn-main" data-link="inviteBot" href="#">Add Arkoris</a>
+          <a class="lx-btn-line" href="features.html">All features</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Free vs Premium ────────────────────────────────────────────── -->
+    <section class="lx-section tight">
+      <div class="container">
+        <div class="lx-head center" data-animate>
+          <span class="k">Pricing</span>
+          <h2>Free for communities. Premium for operators.</h2>
+        </div>
+        <div class="lx-vs" data-animate>
+          <div class="lx-vs-col">
+            <div class="tier">Free · forever</div>
+            <h3>Community Bot</h3>
+            <div class="price">$0 <small>no card · no limits</small></div>
+            <ul>
+              <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Welcome messages &amp; auto roles</li>
+              <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Unlimited role menus</li>
+              <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> /pop full cluster population</li>
+              <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Auto-drawn population charts</li>
+              <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Pets, suggestions &amp; polls</li>
+            </ul>
+            <a class="lx-btn-line" data-link="inviteBot" href="#">Start free</a>
+          </div>
+          <div class="lx-vs-col premium">
+            <div class="tier">Premium · for server owners</div>
+            <h3>Operator Bot</h3>
+            <div class="price">$15 <small>per 30 days · activate with /subscribe</small></div>
+            <ul>
+              <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Full ARK suite — <code>/ark</code>, wipes, rollback</li>
+              <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> ARK Guard 14-signal anti-cheat review</li>
+              <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Live logs + game-chat relay</li>
+              <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> PayPal &amp; Stripe payments, staff pay</li>
+              <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Premium branding &amp; advanced pets</li>
+            </ul>
+            <a class="lx-btn-main" data-link="subscribe" href="#">Subscribe in Discord</a>
+          </div>
+        </div>
+        <div class="lx-center">
+          <a class="lx-btn-line" href="pricing.html">Compare every feature</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── See it in action — featured video ──────────────────────────── -->
+    <section class="lx-section tight video-showcase">
+      <div class="container">
+        <div class="lx-head center" data-animate>
+          <span class="k">See it in action</span>
           <h2>Watch Arkoris run a server</h2>
-          <p>A quick look at the dashboard, the ARK command suite, live population and the anti-cheat review — the whole platform in motion.</p>
+          <p>The dashboard, the ARK suite, live population and the anti-cheat review — the whole platform in motion.</p>
         </div>
         <div class="video-frame" data-animate data-video-open role="button" tabindex="0"
              aria-label="Play the Arkoris product video">
@@ -187,154 +340,13 @@
       </div>
     </section>
 
-    <!-- Bot Ecosystem -->
-    <section class="short">
+    <!-- ── Discord demos ──────────────────────────────────────────────── -->
+    <section class="lx-section tight">
       <div class="container">
-        <div class="section-head" data-animate>
-          <span class="eyebrow">Bot Ecosystem</span>
-          <h2>One Bot. Every System.</h2>
-          <p>Free community tools, premium server-owner tools, and the full ARK command suite &mdash; player tracking, ARK Guard, live logs, payments and more, all in one bot.</p>
-        </div>
-        <div class="ecosystem-grid" data-animate data-stagger>
-          <div class="eco-col free">
-            <div class="eco-tier">Free</div>
-            <h3>For every community</h3>
-            <p class="eco-sub">Forever free. No card. No limits.</p>
-            <ul class="eco-list">
-              <li>Welcome messages</li>
-              <li>Auto roles</li>
-              <li>Role menus</li>
-              <li>/pop cluster population</li>
-              <li>Population charts</li>
-              <li>Basic pets</li>
-            </ul>
-          </div>
-          <div class="eco-col premium">
-            <div class="eco-tier">Premium</div>
-            <h3>For server owners</h3>
-            <p class="eco-sub">Monetization &amp; automation.</p>
-            <ul class="eco-list">
-              <li>PayPal &amp; Stripe payments</li>
-              <li>Staff Pay &amp; Hype rewards</li>
-              <li>Advanced tickets &amp; logs</li>
-              <li>Giveaways, events &amp; moderation</li>
-              <li>Advanced pets &amp; credits</li>
-              <li>Premium branding</li>
-            </ul>
-          </div>
-          <div class="eco-col ark">
-            <div class="eco-tier">ARK Suite · Live</div>
-            <h3>For ARK servers</h3>
-            <p class="eco-sub">Nitrado-powered.</p>
-            <ul class="eco-list">
-              <li>ARK Guard anti-cheat review</li>
-              <li>Player &amp; tribe lookup</li>
-              <li>Live logs + game-chat relay</li>
-              <li>Server controls + rollback</li>
-              <li>Bans, wipes &amp; /grace</li>
-            </ul>
-          </div>
-        </div>
-        <div style="text-align:center;margin-top:32px">
-          <a class="btn btn-ghost" href="features.html">See All Features →</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- ARK Command Suite showcase -->
-    <section class="short">
-      <div class="container">
-        <div class="section-head" data-animate>
-          <span class="eyebrow">ARK Command Suite</span>
-          <h2>Run your whole cluster from Discord</h2>
-          <p>Premium ARK tools over the Nitrado API. Player tracking, anti-cheat review, live logs and one-tap rollback.</p>
-        </div>
-        <div class="ark-suite-grid" data-animate data-stagger>
-          <div class="ark-suite-card">
-            <img src="assets/feat-ark.png?v=2" loading="lazy" width="640" height="360" alt="ARK server management" />
-            <div class="ark-suite-body"><h3>🦖 ARK Management</h3><p>Player lookup, server controls, bans, wipes &amp; one-tap Nitrado rollback — all from <code>/ark</code>.</p></div>
-          </div>
-          <div class="ark-suite-card">
-            <img src="assets/feat-anticheat.png?v=2" loading="lazy" width="640" height="360" alt="ARK Guard anti-cheat" />
-            <div class="ark-suite-body"><h3>🛡️ ARK Guard</h3><p>A 14-signal anti-cheat <em>review</em> system with auto-alerts on your worst actors — evidence for staff, never auto-accusations.</p></div>
-          </div>
-          <div class="ark-suite-card">
-            <img src="assets/feat-logging.png?v=2" loading="lazy" width="640" height="360" alt="Live in-game logs" />
-            <div class="ark-suite-body"><h3>📜 Live Logs + Chat Relay</h3><p>Every in-game event in clean forum posts, plus a live game-chat relay so staff read your servers in real time.</p></div>
-          </div>
-          <div class="ark-suite-card">
-            <img src="assets/feat-lookup.png?v=2" loading="lazy" width="640" height="360" alt="Player and tribe search" />
-            <div class="ark-suite-body"><h3>🔎 Player &amp; Tribe Search</h3><p>Sessions, chat, tribes, name history, Xbox gamerscore &amp; ban status — one search.</p></div>
-          </div>
-        </div>
-        <div style="text-align:center;margin-top:32px">
-          <a class="btn btn-primary" data-link="inviteBot" href="#">➕ Add Arkoris</a>
-          <a class="btn btn-ghost" href="features.html">All Features →</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- Live /pop showcase -->
-    <section class="short">
-      <div class="container">
-        <div class="livepop" data-animate>
-          <div class="livepop-copy">
-            <div class="highlight-tier">Free · Included</div>
-            <h3>Your whole cluster, live</h3>
-            <p>Track every map with live population embeds and auto-drawn charts. <code>/pop</code> is free with Arkoris, on every server.</p>
-            <a class="btn btn-ghost" href="pop.html">Explore /pop →</a>
-          </div>
-
-          <div class="livepop-chart" aria-hidden="true">
-            <div class="lp-head">
-              <span class="lp-live"><span class="lp-live-dot"></span> Live</span>
-              <span class="lp-title">Cluster population · last 24h</span>
-            </div>
-            <svg class="lp-svg" viewBox="0 0 560 230" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="lpGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="rgba(43,255,158,0.34)" />
-                  <stop offset="1" stop-color="rgba(43,255,158,0)" />
-                </linearGradient>
-              </defs>
-              <path class="lp-area" d="M12,170 C80,168 110,150 160,152 S250,176 300,120 S380,58 430,74 S520,44 548,60 L548,230 L12,230 Z" />
-              <path class="lp-line" d="M12,170 C80,168 110,150 160,152 S250,176 300,120 S380,58 430,74 S520,44 548,60" />
-              <circle class="lp-dot" cx="548" cy="60" r="4.5" />
-            </svg>
-            <div class="lp-readout">
-              <span class="lp-online"><b data-count-to="248">0</b> online</span>
-              <span>11/12 maps</span>
-              <span>peak <b data-count-to="312">0</b></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Premium Branding short highlight card -->
-    <section class="short">
-      <div class="container">
-        <a class="highlight-card premium" href="branding.html" data-animate>
-          <div class="highlight-icon">
-            <img src="assets/icon-branding.png?v=2" width="76" height="76" alt="" loading="lazy" />
-          </div>
-          <div>
-            <div class="highlight-tier">Premium</div>
-            <h3>Make the Bot Match Your Server Brand</h3>
-            <p>Premium servers customize embeds, panels, /pop titles, tickets, and welcome messages with their own brand name, colors, logo, and footer.</p>
-          </div>
-          <span class="btn btn-ghost">Explore Branding →</span>
-        </a>
-      </div>
-    </section>
-
-    <!-- Mini demo carousel -->
-    <section class="short">
-      <div class="container">
-        <div class="section-head" data-animate>
-          <span class="eyebrow">Discord Demos</span>
-          <h2>See It in Action</h2>
-          <p>Short previews of how the bot works inside Discord.</p>
+        <div class="lx-head" data-animate>
+          <span class="k">Discord demos</span>
+          <h2>Inside Discord, it looks like this</h2>
+          <p>Short previews of the bot at work.</p>
         </div>
         <div class="demo-mini-grid" data-animate data-stagger>
           <a class="demo-mini" href="demos.html#setup">
@@ -428,43 +440,44 @@
             <span class="demo-mini-cta">Watch the branding demo →</span>
           </a>
         </div>
-        <div style="text-align:center;margin-top:32px">
-          <a class="btn btn-ghost" href="demos.html">View All Demos →</a>
+        <div class="lx-center">
+          <a class="lx-btn-line" href="demos.html">View all demos</a>
         </div>
       </div>
     </section>
 
-    <!-- Community directory entry -->
-    <section class="short">
+    <!-- ── Community directory ────────────────────────────────────────── -->
+    <section class="lx-section tight">
       <div class="container">
-        <a class="highlight-card servers-teaser" href="servers.html" data-animate>
-          <div class="servers-teaser-avatars" data-servers-avatars aria-hidden="true">
+        <a class="lx-dir" href="servers.html" data-animate>
+          <div class="avs" data-servers-avatars aria-hidden="true">
             <span class="srv-av">V</span>
             <span class="srv-av">Q</span>
             <span class="srv-av">A</span>
             <span class="srv-av">+</span>
           </div>
           <div>
-            <div class="highlight-tier">Community Directory</div>
+            <div class="lx-head" style="margin:0">
+              <span class="k">Community directory</span>
+            </div>
             <h3>Join a server running Arkoris</h3>
             <p>Browse <span data-servers-count>the public directory</span> of Discord communities powered by Arkoris — real server logos, one click to jump in.</p>
           </div>
-          <span class="btn btn-ghost">Browse Servers →</span>
+          <span class="lx-btn-line" style="margin-left:auto;flex:none">Browse servers</span>
         </a>
       </div>
     </section>
 
-    <!-- Final CTA -->
-    <section class="cta-section">
+    <!-- ── Final CTA ──────────────────────────────────────────────────── -->
+    <section class="lx-section">
       <div class="container">
-        <div class="cta-panel" data-animate>
-          <span class="eyebrow">Get Started</span>
-          <h2>Ready to upgrade your Discord server?</h2>
-          <p>Invite the bot, use the free tools today, and subscribe when you're ready for premium.</p>
-          <div class="cta-actions">
-            <a class="btn btn-primary btn-lg" data-link="inviteBot" href="#">Invite the Bot</a>
-            <a class="btn btn-ghost btn-lg" data-link="subscribe" href="#">Subscribe in Discord</a>
-            <a class="btn btn-outline btn-lg" data-link="supportDiscord" href="#">Join Support</a>
+        <div class="lx-cta" data-animate>
+          <h2>Your cluster deserves a command center.</h2>
+          <p>Invite Arkoris, use the free tools today, and go premium when you're ready to run the whole operation from Discord.</p>
+          <div class="lx-ctas">
+            <a class="lx-btn-main" data-link="inviteBot" href="#">Invite the Bot</a>
+            <a class="lx-btn-line" data-link="subscribe" href="#">Subscribe in Discord</a>
+            <a class="lx-btn-line" data-link="supportDiscord" href="#">Join Support</a>
           </div>
         </div>
       </div>
@@ -490,8 +503,8 @@
               <li><a href="branding.html">Branding</a></li>
               <li><a href="demos.html">Demos</a></li>
               <li><a href="pricing.html">Pricing</a></li>
-              <li><a href="dashboard.html">Dashboard</a>
-          <a href="servers.html">Servers</a></li>
+              <li><a href="dashboard.html">Dashboard</a></li>
+              <li><a href="servers.html">Servers</a></li>
             </ul>
           </div>
           <div>
@@ -534,31 +547,7 @@
     </dialog>
 
     <script src="config.js"></script>
-    <script src="script.js?v=56"></script>
-    <!-- Community directory teaser — swaps in real server logos + live count. -->
-    <script>
-      (function () {
-        var avWrap = document.querySelector("[data-servers-avatars]");
-        var countEl = document.querySelector("[data-servers-count]");
-        if (!avWrap) return;
-        var base = (window.SITE_CONFIG && window.SITE_CONFIG.backendApiUrl) || "";
-        fetch(base + "/api/servers", { credentials: "omit" })
-          .then(function (r) { return r.ok ? r.json() : Promise.reject(0); })
-          .then(function (d) {
-            var servers = (d && d.servers) || [];
-            if (!servers.length) return;
-            if (countEl) countEl.textContent = servers.length.toLocaleString() + " server" + (servers.length === 1 ? "" : "s");
-            var withIcon = servers.filter(function (s) { return s.icon; }).slice(0, 5);
-            if (!withIcon.length) return;
-            var html = withIcon.map(function (s) {
-              return '<img class="srv-av" src="' + String(s.icon).replace(/["'<>]/g, "") + '" alt="" loading="lazy" width="50" height="50">';
-            }).join("");
-            var extra = servers.length - withIcon.length;
-            if (extra > 0) html += '<span class="srv-av">+' + extra + "</span>";
-            avWrap.innerHTML = html;
-          })
-          .catch(function () { /* keep the static fallback avatars */ });
-      })();
-    </script>
+    <script src="script.js?v=57"></script>
+    <script src="landing.js?v=1"></script>
   </body>
 </html>

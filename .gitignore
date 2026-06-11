@@ -11,3 +11,5 @@ Thumbs.db
 .env.example
 *.env.example
 backend/.env.example
+
+landing-shots/
