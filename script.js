@@ -537,6 +537,10 @@
 
   const TUTORIAL_ORDER = [
     "setup",
+    "ark",
+    "guard",
+    "logs",
+    "rollback",
     "pop",
     "subscribe",
     "branding",
@@ -1146,6 +1150,319 @@
       },
     ],
   };
+
+  /* --- ARK suite demos: /ark hub, ARK Guard, live logs, rollback --- */
+
+  TUTORIALS.ark = {
+    title: "/ark — Run Your Whole Cluster",
+    sub: "One panel for players, controls, bans, wipes and logs — over the Nitrado API.",
+    channel: "cluster",
+    steps: ["Run /ark", "Open the hub", "Player lookup", "Full profile"],
+    scenes: [
+      {
+        run: async (api) => {
+          await api.sleep(400);
+          await api.typeCmd("/ark");
+          await api.sleep(350);
+          api.userMsg(cmdTag("/ark"), "ClusterAdmin", "C");
+          api.sendCmd();
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(500);
+          const r = api.botRow({
+            embed: {
+              title: "ARK Operations Hub",
+              desc: "Manage every linked Nitrado server from one panel.",
+              fields: [
+                { name: "Linked maps", value: "12 / 12 online" },
+                { name: "Players now", value: "248" },
+                { name: "API", value: "Nitrado · connected" },
+                { name: "Mode", value: "Cluster-wide" },
+              ],
+              footer: "Pick a tool below",
+            },
+          });
+          r.addButtons([
+            { label: "Players", style: "primary" },
+            { label: "Controls" },
+            { label: "Bans" },
+            { label: "Wipe" },
+            { label: "Logs" },
+          ]);
+          await api.sleep(1500);
+          await api.clickButton("Players");
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(450);
+          await api.typeCmd("player search Vexa");
+          await api.sleep(300);
+          api.userMsg("Search: <code class=\"cmd\">Vexa</code>", "ClusterAdmin", "C");
+          api.sendCmd();
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(550);
+          api.botRow({
+            embed: {
+              title: "Player — Vexa",
+              desc: "Everything the cluster knows about this player, in one card.",
+              fields: [
+                { name: "Last seen", value: "Ragnarok · 14 min ago" },
+                { name: "Sessions (7d)", value: "23 · 41h total" },
+                { name: "Tribe", value: "Apex" },
+                { name: "Name history", value: "3 names" },
+                { name: "Gamerscore", value: "12,440" },
+                { name: "Ban status", value: "Clean" },
+              ],
+              footer: "Sessions · chat · tribe · bans — one search",
+              style: "success",
+            },
+          });
+        },
+      },
+    ],
+  };
+
+  TUTORIALS.guard = {
+    title: "ARK Guard — 14-Signal Review",
+    sub: "Evidence for your staff. Flags, never auto-accusations.",
+    channel: "cluster",
+    steps: ["Auto-alert", "Open review", "See the signals", "Staff decides"],
+    scenes: [
+      {
+        run: async (api) => {
+          await api.sleep(450);
+          const r = api.botRow({
+            embed: {
+              title: "ARK Guard — review flag",
+              desc: "A player tripped enough signals to be worth a look.",
+              fields: [
+                { name: "Player", value: "GhostRunner" },
+                { name: "Flag score", value: "6 / 14 signals" },
+                { name: "Top signal", value: "Gamertag spoof heuristic" },
+                { name: "Map", value: "The Island" },
+              ],
+              footer: "Auto-alert · staff review required",
+              style: "warn",
+            },
+          });
+          r.addButtons([{ label: "Open Review", style: "primary" }, { label: "Dismiss" }]);
+          await api.sleep(1600);
+          await api.clickButton("Open Review");
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(550);
+          api.botRow({
+            embed: {
+              title: "Review — GhostRunner",
+              desc: "Each signal is shown with its evidence. Nothing is automatic.",
+              fields: [
+                { name: "Gamertag spoof", value: "lookalike of a banned tag" },
+                { name: "Gamerscore", value: "0 — fresh account" },
+                { name: "Session pattern", value: "joins after wipes only" },
+                { name: "Name history", value: "4 names in 6 days" },
+                { name: "Known assoc.", value: "shares tribe w/ banned id" },
+                { name: "11 more signals", value: "all clear" },
+              ],
+              footer: "ARK Guard compiles evidence — your staff makes the call",
+            },
+          });
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(700);
+          const r = api.botRow({
+            text: "Staff decision:",
+          });
+          r.addButtons([
+            { label: "Watchlist", style: "primary" },
+            { label: "Ban via Nitrado" },
+            { label: "Clear flag" },
+          ]);
+          await api.sleep(1500);
+          await api.clickButton("Watchlist");
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(450);
+          api.botRow({
+            embed: {
+              title: "Added to watchlist",
+              desc: "GhostRunner stays flagged. New signals will re-alert your staff.",
+              footer: "No action taken against the player — review only",
+              style: "success",
+            },
+          });
+        },
+      },
+    ],
+  };
+
+  TUTORIALS.logs = {
+    title: "Live Logs + Game-Chat Relay",
+    sub: "Every in-game event in Discord — joins, kills, tribe activity, chat.",
+    channel: "cluster",
+    steps: ["Chat relays in", "Events post live", "Clean forum logs"],
+    scenes: [
+      {
+        run: async (api) => {
+          await api.sleep(400);
+          api.systemMsg("Live relay from Ragnarok — in-game chat appears as it happens");
+          await api.sleep(600);
+          api.userMsg("anyone selling element at green ob?", "Vexa · in-game", "V");
+          await api.sleep(900);
+          api.userMsg("omw with 50", "Riff · in-game", "R");
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(700);
+          api.botRow({
+            embed: {
+              title: "Join · Ragnarok",
+              desc: "<b>Nyx</b> joined the server (42 / 70 online)",
+              footer: "Live event · 12:04",
+            },
+          });
+          await api.sleep(900);
+          api.botRow({
+            embed: {
+              title: "Kill · The Island",
+              desc: "<b>Yutyrannus (wild)</b> killed <b>Daeodon</b> — tribe Apex",
+              footer: "Live event · 12:05",
+              style: "warn",
+            },
+          });
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(700);
+          api.botRow({
+            embed: {
+              title: "Daily log — Ragnarok",
+              desc: "All of today's events, organized into one clean forum post.",
+              fields: [
+                { name: "Joins / leaves", value: "184" },
+                { name: "Kills logged", value: "57" },
+                { name: "Tribe events", value: "23" },
+                { name: "Chat lines", value: "1,212" },
+              ],
+              footer: "Forum-routed · searchable · zero channel spam",
+              style: "success",
+            },
+          });
+        },
+      },
+    ],
+  };
+
+  TUTORIALS.rollback = {
+    title: "One-Tap Nitrado Rollback",
+    sub: "Pick a backup, confirm, restored. No FTP, no support tickets.",
+    channel: "cluster",
+    steps: ["Open Controls", "Pick a backup", "Confirm", "Restored"],
+    scenes: [
+      {
+        run: async (api) => {
+          await api.sleep(400);
+          const r = api.botRow({
+            embed: {
+              title: "Server Controls — Ragnarok",
+              desc: "Start, stop, restart, password — and full backup rollback.",
+              footer: "Nitrado API · service 7001001",
+            },
+          });
+          r.addButtons([
+            { label: "Restart" },
+            { label: "Rollback", style: "primary" },
+            { label: "Password" },
+          ]);
+          await api.sleep(1400);
+          await api.clickButton("Rollback");
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(500);
+          const r = api.botRow({
+            embed: {
+              title: "Choose a backup",
+              desc: "Latest Nitrado backups for Ragnarok:",
+              fields: [
+                { name: "Today 10:00", value: "before raid window" },
+                { name: "Today 04:00", value: "nightly" },
+                { name: "Yesterday 22:00", value: "post-event" },
+              ],
+              footer: "Backups come straight from the Nitrado API",
+            },
+          });
+          r.addButtons([
+            { label: "Today 10:00", style: "primary" },
+            { label: "Today 04:00" },
+            { label: "Cancel" },
+          ]);
+          await api.sleep(1500);
+          await api.clickButton("Today 10:00");
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(500);
+          const r = api.botRow({
+            embed: {
+              title: "Confirm rollback",
+              desc: "Ragnarok will stop, restore <b>Today 10:00</b>, and restart. Players will be disconnected.",
+              footer: "This is the only destructive step — and it asks first",
+              style: "warn",
+            },
+          });
+          r.addButtons([{ label: "Confirm Rollback", style: "primary" }, { label: "Abort" }]);
+          await api.sleep(1600);
+          await api.clickButton("Confirm Rollback");
+        },
+      },
+      {
+        run: async (api) => {
+          await api.sleep(800);
+          api.botRow({
+            embed: {
+              title: "Rollback complete",
+              desc: "Backup restored. Server restarting with the 10:00 save.",
+              fields: [
+                { name: "Downtime", value: "~4 minutes" },
+                { name: "Restored by", value: "@ClusterAdmin" },
+              ],
+              footer: "Logged to your wipe & rollback history",
+              style: "success",
+            },
+          });
+        },
+      },
+    ],
+  };
+
+  /* --- Demo-guide cards: click → load that demo in the player + scroll up --- */
+  document.querySelectorAll("[data-demo-jump]").forEach((card) => {
+    card.style.cursor = "pointer";
+    card.addEventListener("click", () => {
+      const key = card.getAttribute("data-demo-jump");
+      const tab = document.querySelector(`.tut-tab[data-tut="${key}"]`);
+      if (!tab) return;
+      tab.click();
+      const frame = document.querySelector(".tut-frame");
+      if (frame) frame.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
 
   /* --- Branding morph toggle (Premium Branding section) --- */
   document.querySelectorAll("[data-brand-toggle]").forEach((btn) => {

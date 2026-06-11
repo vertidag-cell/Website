@@ -56,6 +56,10 @@
         <div data-tut-root data-animate>
           <div class="tut-tabs" role="tablist">
             <button class="tut-tab active" data-tut="setup" role="tab" type="button">Setup</button>
+            <button class="tut-tab" data-tut="ark" role="tab" type="button">/ark</button>
+            <button class="tut-tab" data-tut="guard" role="tab" type="button">ARK Guard</button>
+            <button class="tut-tab" data-tut="logs" role="tab" type="button">Live Logs</button>
+            <button class="tut-tab" data-tut="rollback" role="tab" type="button">Rollback</button>
             <button class="tut-tab" data-tut="pop" role="tab" type="button">/pop</button>
             <button class="tut-tab" data-tut="subscribe" role="tab" type="button">Subscribe</button>
             <button class="tut-tab" data-tut="branding" role="tab" type="button">Branding</button>
@@ -104,6 +108,92 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Per-demo guide: what each walkthrough actually shows -->
+    <section style="padding-top:0" id="guide">
+      <div class="container">
+        <div class="section-head" data-animate>
+          <span class="eyebrow">Demo guide</span>
+          <h2>What each walkthrough shows</h2>
+          <p>Click a card to load that demo in the player above.</p>
+        </div>
+        <div class="features-grid" data-animate data-stagger>
+          <article class="feature-card" data-demo-jump="setup">
+            <span class="badge badge-free">Free</span>
+            <h3>/setup — Setup Hub</h3>
+            <p>Every module configured from one button-driven hub. The demo walks tickets setup end-to-end: forum channel, staff role, auto-routing — about five minutes in real life.</p>
+          </article>
+          <article class="feature-card" data-demo-jump="ark">
+            <span class="badge badge-premium">Premium</span>
+            <h3>/ark — Cluster Operations</h3>
+            <p>The ARK hub panel: players, controls, bans, wipes and logs over the Nitrado API. The demo runs a player search and pulls a full profile — sessions, tribe, name history, gamerscore, ban status.</p>
+          </article>
+          <article class="feature-card" data-demo-jump="guard">
+            <span class="badge badge-premium">Premium</span>
+            <h3>ARK Guard — Anti-Cheat Review</h3>
+            <p>A 14-signal review system. The demo shows an auto-alert, the evidence card behind it, and the staff decision — watchlist, ban, or clear. Flags are evidence for humans, never auto-bans.</p>
+          </article>
+          <article class="feature-card" data-demo-jump="logs">
+            <span class="badge badge-premium">Premium</span>
+            <h3>Live Logs + Chat Relay</h3>
+            <p>In-game chat relayed into Discord as it happens, join/kill/tribe events posted live, and everything organized into clean, searchable forum posts — no channel spam.</p>
+          </article>
+          <article class="feature-card" data-demo-jump="rollback">
+            <span class="badge badge-premium">Premium</span>
+            <h3>One-Tap Rollback</h3>
+            <p>Pick a Nitrado backup, confirm the one destructive step, restored. The demo shows the full flow including the confirmation gate and the rollback landing in your history.</p>
+          </article>
+          <article class="feature-card" data-demo-jump="pop">
+            <span class="badge badge-free">Free</span>
+            <h3>/pop — Cluster Population</h3>
+            <p>The whole cluster in one embed — per-map players, online status, and auto-drawn 24h charts. Free on every server, forever.</p>
+          </article>
+          <article class="feature-card" data-demo-jump="subscribe">
+            <span class="badge badge-premium">Premium</span>
+            <h3>/subscribe — Activation</h3>
+            <p>PayPal checkout in Discord with webhook auto-confirmation — the demo shows premium activating the moment payment lands. $15 per 30 days, cancel anytime.</p>
+          </article>
+          <article class="feature-card" data-demo-jump="branding">
+            <span class="badge badge-premium">Premium</span>
+            <h3>Premium Branding</h3>
+            <p>Default bot → your brand: name, accent color, logo and footer morph across embeds, panels, /pop boards, tickets and welcome messages.</p>
+          </article>
+          <article class="feature-card" data-demo-jump="tickets">
+            <span class="badge badge-premium">Premium</span>
+            <h3>Tickets &amp; Payments</h3>
+            <p>A ticket opens, staff sells a kit with an in-ticket payment link, and the embed flips to PAID when the webhook confirms — plus staff pay logging the commission.</p>
+          </article>
+          <article class="feature-card" data-demo-jump="reward">
+            <span class="badge badge-premium">Premium</span>
+            <h3>Hype Rewards</h3>
+            <p>Players earn expiring credits for name tags, invites and boosts — the demo shows a reward firing and landing in a player's balance.</p>
+          </article>
+          <article class="feature-card" data-demo-jump="pets">
+            <span class="badge badge-free">Free + Premium</span>
+            <h3>Pet System</h3>
+            <p>Free feeding, renaming and inventory — and the premium layer: rarity tiers, boss fights, fusion and leaderboards.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Command reference -->
+    <section style="padding-top:0">
+      <div class="container">
+        <div class="section-head" data-animate>
+          <span class="eyebrow">Cheat sheet</span>
+          <h2>The commands behind the demos</h2>
+        </div>
+        <div class="pop-bullets" data-animate style="max-width:760px;margin:0 auto">
+          <p><code class="cmd">/setup</code> — the button-driven hub for all 14 modules</p>
+          <p><code class="cmd">/ark</code> — cluster operations: players, controls, bans, wipes, logs <em>(premium)</em></p>
+          <p><code class="cmd">/pop</code> · <code class="cmd">/pop chart</code> — live cluster population &amp; 24h charts <em>(free)</em></p>
+          <p><code class="cmd">/subscribe</code> — activate premium for the server, in Discord</p>
+          <p><code class="cmd">/grace</code> — post-wipe protection timers for fresh servers <em>(premium)</em></p>
+          <p><code class="cmd">/leaderboard</code> · <code class="cmd">/rank</code> — XP &amp; activity boards <em>(free)</em></p>
         </div>
       </div>
     </section>
