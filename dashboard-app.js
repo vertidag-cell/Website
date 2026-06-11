@@ -435,6 +435,8 @@
     paypalTest: (gid)         => api(`/api/dashboard/guilds/${gid}/payments/paypal/test`, { method: "POST" }),
     // ARK Server Suite — read-only live status of linked Nitrado maps
     arkServers: (gid)         => api(`/api/dashboard/guilds/${gid}/ark/servers`),
+    // Discord & Game Logs — real recorded activity (counts + recent feed)
+    logsRecent: (gid)         => api(`/api/dashboard/guilds/${gid}/logs/recent`),
     // Server templates — catalog + guarded apply
     templates: (gid)          => api(`/api/dashboard/guilds/${gid}/server-templates`),
     templateApply: (gid, id, body) => api(`/api/dashboard/guilds/${gid}/server-templates/${id}/apply`, { method: "POST", body: body || {} }),
@@ -5435,7 +5437,8 @@
             h("span", { class: "ark-srv-players" }, players))));
       }
       liveHost.append(h("div", { class: "dash-card" }, head, grid,
-        h("p", { class: "ark-live-note" }, "Status comes from the bot's Nitrado poller — it refreshes automatically every few minutes.")));
+        h("p", { class: "ark-live-note" },
+          "Live from the Nitrado API" + (r.lastSync ? ` · last sync ${new Date(String(r.lastSync).includes("T") ? r.lastSync : r.lastSync.replace(" ", "T") + "Z").toLocaleString()}` : "") + ". Refresh re-checks (cached for 3 minutes).")));
     }
     await drawServers();
 
@@ -6857,44 +6860,83 @@
   /* ============================================================
      Tab: Audit log
      ============================================================ */
-  // Discord & Game Logs — what the bot records and which forum each stream
-  // lands in. The logs themselves live in Discord (readable by staff, per-map
-  // posts); this page is the map of that system + how to turn it on.
+  // Discord & Game Logs — LIVE recorded activity for this guild: per-stream
+  // counts + last event + a recent mixed feed from the bot's real ingestion
+  // tables. Falls back to an honest "nothing recorded yet" state.
   function loadGameLogs(content) {
     clear(content);
     content.append(h("div", { class: "dash-card" },
       h("h3", null, "Discord & Game Logs"),
       h("p", { style: { margin: 0, color: "var(--text-muted)" } },
-        "Everything Arkoris records for this server is posted into log channels and forums inside your Discord — organised per map, readable by staff, searchable forever.")));
+        "What the bot has actually recorded for this server. Full logs live in your Discord forums — organised per map, readable by staff, searchable forever.")));
 
-    const item = (name, desc) => h("div", { class: "log-cat" },
-      h("span", { class: "log-cat-name" }, name),
-      h("span", { class: "log-cat-desc" }, desc));
+    const liveHost = h("div");
+    content.append(liveHost);
+    liveHost.append(h("div", { class: "skel-card" },
+      h("div", { class: "skel skel-line lg w-30" }),
+      h("div", { class: "skel skel-line w-70" }),
+      h("div", { class: "skel skel-line w-50" })));
 
-    content.append(h("div", { class: "dash-card" },
-      h("h3", { style: { margin: "0 0 4px" } }, "💬 Discord server logs"),
-      h("p", { style: { margin: "0 0 10px", color: "var(--text-muted)" } }, "Activity inside your Discord, posted to the log channels the bot generates."),
-      item("Member activity", "Joins, leaves and invites"),
-      item("Messages", "Edits and deletions"),
-      item("Moderation", "Bans, kicks, timeouts and warnings"),
-      item("Server changes", "Role and channel updates")));
+    const fmtAgo = (iso) => {
+      if (!iso) return "never";
+      const d = new Date(String(iso).includes("T") ? iso : iso.replace(" ", "T") + "Z");
+      if (isNaN(d)) return iso;
+      const s = Math.max(0, Math.round((Date.now() - d.getTime()) / 1000));
+      if (s < 60) return s + "s ago";
+      if (s < 3600) return Math.floor(s / 60) + "m ago";
+      if (s < 86400) return Math.floor(s / 3600) + "h ago";
+      return Math.floor(s / 86400) + "d ago";
+    };
 
-    content.append(h("div", { class: "dash-card" },
-      h("h3", { style: { margin: "0 0 4px" } }, "🦖 ARK game-log forums"),
-      h("p", { style: { margin: "0 0 10px", color: "var(--text-muted)" } }, "Live from your linked Nitrado servers — one forum per stream, one post per map."),
-      item("ark-chat-logs", "In-game chat, plus Global / Tribe"),
-      item("ark-kill-logs", "PvP / PvE kills"),
-      item("ark-join-leave-logs", "Player joins & leaves"),
-      item("ark-tribe-logs", "Tribe events — tames, members, structures"),
-      item("ark-admin-logs", "Admin console commands + unrecognized-admin alerts"),
-      item("ark-ban-logs", "Bans & unbans on your linked servers"),
-      item("cheater-log", "Cheater detection — spoofing, alts, ban evasion, burners"),
-      item("service-logs", "Logged player services — carries, grinding, shop")));
+    data.logsRecent(state.selectedGuildId).then((r) => {
+      clear(liveHost);
+      const streams = r.streams || [];
+      const anyData = streams.some((s) => s.total > 0);
+
+      // Per-stream live tiles.
+      const grid = h("div", { class: "ark-live-grid" });
+      const TYPE_ICON = { chat: "💬", kills: "⚔️", joins: "📥", tribe: "🏷️", admin: "🛠️", bans: "🔨" };
+      streams.forEach((s) => {
+        grid.append(h("div", { class: "ark-srv-card " + (s.week > 0 ? "up" : s.total > 0 ? "mid" : "unknown") },
+          h("div", { class: "ark-srv-top" },
+            h("span", { class: "ark-srv-dot", "aria-hidden": "true" }),
+            h("span", { class: "ark-srv-name" }, `${TYPE_ICON[s.key] || ""} ${s.label}`)),
+          h("div", { class: "ark-srv-meta" },
+            h("span", { class: "ark-srv-map" }, `${(s.total || 0).toLocaleString()} recorded · ${(s.week || 0).toLocaleString()} this week`),
+            h("span", { class: "ark-srv-players" }, "last: " + fmtAgo(s.lastAt)))));
+      });
+      liveHost.append(h("div", { class: "dash-card" },
+        h("h3", { style: { margin: "0 0 10px" } }, "Live streams"),
+        grid,
+        h("p", { class: "ark-live-note" }, anyData
+          ? "Counts come from the bot's real log ingestion for this server."
+          : "Nothing recorded yet — link your Nitrado servers and the streams fill up automatically.")));
+
+      // Recent mixed feed (only when there is real data).
+      const recent = r.recent || [];
+      if (recent.length) {
+        const list = h("div", { class: "dash-audit-list" });
+        recent.forEach((e) => {
+          list.append(h("div", { class: "dash-audit-row" },
+            h("span", { class: "dash-audit-action ok" }, (TYPE_ICON[e.type] || "") + " " + (e.type || "event")),
+            h("span", { class: "dash-audit-target" }, e.text || ""),
+            h("span", { class: "dash-audit-time" }, (e.map ? e.map + " · " : "") + fmtAgo(e.at))));
+        });
+        liveHost.append(h("div", { class: "dash-card" },
+          h("h3", { style: { margin: "0 0 10px" } }, "Latest events"),
+          list));
+      }
+    }).catch(() => {
+      clear(liveHost);
+      liveHost.append(h("div", { class: "dash-card" },
+        h("h3", { style: { margin: "0 0 6px" } }, "Live data unavailable"),
+        h("p", { style: { margin: 0, color: "var(--text-muted)" } }, "Couldn't load this server's recorded activity right now — try again in a minute.")));
+    });
 
     content.append(h("div", { class: "dash-card" },
       h("h3", { style: { margin: "0 0 6px" } }, "Turn it on"),
       h("p", { style: { margin: 0, color: "var(--text-muted)" } },
-        "One click creates the whole system: ", h("code", null, "/setup → 📋 Logs & Monitoring → Generate Logs"),
+        "One click creates the whole forum system: ", h("code", null, "/setup → 📋 Logs & Monitoring → Generate Logs"),
         " — then pick which ARK streams you want under ", h("code", null, "Forum Log Categories"), ".")));
   }
 
@@ -7054,6 +7096,22 @@
       { id: "3", name: "Velated PVP — Aberration", map: "Aberration", status: "restarting", players: 0,  maxPlayers: 70 },
       { id: "4", name: "Velated PVP — Extinction", map: "Extinction", status: "stopped",    players: 0,  maxPlayers: 70 },
     ] });
+    data.logsRecent = async () => ({
+      streams: [
+        { key: "chat", label: "In-game chat", total: 1212, week: 412, lastAt: new Date(Date.now() - 240000).toISOString() },
+        { key: "kills", label: "Kill log", total: 357, week: 57, lastAt: new Date(Date.now() - 1500000).toISOString() },
+        { key: "joins", label: "Joins & sessions", total: 980, week: 184, lastAt: new Date(Date.now() - 60000).toISOString() },
+        { key: "tribe", label: "Tribe events", total: 145, week: 23, lastAt: new Date(Date.now() - 7200000).toISOString() },
+        { key: "admin", label: "Admin commands", total: 41, week: 6, lastAt: new Date(Date.now() - 86400000).toISOString() },
+        { key: "bans", label: "Bans", total: 9, week: 1, lastAt: new Date(Date.now() - 172800000).toISOString() },
+      ],
+      recent: [
+        { type: "join", map: "Ragnarok", at: new Date(Date.now() - 60000).toISOString(), text: "Nyx joined" },
+        { type: "chat", map: "Ragnarok", at: new Date(Date.now() - 240000).toISOString(), text: "Vexa: anyone selling element?" },
+        { type: "kill", map: "The Island", at: new Date(Date.now() - 1500000).toISOString(), text: "Yutyrannus (wild) killed Daeodon" },
+        { type: "tribe", map: "Aberration", at: new Date(Date.now() - 7200000).toISOString(), text: "Apex — tamed" },
+      ],
+    });
     data.tierList = async () => ({
       tiers: [
         { id: 1, role_id: "22", tier_name: "Senior Staff", priority: 10, ticket_basic: 5, ticket_medium: 8, ticket_advanced: 12, auction_percentage: 5, event_payouts: { "Raid Base": 20, "Vault Event": 15 }, can_payment: true,  can_log: true, can_approve_payout: true,  can_configure_tickets: false },
