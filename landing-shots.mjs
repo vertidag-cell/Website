@@ -33,13 +33,37 @@ fs.mkdirSync(outDir, { recursive: true });
 const browser = await chromium.launch();
 const errors = [];
 
-for (const [name, w, h] of [["desktop", 1440, 900], ["tablet", 768, 1024], ["phone", 390, 844]]) {
+// index gets all three viewports; every other (non-dashboard) page gets desktop + phone.
+const PAGES = [
+  "features.html", "pop.html", "premium.html", "branding.html", "demos.html",
+  "pricing.html", "servers.html", "support.html", "setup-guide.html",
+  "faq.html", "terms.html", "privacy.html", "xp-leaderboard.html",
+];
+const SHOTS = [["index", "index.html", 1440, 900], ["index-tablet", "index.html", 768, 1024], ["index-phone", "index.html", 390, 844]];
+for (const p of PAGES) {
+  const slug = p.replace(".html", "");
+  SHOTS.push([slug, p, 1440, 900], [slug + "-phone", p, 390, 844]);
+}
+
+for (const [name, file, w, h] of SHOTS) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   page.on("console", (m) => { if (m.type() === "error") errors.push(`${name}: ${m.text()}`); });
   page.on("pageerror", (e) => errors.push(`${name}: ${e}`));
-  await page.goto(base + "/index.html");
-  await page.waitForTimeout(2200);
-  // horizontal-overflow check
+  await page.goto(base + "/" + file);
+  await page.waitForTimeout(900);
+  // Scroll through the page first so every IntersectionObserver reveal
+  // (data-animate / data-stagger) has fired before the full-page capture.
+  await page.evaluate(async () => {
+    const step = Math.max(500, window.innerHeight * 0.8);
+    for (let y = 0; y < document.body.scrollHeight; y += step) {
+      window.scrollTo(0, y);
+      await new Promise((r) => setTimeout(r, 70));
+    }
+    window.scrollTo(0, document.body.scrollHeight);
+  });
+  await page.waitForTimeout(900);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(400);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   if (overflow > 1) errors.push(`${name}: horizontal overflow ${overflow}px`);
   await page.screenshot({ path: path.join(outDir, `${name}.png`), fullPage: true });
