@@ -401,6 +401,10 @@
     resetModule: (gid, name) => api(`/api/dashboard/guilds/${gid}/modules/${name}/reset`, { method: "POST" }),
     quickSetup: (gid, name, body) => api(`/api/dashboard/guilds/${gid}/modules/${name}/quick-setup`, { method: "POST", body: body || {} }),
     analytics: (gid, days) => api(`/api/dashboard/guilds/${gid}/analytics?days=${days || 7}`),
+    // Recent-activity feed (Overview). The audit LIST page was removed, but
+    // this client method must stay — renderOvActivity/renderRecentAuditCard
+    // call it; removing it crashed Overview with "data.audit is not a function".
+    audit: (gid) => api(`/api/dashboard/guilds/${gid}/audit-log`),
     channels: (gid) => api(`/api/dashboard/guilds/${gid}/discord/channels`),
     categories: (gid) => api(`/api/dashboard/guilds/${gid}/discord/categories`),
     roles: (gid) => api(`/api/dashboard/guilds/${gid}/discord/roles`),
