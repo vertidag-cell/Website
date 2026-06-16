@@ -8,6 +8,23 @@
  *  - Discord tutorial player with play/pause/progress/steps
  */
 
+/* Cloudflare Web Analytics — inject the privacy-first, cookie-less beacon when a
+ * Site Tag is configured in config.js (window.SITE_CONFIG.cloudflareAnalyticsToken).
+ * The owner panel's "Website Traffic" tab reads the same site's stats from
+ * Cloudflare. No-op when the tag is blank, so it's zero-impact until enabled. */
+(function () {
+  "use strict";
+  try {
+    var token = (window.SITE_CONFIG || {}).cloudflareAnalyticsToken;
+    if (!token) return;
+    var s = document.createElement("script");
+    s.defer = true;
+    s.src = "https://static.cloudflareinsights.com/beacon.min.js";
+    s.setAttribute("data-cf-beacon", JSON.stringify({ token: token }));
+    (document.head || document.documentElement).appendChild(s);
+  } catch (e) { /* analytics must never break the page */ }
+})();
+
 (function () {
   "use strict";
 

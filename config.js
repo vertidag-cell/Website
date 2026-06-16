@@ -36,6 +36,16 @@ window.SITE_CONFIG = {
    */
   backendApiUrl: "",
 
+  /*
+   * Cloudflare Web Analytics "Site Tag" (PUBLIC — it ships in the page HTML, so
+   * it's safe here). When set, script.js loads the privacy-first, cookie-less
+   * Cloudflare beacon on every page; the owner panel's "Website Traffic" tab then
+   * reads the same site's stats via Cloudflare's API. Leave BLANK if you instead
+   * enable Web Analytics directly on the Cloudflare Pages project — don't do both
+   * (it double-counts).
+   */
+  cloudflareAnalyticsToken: "",
+
   links: {
     // External — opens in new tab
     // Server (guild) install — scope=bot forces the "Add to Server" flow
