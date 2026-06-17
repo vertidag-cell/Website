@@ -848,7 +848,7 @@
       try {
         const m = await data.modules();
         // Modules intentionally hidden from the dashboard (still usable via their Discord commands).
-        state.modules = (m.modules || []).filter((mod) => !["giveaways", "credits", "pets", "polls"].includes(mod.name));
+        state.modules = (m.modules || []);
       } catch (e) {
         return renderTabError(root, e);
       }
@@ -907,6 +907,8 @@
       welcome: "discord", autoRoles: "discord", roleMenus: "discord", customCommands: "discord", xp: "discord",
       hype: "discord", moderation: "discord",
       events: "discord",
+      // Community & Economy (previously hidden from the dashboard)
+      pets: "community", credits: "community", giveaways: "community", polls: "community",
       // Tickets & Staff
       tickets: "tickets", staffPay: "tickets",
       // ARK Integration
@@ -926,6 +928,7 @@
       // Setup Hub drops out of the nav entirely once every module is configured.
       { label: "Core",                items: [...(hideSetupHub ? [] : ["setup-hub"]), "overview", "analytics", "embed-builder"] },
       { label: "Discord Server",      items: inCat("discord") },
+      { label: "Community",           items: inCat("community") },
       { label: "Tickets & Staff",     items: inCat("tickets") },
       { label: "ARK Integration",     items: inCat("ark") },
       { label: "Logs & Monitoring",   items: inCat("logs") },
