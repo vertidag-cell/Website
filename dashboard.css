@@ -1367,4 +1367,49 @@
   .dash-app .dash-content > * { min-width: 0; }
   .dash-app .eb-editable,
   .dash-app .pay-instructions { overflow-wrap: anywhere; }
+
+  /* PRIMARY STRUCTURAL FIX (this is the real cause of the zoomed-out / off-center
+     phone view). styles.css re-declares `.dash-layout` with a FIXED ~248px
+     sidebar column and NO media query, AFTER the <=980px single-column collapse.
+     Equal specificity → the later rule wins at EVERY width, so phones keep
+     reserving a 248px column for the sidebar — even though the sidebar is an
+     off-screen fixed drawer here. That phantom column makes the page ~248px
+     wider than the screen, so the browser shrink-to-fits (zooms out) and the
+     content lands off-center. Re-collapse to one full-width column; the
+     `.dash-app` prefix (0,2,0) in this last-loaded file wins the cascade tie. */
+  .dash-app .dash-layout { grid-template-columns: 1fr; gap: 14px; }
+
+  /* Backstop: let the in-server topbar wrap so a long server name / plan pill /
+     logout button can't push the row (and the page) past a narrow viewport. */
+  .dash-app .dsx-topbar { flex-wrap: wrap; min-width: 0; }
 }
+
+/* ============================================================================
+   Phone + narrow-tablet band (<=980px): the sidebar is a fixed off-screen
+   drawer across this whole band, so .dash-layout must be a TRUE single column
+   all the way up to 980px — not just <=600px — otherwise 601–980px (landscape
+   phones / small tablets) keeps reserving the 248px phantom sidebar column and
+   stays too wide. `.dash-app .dash-layout` (0,2,0) beats the bare styles.css
+   `.dash-layout` rules (0,1,0) regardless of source order; gated <=980px so the
+   desktop two-column layout (>980px) is never affected.
+   ============================================================================ */
+@media (max-width: 980px) {
+  .dash-app .dash-layout { grid-template-columns: 1fr; }
+}
+
+/* ----------------------------------------------------------------------------
+   Belt-and-braces overflow guard, scoped to the dashboard subtree only. html/
+   body already have overflow-x:hidden, but that only CLIPS paint — it doesn't
+   stop a wide in-flow descendant (long server IDs/URLs, copy-field inputs) from
+   widening the layout and re-triggering shrink-to-fit. Constraining the shell
+   with overflow-x:clip + min-width:0 keeps any wide child contained. The
+   marketing navbar/footer are siblings OUTSIDE .dash-shell, so they're
+   untouched. overflow-x:clip (not hidden) preserves vertical sticky + the fixed
+   drawer (which escapes .dash-shell since it has no transformed ancestor).
+   min-width:0 only RELAXES shrinking — desktop already uses minmax(0,1fr), so
+   wide layouts are unchanged.
+   ---------------------------------------------------------------------------- */
+.dash-app .dash-shell { overflow-x: clip; }
+.dash-app .dash-layout,
+.dash-app .dash-content,
+.dash-app .dash-content > * { min-width: 0; }
