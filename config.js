@@ -55,8 +55,9 @@ window.SITE_CONFIG = {
       "https://discord.com/oauth2/authorize?client_id=1487468686150336614&permissions=1495454182518&scope=bot+applications.commands&integration_type=0",
     supportDiscord: "https://discord.gg/sNG6DfkbKt",
 
-    // Internal — same tab, points to pages that explain the flow
-    subscribe: "pricing.html",
+    // Internal — Subscribe CTAs now lead to the dashboard, where premium can be
+    // purchased on-site (PayPal) per server, or via /subscribe in Discord.
+    subscribe: "dashboard.html",
     dashboardLogin: "dashboard.html",
 
     // Email — auto-converted to mailto: with subject

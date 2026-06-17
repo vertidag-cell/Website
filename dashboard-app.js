@@ -401,6 +401,9 @@
     resetModule: (gid, name) => api(`/api/dashboard/guilds/${gid}/modules/${name}/reset`, { method: "POST" }),
     quickSetup: (gid, name, body) => api(`/api/dashboard/guilds/${gid}/modules/${name}/quick-setup`, { method: "POST", body: body || {} }),
     analytics: (gid, days) => api(`/api/dashboard/guilds/${gid}/analytics?days=${days || 7}`),
+    // On-site premium checkout: creates a PayPal order for this server and returns
+    // { approvalUrl } to redirect to. Activation is handled by the bot's webhook.
+    subscribe: (gid) => api(`/api/dashboard/guilds/${gid}/subscribe`, { method: "POST" }),
     // Recent-activity feed (Overview). The audit LIST page was removed, but
     // this client method must stay — renderOvActivity/renderRecentAuditCard
     // call it; removing it crashed Overview with "data.audit is not a function".
@@ -6826,9 +6829,13 @@
      ============================================================ */
   function renderPremium(content) {
     clear(content);
-    const g = state.guilds.find((x) => x.id === state.selectedGuildId) || {};
+    const gid = state.selectedGuildId;
+    const g = state.guilds.find((x) => x.id === gid) || {};
     const plan = g.plan || "free";
-    const planLabel = plan === "lifetime" ? "Lifetime" : (plan === "premium" || plan === "monthly") ? "Premium" : "Free";
+    const premium = plan === "premium" || plan === "monthly" || plan === "lifetime";
+    const planLabel = plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
+    const price = (cfg.pricing && cfg.pricing.monthly && cfg.pricing.monthly.price) || "";
+
     content.append(
       h("div", { class: "dash-card" },
         h("h3", null, "Current Plan"),
@@ -6837,20 +6844,45 @@
           h("dt", null, "Status"), h("dd", null, g.status || "—"),
           h("dt", null, "Expires"), h("dd", null, g.expiresAt ? new Date(g.expiresAt).toLocaleString() : "—")
         )
-      ),
-      notice("info", "Subscriptions are managed inside Discord",
-        "The website does not process payments directly. Premium activates automatically inside Discord after PayPal confirms."),
+      )
+    );
+
+    // On-site checkout: create a PayPal order for THIS server and redirect to it.
+    const statusBox = h("div");
+    const payLabel = (premium ? "Renew Premium" : "Subscribe to Premium") + (price ? " · " + price + "/mo" : "");
+    const payBtn = h("button", { class: "btn btn-primary", type: "button" }, payLabel);
+    payBtn.addEventListener("click", async () => {
+      payBtn.disabled = true;
+      clear(statusBox).append(notice("info", "Starting checkout…", "Taking you to PayPal — please don't close this tab."));
+      try {
+        const res = await data.subscribe(gid);
+        if (res && res.approvalUrl) { window.location.href = res.approvalUrl; return; }
+        clear(statusBox).append(notice("error", "Couldn't start checkout", "PayPal didn't return a checkout link. Please try again."));
+        payBtn.disabled = false;
+      } catch (e) {
+        const msg = (e && e.data && e.data.message) || (e && e.message) || "Please try again.";
+        if (e && e.data && e.data.error === "bot_not_in_guild") {
+          clear(statusBox).append(
+            notice("warn", "Add Arkoris first", msg),
+            h("div", { class: "dash-actions" }, btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true })));
+        } else {
+          clear(statusBox).append(notice("error", "Couldn't start checkout", msg));
+        }
+        payBtn.disabled = false;
+      }
+    });
+
+    content.append(
       h("div", { class: "dash-card" },
-        h("h3", null, "How to subscribe"),
-        h("ol", { style: { color: "var(--text-muted)", paddingLeft: "20px", lineHeight: "1.8" } },
-          h("li", null, "Make sure Arkoris is in your server."),
-          h("li", null, "Run ", h("code", null, "/subscribe"), " in your Discord server."),
-          h("li", null, "Select the Premium plan."),
-          h("li", null, "Complete the PayPal checkout the bot opens."),
-          h("li", null, "Your server activates automatically.")
-        ),
+        h("h3", null, premium ? "Renew or extend Premium" : "Upgrade to Premium"),
+        h("p", { style: { color: "var(--text-muted)", marginTop: "4px" } },
+          "Pay securely with PayPal — your server activates automatically the moment payment confirms (usually a few seconds)." + (price ? " Premium is " + price + "/month per server." : "")),
+        h("div", { class: "dash-actions" }, payBtn),
+        statusBox,
+        h("p", { style: { color: "var(--text-muted)", fontSize: "12px", marginTop: "10px" } },
+          "Prefer Discord? You can also run ", h("code", null, "/subscribe"), " in your server."),
         h("div", { class: "dash-actions" },
-          btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true }),
+          btn("Invite Bot", { kind: "btn-ghost", href: cfg.links?.inviteBot, external: true }),
           btn("Join Support", { kind: "btn-ghost", href: cfg.links?.supportDiscord, external: true })
         )
       )
