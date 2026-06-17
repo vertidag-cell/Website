@@ -2369,6 +2369,8 @@
       const ovWrap = h("div", { class: "dsx-ov" });
       const upsell = renderOvUpgrade(o, guild);   // free servers only — null when premium
       if (upsell) ovWrap.append(upsell);
+      const expSoon = expiresSoonBanner(o, guild); // premium servers only — null unless expiring within 7 days
+      if (expSoon) ovWrap.append(expSoon);
       ovWrap.append(
         renderOvHealth(o, guild),
         renderOvStats(analytics),
@@ -2422,6 +2424,37 @@
     );
   }
 
+  // "Premium expires soon" banner. Shown on Overview + Premium when an ACTIVE
+  // premium subscription expires within ~7 days. Reads only data the existing
+  // APIs already return: overview.subscription.expiresAt + overview.premiumActive,
+  // or the guild list's expiresAt/plan/status. Lifetime plans (no expiry) and
+  // free servers never see it. Returns null when not applicable.
+  function expiresSoonBanner(o, guild) {
+    guild = guild || {};
+    const plan = (o && o.plan) || guild.plan || "free";
+    if (plan === "free" || plan === "lifetime") return null;
+    const active = (o && typeof o.premiumActive === "boolean")
+      ? o.premiumActive
+      : (plan !== "free");
+    if (!active) return null;
+    const rawExp = (o && o.subscription && o.subscription.expiresAt) || guild.expiresAt || null;
+    if (!rawExp) return null;
+    const exp = new Date(rawExp);
+    if (isNaN(exp)) return null;
+    const msLeft = exp.getTime() - Date.now();
+    const days = Math.ceil(msLeft / 86400000);
+    if (days > 7 || days < 0) return null; // only the final week; expired is handled elsewhere
+    const whenText = days <= 0
+      ? "today"
+      : days === 1 ? "in 1 day" : ("in " + days + " days");
+    const banner = notice("warn", "Premium expires " + whenText,
+      "Renew now to keep ARK management, anti-cheat, live logs and your other premium features running. Expires " + exp.toLocaleString() + ".");
+    const renew = btn("Renew Premium", { kind: "btn-primary",
+      onclick: () => { state.activeTab = "premium"; render(); } });
+    banner.append(h("div", { class: "dash-actions", style: { marginTop: "8px" } }, renew));
+    return banner;
+  }
+
   // Health-at-a-glance hero: identity + status + setup progress + CTA.
   function renderOvHealth(o, guild) {
     const setup = o.setup || {};
@@ -2441,7 +2474,11 @@
         h("div", { class: "dsx-ovh-id" },
           h("div", { class: "dsx-ovh-name" }, guild.name || "Your server"),
           h("div", { class: "dsx-ovh-meta" },
-            h("span", { class: "dsx-status" }, h("span", { class: "dsx-dot online" }), "Bot online"),
+            (o.botInstalled
+              ? h("span", { class: "dsx-status" }, h("span", { class: "dsx-dot online" }), "Bot online")
+              : h("a", { class: "dsx-status dsx-status-off", href: cfg.links?.inviteBot || "#", target: "_blank", rel: "noopener noreferrer",
+                  title: "Arkoris isn't in this server. Click to re-invite." },
+                  h("span", { class: "dsx-dot offline" }), "Bot offline — re-invite")),
             h("span", { class: "dsx-sep", "aria-hidden": "true" }, "·"),
             h("span", null, members != null ? fmtNum(members) + " members" : "Members syncing")
           )
@@ -3600,10 +3637,11 @@
               ...["Payments", "Staff Pay", "Hype Rewards", "Advanced Tickets", "Premium Branding", "Priority Support"]
                 .map((t) => h("span", { class: "dash-upsell-chip" }, t))),
             h("div", { class: "dash-upsell-note" },
-              `Premium is ${price} and unlocks every premium module for this server — your free modules keep working. Activate it by running `,
-              h("code", null, "/subscribe"), " inside your Discord server."),
+              `Premium is ${price} and unlocks every premium module for this server — your free modules keep working. You can subscribe right here on this site and pay securely with PayPal; your server activates automatically the moment payment confirms.`),
+            h("div", { class: "dash-upsell-note", style: { fontSize: "12px", opacity: "0.8", marginTop: "6px" } },
+              "Prefer Discord? You can also run ", h("code", null, "/subscribe"), " in your server."),
             h("div", { class: "dash-actions", style: { marginTop: "18px" } },
-              btn("See how to subscribe →", { kind: "btn-primary", onclick: () => { state.activeTab = "premium"; render(); } }),
+              btn("Unlock with Premium — pay securely here", { kind: "btn-primary", onclick: () => { state.activeTab = "premium"; render(); } }),
               btn("Invite Bot", { kind: "btn-ghost", href: cfg.links?.inviteBot, external: true })
             )
           )
@@ -6887,6 +6925,8 @@
     const monthlyPrice = (cfg.pricing && cfg.pricing.monthly && cfg.pricing.monthly.price) || "$15";
     const annualPrice  = (cfg.pricing && cfg.pricing.annual  && cfg.pricing.annual.price)  || "$150";
 
+    const expSoon = expiresSoonBanner(null, g); // uses the guild list's plan/status/expiresAt
+    if (expSoon) content.append(expSoon);
     content.append(
       h("div", { class: "dash-card" },
         h("h3", null, "Current Plan"),
@@ -7453,6 +7493,28 @@
     return true;
   }
 
+  // After the bot's PayPal return page sends the buyer back with ?paid=1,
+  // show a one-time "You're Premium!" banner and refresh the server's plan.
+  // Activation itself is done server-side by the billing webhook; this is
+  // purely the dashboard-side confirmation. The flag is stripped from the URL
+  // so a refresh / share doesn't replay the banner.
+  async function maybeShowPaidSuccess() {
+    let isPaid = false;
+    try { isPaid = new URLSearchParams(location.search).get("paid") === "1"; } catch { isPaid = false; }
+    if (!isPaid) return;
+    // Strip ?paid=1 (and any leftover PayPal token/PayerID) from the URL.
+    try { history.replaceState(null, "", location.pathname + location.hash); } catch {}
+    toast("success", "🎉 You're Premium! Thanks — your server's premium features are switching on.", 6000);
+    // Re-fetch the guild list so the just-activated server flips Free → Premium.
+    // The webhook usually confirms within a few seconds; this best-effort refresh
+    // picks up the new plan. If it's still propagating, a manual refresh will catch it.
+    try {
+      const g = await data.guilds();
+      state.guilds = g.guilds || state.guilds;
+      render();
+    } catch { /* keep current view; banner already shown */ }
+  }
+
   async function boot() {
     clear(root);
     if (maybeRenderMock()) return;
@@ -7465,6 +7527,7 @@
       const g = await data.guilds();
       state.guilds = g.guilds || [];
       render();
+      maybeShowPaidSuccess();
     } catch (e) {
       console.error("[dashboard] boot failed:", e);
       if (e.code === 401) { state.user = null; return renderLoggedOut(); }

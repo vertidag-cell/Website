@@ -304,6 +304,9 @@
 .dsx-status { display: inline-flex; align-items: center; gap: 6px; }
 .dsx-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
 .dsx-dot.online { background: var(--dsc-green); box-shadow: 0 0 0 3px rgba(35, 165, 90, 0.16); }
+.dsx-dot.offline { background: var(--dsc-red, #f23f43); box-shadow: 0 0 0 3px rgba(242, 63, 67, 0.16); }
+.dsx-status-off { color: var(--dsc-red, #f23f43); text-decoration: none; font-weight: 600; }
+.dsx-status-off:hover { text-decoration: underline; }
 .dsx-sep { opacity: 0.5; }
 .dsx-plan {
   flex: none;
