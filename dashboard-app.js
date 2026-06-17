@@ -2363,13 +2363,60 @@
       // Rebuilt Discord-native overview (.dsx-ov-*): a health hero, a compact
       // weekly-activity row, quick actions, and recent activity. No old
       // .dash-card / .hub-shell / stat-grid / ring / pop-rail.
-      content.append(h("div", { class: "dsx-ov" },
+      const ovWrap = h("div", { class: "dsx-ov" });
+      const upsell = renderOvUpgrade(o, guild);   // free servers only — null when premium
+      if (upsell) ovWrap.append(upsell);
+      ovWrap.append(
         renderOvHealth(o, guild),
         renderOvStats(analytics),
         renderOvActions(),
         renderOvActivity()
-      ));
+      );
+      content.append(ovWrap);
     } catch (e) { renderTabError(content, e); }
+  }
+
+  // Free-plan upsell banner pinned to the top of the Overview. Premium / lifetime
+  // servers never see it (returns null). The CTA jumps straight to the Premium
+  // tab, where the on-site "Subscribe · Pay with PayPal" button lives — the
+  // shortest path from a free user to a paying customer.
+  function renderOvUpgrade(o, guild) {
+    const plan = (guild && guild.plan) || "free";
+    const premium = plan === "premium" || plan === "monthly" || plan === "lifetime"
+      || !!(o && o.premiumActive);
+    if (premium) return null;
+
+    const perks = [
+      "Full ARK management — lookup, controls, bans, wipes",
+      "ARK Guard anti-cheat + auto-alerts",
+      "Live in-game logs & game-chat relay",
+      "Leaderboards, /grace timers & one-tap backup rollback",
+      "Tickets, Staff Pay, Hype & advanced Credits",
+      "Server templates & premium branding",
+    ];
+    const perkRow = h("div", { class: "dsx-up-perks" });
+    perks.forEach((label) => {
+      const chip = h("span", { class: "dsx-up-perk" });
+      chip.append(iconSvg("check"));
+      chip.append(h("span", null, label));
+      perkRow.append(chip);
+    });
+
+    return h("section", { class: "dsx-ov-upgrade" },
+      h("div", { class: "dsx-up-main" },
+        h("div", { class: "dsx-up-text" },
+          h("div", { class: "dsx-up-eyebrow" }, "Premium"),
+          h("div", { class: "dsx-up-title" }, "Unlock the full Arkoris toolkit"),
+          h("div", { class: "dsx-up-sub" },
+            "This server is on the Free plan. Go Premium to switch on ARK management, "
+            + "anti-cheat, live logs, leaderboards and more — $15/mo, cancel anytime.")
+        ),
+        h("button", { type: "button", class: "dsx-btn dsx-up-cta",
+          onclick: () => { state.activeTab = "premium"; render(); } },
+          "Upgrade to Premium")
+      ),
+      perkRow
+    );
   }
 
   // Health-at-a-glance hero: identity + status + setup progress + CTA.

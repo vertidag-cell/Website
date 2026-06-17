@@ -1413,3 +1413,53 @@
 .dash-app .dash-layout,
 .dash-app .dash-content,
 .dash-app .dash-content > * { min-width: 0; }
+
+/* ============================================================================
+   Free-plan UPGRADE banner on the Overview (renderOvUpgrade in dashboard-app.js).
+   Premium/amber-accented so it reads as "paid", shown only to free servers; the
+   CTA jumps to the Premium tab. Built on the existing --dsc-* theme tokens.
+   ============================================================================ */
+.dash-app .dsx-ov-upgrade {
+  background:
+    linear-gradient(135deg, rgba(240, 178, 50, 0.10), rgba(88, 101, 242, 0.10)),
+    var(--dsc-bg-raise);
+  border: 1px solid rgba(240, 178, 50, 0.32);
+  border-radius: var(--dsc-radius);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dash-app .dsx-up-main { display: flex; align-items: center; gap: 18px; }
+.dash-app .dsx-up-text { flex: 1; min-width: 0; }
+.dash-app .dsx-up-eyebrow {
+  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--dsc-amber-text, #f0b232); margin-bottom: 4px;
+}
+.dash-app .dsx-up-title {
+  font-size: 1.12rem; font-weight: 800; letter-spacing: -0.01em; color: var(--dsc-text);
+}
+.dash-app .dsx-up-sub {
+  font-size: 0.86rem; color: var(--dsc-text-muted); margin-top: 4px; max-width: 62ch;
+}
+.dash-app .dsx-up-cta {
+  flex: none; align-self: center;
+  background: var(--dsc-amber, #f0b232); color: #1a1505; font-weight: 700; border-color: transparent;
+}
+.dash-app .dsx-up-cta:hover { filter: brightness(1.06); background: var(--dsc-amber, #f0b232); }
+.dash-app .dsx-up-perks {
+  display: flex; flex-wrap: wrap; gap: 8px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 12px;
+}
+.dash-app .dsx-up-perk {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.8rem; color: var(--dsc-text-body);
+}
+.dash-app .dsx-up-perk svg {
+  width: 14px; height: 14px; flex: none; color: var(--dsc-amber-text, #f0b232);
+}
+@media (max-width: 600px) {
+  .dash-app .dsx-up-main { flex-direction: column; align-items: stretch; gap: 12px; }
+  .dash-app .dsx-up-cta { width: 100%; align-self: stretch; }
+  .dash-app .dsx-up-perk { width: 100%; }
+}
