@@ -403,7 +403,7 @@
     analytics: (gid, days) => api(`/api/dashboard/guilds/${gid}/analytics?days=${days || 7}`),
     // On-site premium checkout: creates a PayPal order for this server and returns
     // { approvalUrl } to redirect to. Activation is handled by the bot's webhook.
-    subscribe: (gid) => api(`/api/dashboard/guilds/${gid}/subscribe`, { method: "POST" }),
+    subscribe: (gid, plan) => api(`/api/dashboard/guilds/${gid}/subscribe`, { method: "POST", body: plan ? { plan } : undefined }),
     // Recent-activity feed (Overview). The audit LIST page was removed, but
     // this client method must stay — renderOvActivity/renderRecentAuditCard
     // call it; removing it crashed Overview with "data.audit is not a function".
@@ -654,7 +654,7 @@
     const f = pickerState.filter;
     return guilds.filter((g) => {
       if (q && !(g.name || "").toLowerCase().includes(q)) return false;
-      const premium = g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime";
+      const premium = g.plan === "premium" || g.plan === "monthly" || g.plan === "annual" || g.plan === "lifetime";
       if (f === "premium" && !premium) return false;
       if (f === "owner" && !g.owner) return false;
       return true;
@@ -681,7 +681,7 @@
   }
 
   function renderGuildRow(g) {
-    const premium = g.plan === "premium" || g.plan === "monthly" || g.plan === "lifetime";
+    const premium = g.plan === "premium" || g.plan === "monthly" || g.plan === "annual" || g.plan === "lifetime";
     const planLabel = g.plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
     const role = g.owner ? "Owner" : "Manage Server";
 
@@ -822,7 +822,7 @@
     root.append(mobileBar);
 
     // Top bar — Discord-style header (.dsx-topbar)
-    const premium = plan === "premium" || plan === "monthly" || plan === "lifetime";
+    const premium = plan === "premium" || plan === "monthly" || plan === "annual" || plan === "lifetime";
     const planLabel = plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
     const back = h("button", { type: "button", class: "dsx-topbar-back", "aria-label": "Back to servers",
       onclick: () => { state.selectedGuildId = null; render(); } });
@@ -882,7 +882,7 @@
 
   /** Grouped sidebar with icons, sections, premium-locked indicators. */
   function renderSidebar(plan, hideSetupHub) {
-    const isPremium = plan === "premium" || plan === "monthly" || plan === "lifetime";
+    const isPremium = plan === "premium" || plan === "monthly" || plan === "annual" || plan === "lifetime";
     // Keep .dash-sidebar for the mobile-drawer toggle + layout grid; the new
     // Discord-native look is driven entirely by .dsx-nav (+ children).
     const side = h("div", { class: "dash-sidebar dsx-nav", role: "tablist", "aria-label": "Dashboard navigation" });
@@ -2382,7 +2382,7 @@
   // shortest path from a free user to a paying customer.
   function renderOvUpgrade(o, guild) {
     const plan = (guild && guild.plan) || "free";
-    const premium = plan === "premium" || plan === "monthly" || plan === "lifetime"
+    const premium = plan === "premium" || plan === "monthly" || plan === "annual" || plan === "lifetime"
       || !!(o && o.premiumActive);
     if (premium) return null;
 
@@ -2426,7 +2426,7 @@
     const setupComplete = hubAllDone(setup.flags);
     const members = (o.guild && o.guild.memberCount != null) ? o.guild.memberCount : null;
     const plan = guild.plan || "free";
-    const premium = plan === "premium" || plan === "monthly" || plan === "lifetime";
+    const premium = plan === "premium" || plan === "monthly" || plan === "annual" || plan === "lifetime";
     const planLabel = plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
 
     const bar = h("div", { class: "dsx-ovh-bar" }, h("span", { style: { width: "0%" } }));
@@ -6879,9 +6879,10 @@
     const gid = state.selectedGuildId;
     const g = state.guilds.find((x) => x.id === gid) || {};
     const plan = g.plan || "free";
-    const premium = plan === "premium" || plan === "monthly" || plan === "lifetime";
+    const premium = plan === "premium" || plan === "monthly" || plan === "annual" || plan === "lifetime";
     const planLabel = plan === "lifetime" ? "Lifetime" : premium ? "Premium" : "Free";
-    const price = (cfg.pricing && cfg.pricing.monthly && cfg.pricing.monthly.price) || "";
+    const monthlyPrice = (cfg.pricing && cfg.pricing.monthly && cfg.pricing.monthly.price) || "$15";
+    const annualPrice  = (cfg.pricing && cfg.pricing.annual  && cfg.pricing.annual.price)  || "$150";
 
     content.append(
       h("div", { class: "dash-card" },
@@ -6894,37 +6895,47 @@
       )
     );
 
-    // On-site checkout: create a PayPal order for THIS server and redirect to it.
+    // On-site checkout: create a PayPal order for THIS server (monthly OR annual)
+    // and redirect to it. The price for each plan is fixed server-side — the
+    // client only sends the plan key.
     const statusBox = h("div");
-    const payLabel = (premium ? "Renew Premium" : "Subscribe to Premium") + (price ? " · " + price + "/mo" : "");
-    const payBtn = h("button", { class: "btn btn-primary", type: "button" }, payLabel);
-    payBtn.addEventListener("click", async () => {
-      payBtn.disabled = true;
-      clear(statusBox).append(notice("info", "Starting checkout…", "Taking you to PayPal — please don't close this tab."));
-      try {
-        const res = await data.subscribe(gid);
-        if (res && res.approvalUrl) { window.location.href = res.approvalUrl; return; }
-        clear(statusBox).append(notice("error", "Couldn't start checkout", "PayPal didn't return a checkout link. Please try again."));
-        payBtn.disabled = false;
-      } catch (e) {
-        const msg = (e && e.data && e.data.message) || (e && e.message) || "Please try again.";
-        if (e && e.data && e.data.error === "bot_not_in_guild") {
-          clear(statusBox).append(
-            notice("warn", "Add Arkoris first", msg),
-            h("div", { class: "dash-actions" }, btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true })));
-        } else {
-          clear(statusBox).append(notice("error", "Couldn't start checkout", msg));
+    const monthlyBtn = h("button", { class: "btn btn-primary", type: "button" },
+      (premium ? "Renew Monthly" : "Subscribe Monthly") + " · " + monthlyPrice + "/mo");
+    const annualBtn = h("button", { class: "btn btn-ghost", type: "button" },
+      "Pay Annually · " + annualPrice + "/yr (save 2 months)");
+    const payBtns = [monthlyBtn, annualBtn];
+
+    function startCheckout(planKey) {
+      return async () => {
+        payBtns.forEach((b) => { b.disabled = true; });
+        clear(statusBox).append(notice("info", "Starting checkout…", "Taking you to PayPal — please don't close this tab."));
+        try {
+          const res = await data.subscribe(gid, planKey);
+          if (res && res.approvalUrl) { window.location.href = res.approvalUrl; return; }
+          clear(statusBox).append(notice("error", "Couldn't start checkout", "PayPal didn't return a checkout link. Please try again."));
+          payBtns.forEach((b) => { b.disabled = false; });
+        } catch (e) {
+          const msg = (e && e.data && e.data.message) || (e && e.message) || "Please try again.";
+          if (e && e.data && e.data.error === "bot_not_in_guild") {
+            clear(statusBox).append(
+              notice("warn", "Add Arkoris first", msg),
+              h("div", { class: "dash-actions" }, btn("Invite Bot", { kind: "btn-primary", href: cfg.links?.inviteBot, external: true })));
+          } else {
+            clear(statusBox).append(notice("error", "Couldn't start checkout", msg));
+          }
+          payBtns.forEach((b) => { b.disabled = false; });
         }
-        payBtn.disabled = false;
-      }
-    });
+      };
+    }
+    monthlyBtn.addEventListener("click", startCheckout("monthly"));
+    annualBtn.addEventListener("click", startCheckout("annual"));
 
     content.append(
       h("div", { class: "dash-card" },
         h("h3", null, premium ? "Renew or extend Premium" : "Upgrade to Premium"),
         h("p", { style: { color: "var(--text-muted)", marginTop: "4px" } },
-          "Pay securely with PayPal — your server activates automatically the moment payment confirms (usually a few seconds)." + (price ? " Premium is " + price + "/month per server." : "")),
-        h("div", { class: "dash-actions" }, payBtn),
+          "Pay securely with PayPal — your server activates automatically the moment payment confirms (usually a few seconds). Premium is " + monthlyPrice + "/month, or " + annualPrice + "/year (save 2 months)."),
+        h("div", { class: "dash-actions" }, monthlyBtn, annualBtn),
         statusBox,
         h("p", { style: { color: "var(--text-muted)", fontSize: "12px", marginTop: "10px" } },
           "Prefer Discord? You can also run ", h("code", null, "/subscribe"), " in your server."),

@@ -108,6 +108,21 @@ window.SITE_CONFIG = {
         "Priority Support",
       ],
     },
+    annual: {
+      name: "Premium Annual",
+      price: "$150",
+      period: "/ year",
+      cadence: "365 days · save 2 months vs monthly",
+      cta: "Subscribe",
+      ctaLink: "subscribe",
+      featured: false,
+      features: [
+        "Everything in Premium Monthly",
+        "2 months free vs paying monthly",
+        "One payment covers a full year",
+        "Priority Support",
+      ],
+    },
     lifetime: {
       name: "Lifetime / Custom",
       price: "Custom",
