@@ -184,6 +184,27 @@ window.applySiteConfig = function (root) {
     for (const k of path) v = v ? v[k] : undefined;
     if (v !== undefined) el.textContent = v;
   });
+
+  // [data-list="<a.b.c>"] -> renders a string[] from SITE_CONFIG as <li> rows.
+  // Each <li> keeps a leading checkmark SVG (read from [data-list-icon] on the
+  // element, falling back to a default check). If the path is missing or not an
+  // array, the element is left untouched so any hardcoded <li> fallback shows.
+  root.querySelectorAll("[data-list]").forEach((el) => {
+    const path = el.getAttribute("data-list").split(".");
+    let v = cfg;
+    for (const k of path) v = v ? v[k] : undefined;
+    if (!Array.isArray(v)) return;
+    const icon =
+      el.getAttribute("data-list-icon") ||
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    el.innerHTML = v
+      .map(function (item) {
+        var li = document.createElement("li");
+        li.textContent = String(item);
+        return "<li>" + icon + " " + li.innerHTML + "</li>";
+      })
+      .join("");
+  });
 };
 
 document.addEventListener("DOMContentLoaded", function () {
