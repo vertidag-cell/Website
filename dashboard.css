@@ -601,7 +601,11 @@
 
 /* ---- Responsive ---- */
 @media (max-width: 760px) {
-  .dsx-ov-stats { grid-template-columns: 1fr; }
+  /* .dsx-ov-stats is a flex row (display:flex above), NOT a grid — the old
+     grid-template-columns rule here was a no-op, so the three weekly-stat
+     cards stayed cramped in one row on phones. Let them wrap 2-up / 1-up. */
+  .dsx-ov-stats { flex-wrap: wrap; }
+  .dsx-ov-stats > .dsx-ov-stat { flex: 1 1 140px; }
   .dsx-ov-actions { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1315,3 +1319,52 @@
 .dash-app .cc-hint { font-size: 0.78rem; color: var(--dsc-text-faint, #80848e); margin-top: 4px; }
 .dash-app .cc-color { width: 58px; height: 36px; padding: 2px; border-radius: 8px; border: 1px solid var(--dsc-line, rgba(255,255,255,0.12)); background: transparent; cursor: pointer; }
 .dash-app .cc-danger { color: #ff6b6b; }
+
+/* ============================================================================
+   PHONE POLISH — final, additive, phone-only block (loaded last so it wins).
+   ----------------------------------------------------------------------------
+   The dashboard was already responsive: at <= 980px the sidebar becomes a
+   slide-in drawer (styles.css), and the picker / role-menu / setup / template
+   grids all collapse to one column. This block only TIGHTENS the content for
+   narrow screens and kills two real overflow sources. Everything is scoped
+   under .dash-app and gated behind small max-widths, so the desktop and tablet
+   layouts are untouched.
+   ============================================================================ */
+@media (max-width: 600px) {
+  /* Give the panel more usable width: trim the page gutter (dashboard only). */
+  .dash-app .dash-shell .container { padding-left: 14px; padding-right: 14px; }
+
+  /* Compact the marketing hero that sits above the panel so the dashboard is
+     closer to the top on a phone. (Hero padding is set inline → needs the
+     !important to win.) */
+  .dash-app .page-hero { padding: 26px 0 14px !important; }
+  .dash-app .page-hero h1 { font-size: 1.7rem; }
+  .dash-app .page-hero .lead { font-size: 0.92rem; }
+
+  /* In-server topbar: tighter; the long server name still ellipsises. The
+     "Saved" hint is redundant on a phone (toasts already confirm a save). */
+  .dash-app .dsx-topbar { padding: 9px 12px; margin-bottom: 14px; gap: 10px; }
+  .dash-app .dsx-topbar-name { font-size: 0.92rem; }
+  .dash-app .dsx-save { display: none; }
+
+  /* Weekly stat cards: compact a touch once they wrap (see the 760px rule). */
+  .dash-app .dsx-ov-stats { gap: 10px; }
+  .dash-app .dsx-ov-stat { padding: 12px 14px; }
+  .dash-app .dsx-ov-stat-v { font-size: 1.3rem; }
+
+  /* Overview health hero */
+  .dash-app .dsx-ov-health { padding: 16px; }
+  .dash-app .dsx-ovh-name { font-size: 1.08rem; }
+
+  /* Custom-commands list used minmax(360px, 1fr): on any phone narrower than
+     360px that forced a 360px track → the card ran off-screen sideways.
+     Collapse to a single full-width column. */
+  .dash-app .cc-grid { grid-template-columns: 1fr; }
+
+  /* Anti-overflow guard: grid/flex children can blow past the screen if their
+     content has a wide min-size (long IDs, webhook URLs, invite links). Let
+     them shrink, and break long unbroken strings instead of scrolling. */
+  .dash-app .dash-content > * { min-width: 0; }
+  .dash-app .eb-editable,
+  .dash-app .pay-instructions { overflow-wrap: anywhere; }
+}
