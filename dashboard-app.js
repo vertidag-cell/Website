@@ -1422,7 +1422,7 @@
         const errs = ebValidate(eb);
         const chSel = h("select", { class: "eb-select", onchange: (ev) => { eb.channelId = ev.target.value; } },
           h("option", { value: "" }, channels.length ? "Choose a channel…" : "No sendable channels found"),
-          ...channels.map((c) => h("option", { value: c.id, selected: c.id === eb.channelId ? true : null }, `#${c.name}${c.parentName ? "  ·  " + c.parentName : ""}`)));
+          ...channels.map((c) => h("option", { value: c.id, selected: c.id === eb.channelId ? true : null }, `${c.isPost ? "🧵 " : "#"}${c.name}${c.parentName ? "  ·  " + c.parentName : ""}`)));
         return [
           field("Channel", chSel, "Only channels the bot can post in are listed."),
           errs.length ? notice("warn", `${errs.length} issue${errs.length > 1 ? "s" : ""} to fix first`, errs[0]) : notice("success", "Everything looks valid — ready to post."),
@@ -1869,7 +1869,7 @@
       const guild = state.guilds.find((g) => g.id === gid);
       const chSel = h("select", { class: "eb-select eb-post-channel" },
         h("option", { value: "" }, channels.length ? "Choose a channel…" : "No sendable channels found"),
-        ...channels.map((c) => h("option", { value: c.id, selected: c.id === eb.channelId ? true : null }, `#${c.name}${c.parentName ? "  ·  " + c.parentName : ""}`))
+        ...channels.map((c) => h("option", { value: c.id, selected: c.id === eb.channelId ? true : null }, `${c.isPost ? "🧵 " : "#"}${c.name}${c.parentName ? "  ·  " + c.parentName : ""}`))
       );
       const errLine = h("div", { class: "eb-post-err" });
       ebModal("Post embed", h("div", null,
@@ -5167,6 +5167,9 @@
       <optgroup> for clearer scanning. Channels without a parent go
       into an "Uncategorized" group at the bottom. */
   function renderChannelSelect(id, name, channels, value) {
+    // Forum POSTS (isPost) are only meaningful for the embed builder's picker;
+    // keep them out of module config pickers (welcome / logs / etc.).
+    channels = (channels || []).filter((c) => !c.isPost);
     const sel = h("select", { id, name });
     sel.appendChild(h("option", { value: "", selected: !value || null }, "— none —"));
     const byParent = new Map();
