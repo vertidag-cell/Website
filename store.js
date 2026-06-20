@@ -184,11 +184,18 @@
       '<div class="co-err" hidden></div>' +
       '<button type="button" class="btn btn-primary co-submit">Place order</button></div>';
     document.body.appendChild(ov);
-    function close() { ov.remove(); }
+    // Capture-phase so Esc closes only this dialog (returning to the cart),
+    // not the cart's own Esc handler underneath it.
+    var onKey = function (e) {
+      if (e.key === 'Escape') { e.stopImmediatePropagation(); close(); }
+      else if (e.key === 'Enter' && e.target && e.target.classList && e.target.classList.contains('co-input')) { e.preventDefault(); doSubmit(); }
+    };
+    function close() { document.removeEventListener('keydown', onKey, true); ov.remove(); }
+    document.addEventListener('keydown', onKey, true);
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
     ov.querySelector('.co-close').addEventListener('click', close);
     var errBox = ov.querySelector('.co-err');
-    ov.querySelector('.co-submit').addEventListener('click', function () {
+    function doSubmit() {
       var answers = {}; var missing = [];
       ov.querySelectorAll('.co-input').forEach(function (inp) {
         var v = inp.value.trim();
@@ -198,7 +205,8 @@
       if (missing.length) { errBox.hidden = false; errBox.textContent = 'Please fill in: ' + missing.join(', '); return; }
       close();
       submitCheckout(rail, answers);
-    });
+    }
+    ov.querySelector('.co-submit').addEventListener('click', doSubmit);
     var first = ov.querySelector('.co-input'); if (first) first.focus();
   }
   function submitCheckout(rail, customFields) {
