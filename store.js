@@ -548,6 +548,8 @@
     if (v.sort === 'price_asc') list.sort(function (a, b) { return priceKey(a) - priceKey(b); });
     else if (v.sort === 'price_desc') list.sort(function (a, b) { return priceKey(b) - priceKey(a); });
     else if (v.sort === 'name') list.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    else if (v.sort === 'sales') list.sort(function (a, b) { return (b.soldCount || 0) - (a.soldCount || 0); }); // best selling
+    else if (v.sort === 'newest') list.sort(function (a, b) { return (b.id || 0) - (a.id || 0); }); // newest first
     else list.sort(function (a, b) { return (b.featured ? 1 : 0) - (a.featured ? 1 : 0); }); // featured first
 
     if (!list.length) {
@@ -886,6 +888,8 @@
       '<input type="search" id="store-search" class="store-search" placeholder="Search products…" autocomplete="off">' +
       '<select id="store-sort" class="store-sort" aria-label="Sort products">' +
       '<option value="featured">Featured first</option>' +
+      '<option value="sales">Best selling</option>' +
+      '<option value="newest">Newest</option>' +
       '<option value="price_asc">Price: low to high</option>' +
       '<option value="price_desc">Price: high to low</option>' +
       '<option value="name">Name A–Z</option></select></div>';
