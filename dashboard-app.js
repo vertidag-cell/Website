@@ -2546,6 +2546,7 @@
       ["welcome",   "hand",     "Welcome",    "Greet new members"],
       ["roleMenus", "masks",    "Role Menus", "Dropdown / button roles"],
       ["tickets",   "ticket",   "Tickets",    "Support tickets"],
+      ["store",     "store",    "Store",      "Sell products on the web"],
       ["staffPay",  "wallet",   "Staff Pay",  "Per-role pay amounts"],
       ["events",    "calendar", "Events",     "Dino / vault credit events"],
       ["branding",  "palette",  "Branding",   "Customize embed look"],
