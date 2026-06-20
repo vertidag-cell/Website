@@ -228,11 +228,16 @@
   function renderCartPanel() {
     var body = document.getElementById('cart-body'); if (!body) return;
     var c = S.cart;
+    var hd = document.querySelector('.cart-head h2');
     if (!c || !c.items || !c.items.length) {
-      body.innerHTML = '<p class="cart-empty">Your cart is empty.</p>';
+      if (hd) hd.textContent = 'Your cart';
+      body.innerHTML = '<div class="cart-empty-state"><div class="cart-empty-ico">' + ICON.bag + '</div><p>Your cart is empty.</p><button type="button" class="btn btn-outline" id="cart-browse">Browse products</button></div>';
+      var br = body.querySelector('#cart-browse'); if (br) br.addEventListener('click', closeCart);
       return;
     }
     var ccy = c.currency || (S.store && S.store.currency) || 'GBP';
+    var count = (c.rails && c.rails.itemCount) || c.items.reduce(function (s, i) { return s + (i.quantity || 0); }, 0);
+    if (hd) hd.textContent = 'Your cart (' + count + ')';
     var html = '<ul class="cart-lines">';
     c.items.forEach(function (i) {
       var p = i.product || {};
@@ -241,13 +246,23 @@
       if (i.lineMoney != null) line += money(i.lineMoney, ccy);
       if (i.lineMoney != null && i.lineCredits != null) line += ' / ';
       if (i.lineCredits != null) line += '🪙' + fmt(i.lineCredits);
+      var unit = '';
+      if (i.quantity > 1) {
+        if (i.lineMoney != null) unit = money(i.lineMoney / i.quantity, ccy) + ' each';
+        else if (i.lineCredits != null) unit = '🪙' + fmt(Math.round(i.lineCredits / i.quantity)) + ' each';
+      }
+      var thumb = p.image_url ? '<img class="cart-thumb" src="' + esc(p.image_url) + '" alt="" data-letter="' + initial(p.name) + '">' : '<div class="cart-thumb cart-thumb-fb">' + initial(p.name || '?') + '</div>';
       var issue = i.issue ? '<span class="cart-issue">' + (i.issue === 'out_of_stock' ? 'out of stock' : 'unavailable') + '</span>' : '';
-      html += '<li class="cart-line' + (i.issue ? ' bad' : '') + '" data-pid="' + i.productId + '">' +
-        '<div class="cart-line-main"><span class="cart-line-name">' + esc(name) + '</span>' + issue + '<span class="cart-line-price">' + line + '</span></div>' +
-        '<div class="cart-qty"><button type="button" class="qbtn" data-act="dec">−</button>' +
-        '<span class="qn">' + i.quantity + '</span>' +
-        '<button type="button" class="qbtn" data-act="inc">+</button>' +
-        '<button type="button" class="qbtn rm" data-act="rm" aria-label="Remove">🗑</button></div></li>';
+      html += '<li class="cart-line' + (i.issue ? ' bad' : '') + '" data-pid="' + i.productId + '">' + thumb +
+        '<div class="cart-line-info">' +
+          '<div class="cart-line-top"><span class="cart-line-name">' + esc(name) + '</span>' + issue + '</div>' +
+          (unit ? '<div class="cart-line-unit">' + unit + '</div>' : '') +
+          '<div class="cart-qty"><button type="button" class="qbtn" data-act="dec">−</button>' +
+          '<span class="qn">' + i.quantity + '</span>' +
+          '<button type="button" class="qbtn" data-act="inc">+</button>' +
+          '<button type="button" class="qbtn rm" data-act="rm" aria-label="Remove">🗑</button></div>' +
+        '</div>' +
+        '<span class="cart-line-price">' + line + '</span></li>';
     });
     html += '</ul>';
 
@@ -288,6 +303,7 @@
     }
     html += '</div>';
     body.innerHTML = html;
+    wireImgFallbacks(body);
 
     var promoApply = body.querySelector('.cart-promo-apply'), promoInput = body.querySelector('.cart-promo-input'), promoX = body.querySelector('.cart-promo-x');
     if (promoApply) promoApply.addEventListener('click', function () { applyCoupon(promoInput.value); });
@@ -405,7 +421,8 @@
     container.querySelectorAll('img[data-letter]').forEach(function (img) {
       img.addEventListener('error', function () {
         var d = document.createElement('div');
-        d.className = img.className + (img.classList.contains('prod-img') ? ' prod-fb' : ' store-fb');
+        var fb = img.classList.contains('prod-img') ? ' prod-fb' : img.classList.contains('cart-thumb') ? ' cart-thumb-fb' : ' store-fb';
+        d.className = img.className + fb;
         d.textContent = img.getAttribute('data-letter') || '';
         if (img.parentNode) img.parentNode.replaceChild(d, img);
       });
