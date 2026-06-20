@@ -91,7 +91,7 @@
   var DEMO_CHANNELS = [{ id: "10", name: "orders" }, { id: "11", name: "staff-fulfilment" }, { id: "12", name: "general" }];
   var DEMO_PRODUCTS = [
     { id: 1, name: "VIP Rank", description: "Coloured name, /kit vip, 2 homes and queue priority.", image_url: null, category: "Ranks", price_money: 9.99, price_credits: 5000, fulfillment_type: "role", role_id: "1", stock: null, per_user_limit: 1, enabled: true, featured: true, rating: 4.7, reviewCount: 12, variants: [{ id: 11, name: "1 month", enabled: true }, { id: 12, name: "3 months", enabled: true }, { id: 13, name: "Lifetime", enabled: true }] },
-    { id: 2, name: "MVP Rank", description: "Everything in VIP plus a custom tag and monthly crate.", image_url: null, category: "Ranks", price_money: 19.99, price_credits: 12000, fulfillment_type: "role", role_id: "3", stock: null, per_user_limit: 1, enabled: true, featured: true },
+    { id: 2, name: "MVP Rank", description: "Everything in VIP plus a custom tag and monthly crate.", image_url: null, category: "Ranks", price_money: 19.99, price_credits: 12000, sale_price_money: 14.99, fulfillment_type: "role", role_id: "3", stock: null, per_user_limit: 1, enabled: true, featured: true },
     { id: 3, name: "Giga lvl 150 (imprinted)", description: "Bred, imprinted Giga delivered to your tribe.", image_url: null, category: "Dinos", price_money: null, price_credits: 8000, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", stock: 5, per_user_limit: null, enabled: true, rating: 5, reviewCount: 3 },
     { id: 4, name: "Starter Kit", description: "Metal tools, 200 element, full flak.", image_url: null, category: "Kits", price_money: 4.99, price_credits: 2500, fulfillment_type: "manual", delivery_instructions: "Hand over starter kit", stock: 0, per_user_limit: null, enabled: true },
     { id: 5, name: "Tribe Logo", description: "Custom in-server tribe banner (hidden while in design).", image_url: null, category: "Cosmetic", price_money: 6, price_credits: null, fulfillment_type: "manual", delivery_instructions: "Design + deliver banner", stock: null, per_user_limit: null, enabled: false },
@@ -465,7 +465,8 @@
   // ── PRODUCTS ───────────────────────────────────────────────────────────────
   function productCard(p, sel, move) {
     var price = el("div", { class: "pr" });
-    if (p.price_money != null) price.append(money(p.price_money, S.cfg.currency));
+    if (p.sale_price_money != null && p.price_money != null) { price.append(money(p.sale_price_money, S.cfg.currency)); price.append(el("s", { class: "alt", style: { marginLeft: "5px" } }, money(p.price_money, S.cfg.currency))); }
+    else if (p.price_money != null) price.append(money(p.price_money, S.cfg.currency));
     if (p.price_money != null && p.price_credits != null) price.append(el("span", { class: "alt" }, "  or  "));
     if (p.price_credits != null) price.append(el("span", { class: p.price_money != null ? "alt" : "" }, "🪙 " + fmt(p.price_credits)));
     var tierCount = (p.variants || []).filter(function (v) { return v.enabled !== false; }).length;
@@ -485,6 +486,7 @@
         el("div", { class: "nm" }, p.name),
         el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
           p.featured ? badge("★ Featured", "ok") : null,
+          p.sale_price_money != null ? badge("Sale", "warn") : null,
           p.reviewCount ? badge("★ " + Number(p.rating).toFixed(1) + " (" + p.reviewCount + ")", "") : null,
           badge(p.fulfillment_type === "role" ? "⚡ Instant role" : "📦 In-game", p.fulfillment_type === "role" ? "ok" : ""),
           tierCount ? badge(tierCount + " tier" + (tierCount === 1 ? "" : "s"), "info") : null,
@@ -631,6 +633,7 @@
     var cat = inp({ type: "text", value: p.category || "", maxlength: 60, placeholder: "Ranks" });
     var pm = inp({ type: "number", step: "0.01", min: "0", value: p.price_money != null ? p.price_money : "", placeholder: "0.00" });
     var pc = inp({ type: "number", step: "1", min: "0", value: p.price_credits != null ? p.price_credits : "", placeholder: "0" });
+    var salePm = inp({ type: "number", step: "0.01", min: "0", value: p.sale_price_money != null ? p.sale_price_money : "", placeholder: "e.g. 14.99" });
     var stock = inp({ type: "number", step: "1", min: "0", value: p.stock != null ? p.stock : "", placeholder: "Unlimited" });
     var lim = inp({ type: "number", step: "1", min: "0", value: p.per_user_limit != null ? p.per_user_limit : "", placeholder: "No limit" });
     var enabled = swRow("Visible in store", "Buyers can see and purchase it", existing ? p.enabled : true);
@@ -647,6 +650,7 @@
       errEl.textContent = ""; save.disabled = true;
       var b = { name: name.value.trim(), description: desc.value.trim() || null, image_url: img.value.trim() || null, category: cat.value.trim() || null,
         price_money: pm.value === "" ? null : Number(pm.value), price_credits: pc.value === "" ? null : Number(pc.value),
+        sale_price_money: salePm.value === "" ? null : Number(salePm.value),
         fulfillment_type: ft.value(), role_id: ft.value() === "role" ? (roleSel.value || null) : null,
         delivery_instructions: ft.value() === "manual" ? (instr.value.trim() || null) : null,
         stock: stock.value === "" ? null : Number(stock.value), per_user_limit: lim.value === "" ? null : Number(lim.value), enabled: enabled.input.checked, featured: featured.input.checked };
@@ -655,11 +659,13 @@
     } });
 
     var pmWrap = el("div", { class: "inp-prefix" }, el("span", null, CCY[S.cfg.currency] || ""), pm);
+    var salePmWrap = el("div", { class: "inp-prefix" }, el("span", null, CCY[S.cfg.currency] || ""), salePm);
     var body = el("div", null,
       field("Name", name), field("Description", desc),
       field("Image", img, { hint: "Paste an https image URL, or upload below" }), prev, el("div", { style: { margin: "8px 0 16px" } }, upBtn, upMsg, file),
       field("Category (optional)", cat),
       el("div", { class: "grid2" }, field("Price — money", pmWrap, { hint: "Blank = not sold for money" }), field("Price — credits", pc, { hint: "Blank = not sold for credits" })),
+      field("Sale price — money (optional)", salePmWrap, { hint: "Shown as a markdown under the money price; must be below it." }),
       el("div", { class: "field" }, el("span", { class: "lab" }, "Tiers / variants (optional)"),
         existing ? variantManager(existing) : el("p", { class: "hint", style: { margin: 0 } }, "Save this product first, then reopen it to add tiers like 1 month / 3 months / lifetime.")),
       el("div", { class: "field" }, el("span", { class: "lab" }, "Delivery"), ft.node), roleWrap, manWrap,

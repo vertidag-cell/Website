@@ -411,7 +411,8 @@
       return '';
     }
     var price = '';
-    if (p.price_money != null) price += '<span class="prod-money">' + money(p.price_money, s.currency) + '</span>';
+    if (p.sale_price_money != null && p.price_money != null) price += '<span class="prod-money">' + money(p.sale_price_money, s.currency) + '</span><s class="prod-was">' + money(p.price_money, s.currency) + '</s>';
+    else if (p.price_money != null) price += '<span class="prod-money">' + money(p.price_money, s.currency) + '</span>';
     if (p.price_money != null && p.price_credits != null) price += '<span class="prod-or">or</span>';
     if (p.price_credits != null) price += '<span class="prod-credits">🪙 ' + fmt(p.price_credits) + '</span>';
     return price;
@@ -423,6 +424,7 @@
     var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + initial(p.name) + '</div>';
     var badges = '';
     if (S.cart && S.cart.items && S.cart.items.some(function (it) { return it.productId === p.id; })) badges += '<span class="prod-badge incart">✓ In cart</span>';
+    if (p.sale_price_money != null) badges += '<span class="prod-badge sale">Sale</span>';
     if (p.featured) badges += '<span class="prod-badge feat">★ Featured</span>';
     badges += p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
     if (!p.inStock && !hasVariants(p)) badges += '<span class="prod-badge oos">Out of stock</span>';
@@ -584,10 +586,13 @@
 
     var selected = null, qty = 1;
     function priceForVariant(v) {
-      var m = v && v.price_money != null ? v.price_money : p.price_money;
+      var m, was = null;
+      if (v && v.price_money != null) m = v.price_money;
+      else if (!v && p.sale_price_money != null) { m = p.sale_price_money; was = p.price_money; }
+      else m = p.price_money;
       var c = v && v.price_credits != null ? v.price_credits : p.price_credits;
       var out = '';
-      if (m != null) out += '<span class="prod-money">' + money(m, ccy) + '</span>';
+      if (m != null) out += '<span class="prod-money">' + money(m, ccy) + '</span>' + (was != null ? '<s class="prod-was">' + money(was, ccy) + '</s>' : '');
       if (m != null && c != null) out += '<span class="prod-or">or</span>';
       if (c != null) out += '<span class="prod-credits">🪙 ' + fmt(c) + '</span>';
       return out;
