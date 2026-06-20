@@ -569,41 +569,49 @@
     var wrap = panel(panelHead("Orders"));
     c.append(wrap);
     var chips = el("div", { class: "chips" });
+    var search = inp({ type: "search", placeholder: "Search by order # or buyer…", style: { margin: "12px 0 4px" } });
     var listBox = el("div");
-    wrap.append(chips, listBox);
-    var current = "all";
+    wrap.append(chips, search, listBox);
+    var current = "all", loaded = [];
+    search.addEventListener("input", renderRows);
+    function orderRow(o) {
+      var total = o.rail === "credits" ? "🪙 " + fmt(o.total_credits) : money(o.total_money, o.currency);
+      var rowTop = el("div", { class: "row", style: { flexDirection: "column", alignItems: "stretch", gap: "8px" } });
+      rowTop.append(el("div", { style: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" } },
+        el("b", null, "#" + o.id), el("a", { href: "https://discord.com/users/" + o.buyer_user_id, target: "_blank", rel: "noopener", class: "muted" }, "@" + (o.buyer_username || o.buyer_user_id)),
+        o.coupon_code ? badge("🎟️ " + o.coupon_code, "info") : null,
+        el("span", { style: { marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" } }, orderBadge(o.status), el("b", null, total))));
+      (o.items || []).forEach(function (i) {
+        var tick = i.fulfillment_status === "delivered" ? "✅" : i.fulfillment_status === "granted" ? "⚡" : "⏳";
+        var ln = el("div", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13.5px" } },
+          el("span", { class: "muted", style: { flex: 1 } }, tick + " " + i.quantity + "× " + i.name + (i.fulfillment_type === "manual" && i.delivery_instructions ? " — " + i.delivery_instructions : "")));
+        if (i.fulfillment_type === "manual" && i.fulfillment_status === "pending") {
+          ln.append(btn("Deliver", { style: { padding: "4px 12px", fontSize: "12px" }, onClick: function (e) { var b = e.currentTarget; b.disabled = true; api(A("/store/orders/" + o.id + "/items/" + i.id + "/deliver"), { method: "POST" }).then(function (rr) { if (rr.ok) { toast("Delivered"); refreshOverview().then(function () { load(current); }); } else { toast("Failed", "err"); b.disabled = false; } }); } }));
+        }
+        rowTop.append(ln);
+      });
+      if (o.status !== "refunded" && o.status !== "cancelled") {
+        rowTop.append(el("div", null, btn("Refund", { variant: "btn-ghost", style: { padding: "4px 12px", fontSize: "12px" }, onClick: function () { if (!confirm("Refund order #" + o.id + "? Granted roles are revoked; credits are re-credited. Money refunds happen in your PayPal/Stripe dashboard.")) return; api(A("/store/orders/" + o.id + "/refund"), { method: "POST" }).then(function (rr) { toast(rr.ok ? ((rr.body && rr.body.moneyRefundNote) || "Refunded") : "Failed", rr.ok ? "" : "err"); refreshOverview().then(function () { load(current); }); }); } })));
+      }
+      return rowTop;
+    }
+    function renderRows() {
+      clear(listBox);
+      var q = search.value.trim().toLowerCase().replace(/^#/, "");
+      var orders = q ? loaded.filter(function (o) { return String(o.id).indexOf(q) >= 0 || (o.buyer_username || "").toLowerCase().indexOf(q) >= 0; }) : loaded;
+      if (!orders.length) {
+        listBox.append(emptyState("orders", q ? "No matching orders" : "No orders here", q ? "Try a different order number or buyer name." : (current === "all" ? "Orders appear here as customers buy from your store." : "No orders with this status right now."), null, true));
+        return;
+      }
+      orders.forEach(function (o) { listBox.append(orderRow(o)); });
+    }
     function load(f) {
       current = f; clear(chips);
       [["all", "All"], ["needs_delivery", "Needs delivery"], ["completed", "Completed"], ["refunded", "Refunded"]].forEach(function (x) {
         var ch = el("button", { class: "chip" + (x[0] === current ? " on" : "") }, x[1]); ch.addEventListener("click", function () { load(x[0]); }); chips.append(ch);
       });
       clear(listBox); listBox.append(el("div", { class: "sk", style: { height: "70px", marginBottom: "9px" } }), el("div", { class: "sk", style: { height: "70px" } }));
-      api(A("/store/orders" + (f === "all" ? "" : "?status=" + f))).then(function (r) {
-        clear(listBox);
-        var orders = (r.body && r.body.orders) || [];
-        if (!orders.length) { listBox.append(emptyState("orders", "No orders here", f === "all" ? "Orders appear here as customers buy from your store." : "No orders with this status right now.")); return; }
-        orders.forEach(function (o) {
-          var total = o.rail === "credits" ? "🪙 " + fmt(o.total_credits) : money(o.total_money, o.currency);
-          var rowTop = el("div", { class: "row", style: { flexDirection: "column", alignItems: "stretch", gap: "8px" } });
-          rowTop.append(el("div", { style: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" } },
-            el("b", null, "#" + o.id), el("a", { href: "https://discord.com/users/" + o.buyer_user_id, target: "_blank", rel: "noopener", class: "muted" }, "@" + (o.buyer_username || o.buyer_user_id)),
-            o.coupon_code ? badge("🎟️ " + o.coupon_code, "info") : null,
-            el("span", { style: { marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" } }, orderBadge(o.status), el("b", null, total))));
-          (o.items || []).forEach(function (i) {
-            var tick = i.fulfillment_status === "delivered" ? "✅" : i.fulfillment_status === "granted" ? "⚡" : "⏳";
-            var ln = el("div", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13.5px" } },
-              el("span", { class: "muted", style: { flex: 1 } }, tick + " " + i.quantity + "× " + i.name + (i.fulfillment_type === "manual" && i.delivery_instructions ? " — " + i.delivery_instructions : "")));
-            if (i.fulfillment_type === "manual" && i.fulfillment_status === "pending") {
-              ln.append(btn("Deliver", { style: { padding: "4px 12px", fontSize: "12px" }, onClick: function (e) { var b = e.target; b.disabled = true; api(A("/store/orders/" + o.id + "/items/" + i.id + "/deliver"), { method: "POST" }).then(function (rr) { if (rr.ok) { toast("Delivered"); refreshOverview().then(function () { load(current); }); } else { toast("Failed", "err"); b.disabled = false; } }); } }));
-            }
-            rowTop.append(ln);
-          });
-          if (o.status !== "refunded" && o.status !== "cancelled") {
-            rowTop.append(el("div", null, btn("Refund", { variant: "btn-ghost", style: { padding: "4px 12px", fontSize: "12px" }, onClick: function () { if (!confirm("Refund order #" + o.id + "? Granted roles are revoked; credits are re-credited. Money refunds happen in your PayPal/Stripe dashboard.")) return; api(A("/store/orders/" + o.id + "/refund"), { method: "POST" }).then(function (rr) { toast(rr.ok ? ((rr.body && rr.body.moneyRefundNote) || "Refunded") : "Failed", rr.ok ? "" : "err"); refreshOverview().then(function () { load(current); }); }); } })));
-          }
-          listBox.append(rowTop);
-        });
-      });
+      api(A("/store/orders" + (f === "all" ? "" : "?status=" + f))).then(function (r) { loaded = (r.body && r.body.orders) || []; renderRows(); });
     }
     load("all");
   }
