@@ -133,7 +133,7 @@
       if (params.get("new") === "1") return { config: Object.assign({}, DEMO_CFG, { title: "My New Store", enabled: false }), recentOrders: [], series: [], topProducts: [], stats: { revenueMoney: 0, revenueCredits: 0, paidOrders: 0, needsDelivery: 0, products: 0, enabledProducts: 0, activeCoupons: 0 } };
       var ser = DEMO_SERIES;
       if (/days=30/.test(path)) { ser = []; for (var di = 0; di < 30; di++) { var b = DEMO_SERIES[di % DEMO_SERIES.length]; ser.push({ date: "d" + di, money: b.money, credits: b.credits, orders: b.orders }); } }
-      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: ser, topProducts: DEMO_TOP, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 } };
+      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: ser, topProducts: DEMO_TOP, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 }, inventory: { outOfStock: [{ id: 4, name: "Starter Kit" }], lowStock: [{ id: 3, name: "Giga lvl 150 (imprinted)", stock: 5 }] } };
     }
     if (/\/variants/.test(path)) return { variants: DEMO_VARIANTS };
     if (/\/store\/products/.test(path)) return { products: DEMO_PRODUCTS };
@@ -248,14 +248,14 @@
     if (ov.status === 403 && ov.body && ov.body.error === "premium_required") { return fullState("lock", "Premium required", "The web store is a Premium feature. Unlock it with /subscribe in Discord.", btn("See Premium", { onClick: function () { location.href = "pricing.html"; } })); }
     if (ov.status === 401 || ov.status === 403) { return fullState("lock", "No access", "You don't manage this server, or your session expired.", btn("Back to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); }
     if (!ov.ok) { return fullState("store", "Couldn't load the store", "Please try again in a moment.", btn("Retry", { onClick: function () { location.reload(); } })); }
-    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || []; S.series = ov.body.series || []; S.top = ov.body.topProducts || [];
+    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || []; S.series = ov.body.series || []; S.top = ov.body.topProducts || []; S.inventory = ov.body.inventory || { outOfStock: [], lowStock: [] };
     S.products = (res[1].body && res[1].body.products) || [];
     S.roles = (res[2].body && res[2].body.roles) || [];
     S.channels = (res[3].body && res[3].body.channels) || [];
     render();
   }).catch(function (e) { if (e !== "redirect") fullState("store", "Couldn't reach the backend", "Please try again shortly.", btn("Retry", { onClick: function () { location.reload(); } })); });
 
-  function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; } }); }
+  function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; S.inventory = r.body.inventory || { outOfStock: [], lowStock: [] }; } }); }
   function refreshProducts() { return api(A("/store/products")).then(function (r) { S.products = (r.body && r.body.products) || []; }); }
 
   // ── shell render ──────────────────────────────────────────────────────────
@@ -377,6 +377,28 @@
           el("div", { class: "t" }, s.needsDelivery === 1 ? "1 order is waiting on you" : s.needsDelivery + " orders are waiting on you"),
           el("div", { class: "d" }, "Customers have paid for in-game items that need hand delivery.")),
         btn("Deliver now", { onClick: function () { S.section = "orders"; render(); } }))));
+    }
+
+    // inventory attention — out-of-stock / low-stock products to restock
+    var inv = S.inventory || { outOfStock: [], lowStock: [] };
+    if ((inv.outOfStock && inv.outOfStock.length) || (inv.lowStock && inv.lowStock.length)) {
+      function invChip(item, kind) {
+        var label = kind === "out" ? item.name : item.name + " · " + item.stock + " left";
+        var b = el("button", { class: "inv-chip " + kind, type: "button", title: "Restock " + item.name }, label);
+        b.addEventListener("click", function () { S.pfilter = (item.name || "").split(" — ")[0]; S.section = "products"; render(); });
+        return b;
+      }
+      function invGroup(title, cls, items, kind) {
+        var chips = el("div", { class: "inv-chips" });
+        items.forEach(function (it) { chips.append(invChip(it, kind)); });
+        return el("div", { class: "inv-group" }, el("span", { class: "inv-h " + cls }, title + " (" + items.length + ")"), chips);
+      }
+      var invBox = el("div", { class: "inv-wrap" });
+      if (inv.outOfStock.length) invBox.append(invGroup("Out of stock", "out", inv.outOfStock, "out"));
+      if (inv.lowStock.length) invBox.append(invGroup("Low stock", "low", inv.lowStock, "low"));
+      c.append(reveal(panel(panelHead("Needs attention · inventory"),
+        el("p", { class: "panel-sub" }, "Restock these so customers can keep buying — click one to jump to it."),
+        invBox)));
     }
 
     // hero revenue + chart, alongside a 2×2 stat grid
@@ -546,14 +568,15 @@
       if (!list.length) { grid.append(emptyState("products", "No matches", "No products match your search — try a different term.", null, true)); return; }
       list.forEach(function (p) { grid.append(productCard(p, sel, q ? null : move)); });
     }
+    var initialQ = S.pfilter || ""; S.pfilter = null; // deep-link from "Needs attention"
     var searchEl = null;
     if (S.products.length > 3) {
-      searchEl = inp({ type: "search", placeholder: "Search products by name or category…", style: { marginBottom: "14px" } });
+      searchEl = inp({ type: "search", value: initialQ, placeholder: "Search products by name or category…", style: { marginBottom: "14px" } });
       searchEl.addEventListener("input", function () { renderGrid(searchEl.value); });
       c.append(searchEl);
     }
     c.append(bar, grid);
-    renderGrid("");
+    renderGrid(initialQ);
   }
   function delProduct(p) {
     if (!confirm('Delete "' + p.name + '"? This hides it from the store.')) return;
