@@ -7215,6 +7215,28 @@
       const img = inputEl({ type: "url", value: p.image_url || "", placeholder: "https://…/image.png" });
       const preview = h("img", { src: p.image_url || "", alt: "", style: { maxWidth: "80px", maxHeight: "56px", borderRadius: "8px", marginTop: "6px", display: p.image_url ? "block" : "none", objectFit: "cover" } });
       img.addEventListener("input", () => { if (/^https:\/\/\S+\.(png|jpe?g|webp|gif)/i.test(img.value)) { preview.src = img.value; preview.style.display = "block"; } else preview.style.display = "none"; });
+      // Optional image upload (Cloudflare R2 via /api/store-upload). Falls back to
+      // URL-only when uploads aren't configured on the Pages project.
+      const fileInput = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp,image/gif", style: { display: "none" } });
+      const upBtn = h("button", { type: "button", class: "btn btn-ghost", style: { fontSize: "13px", padding: "5px 12px" } }, "⬆ Upload image");
+      const upMsg = h("span", { class: "dsx-muted", style: { fontSize: "12px", marginLeft: "8px" } });
+      upBtn.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", async () => {
+        const f = fileInput.files && fileInput.files[0];
+        if (!f) return;
+        if (f.size > 5 * 1024 * 1024) { upMsg.textContent = "Max 5 MB."; return; }
+        upBtn.disabled = true; upMsg.textContent = "Uploading…";
+        try {
+          const res = await fetch("/api/store-upload", { method: "POST", credentials: "include", headers: { "content-type": f.type }, body: f });
+          const body = await res.json().catch(() => null);
+          if (res.status === 501) upMsg.textContent = "Uploads aren't set up — paste a URL instead.";
+          else if (res.status === 401) upMsg.textContent = "Re-login to upload.";
+          else if (!res.ok || !body || !body.url) upMsg.textContent = (body && body.detail) || "Upload failed.";
+          else { img.value = body.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; }
+        } catch { upMsg.textContent = "Upload failed."; }
+        finally { upBtn.disabled = false; fileInput.value = ""; }
+      });
+      const uploadRow = h("div", { style: { margin: "2px 0 10px" } }, upBtn, upMsg, fileInput);
       const cat = inputEl({ type: "text", value: p.category || "", maxlength: 60, placeholder: "Category (optional)" });
       const money = inputEl({ type: "number", step: "0.01", min: "0", value: p.price_money != null ? p.price_money : "", placeholder: "—", style: { width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)" } });
       const creds = inputEl({ type: "number", step: "1", min: "0", value: p.price_credits != null ? p.price_credits : "", placeholder: "—", style: { width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)" } });
@@ -7259,7 +7281,7 @@
 
       const form = h("div", { class: "dsx-card", style: { background: "var(--card)", marginTop: "10px" } },
         labeled("Name", name), labeled("Description", desc),
-        labeled("Image URL", img, "https image, optional"), preview, labeled("Category", cat),
+        labeled("Image URL", img, "https image, or upload below"), preview, uploadRow, labeled("Category", cat),
         h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" } },
           labeled("Price — money", money), labeled("Price — credits", creds)),
         h("div", { style: { margin: "6px 0 10px" } },
