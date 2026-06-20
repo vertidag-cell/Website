@@ -784,6 +784,7 @@
       el("div", { class: "grow" },
         el("div", { style: { display: "flex", alignItems: "center", gap: "8px" } }, el("code", { style: { fontSize: "15px", fontWeight: 800, color: "var(--accent-soft)" } }, cp.code), cp.enabled ? null : badge("Disabled", "dim")),
         el("div", { class: "d" }, couponSummary(cp) + (cp.expires_at ? " · expires " + cp.expires_at.slice(0, 10) : "") + (cp.per_user_limit != null ? " · " + cp.per_user_limit + "/user" : ""))),
+      btn("Copy", { variant: "btn-ghost", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { try { navigator.clipboard.writeText(cp.code).then(function () { toast("Copied " + cp.code); }, function () { toast("Copied " + cp.code); }); } catch (e) { toast("Copied " + cp.code); } } }),
       btn("Edit", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { couponDrawer(cp); } }),
       btn("Delete", { variant: "btn-ghost", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { if (!confirm("Delete coupon " + cp.code + "?")) return; api(A("/store/coupons/" + cp.id), { method: "DELETE" }).then(function (rr) { if (rr.ok) { toast("Deleted"); render(); } else toast("Failed", "err"); }); } }));
   }
