@@ -649,6 +649,10 @@
       if (rb) rb.innerHTML = rv.summary.reviewCount
         ? starDisplay(rv.summary.rating) + '<span class="prod-rating-n">' + Number(rv.summary.rating).toFixed(1) + ' · ' + rv.summary.reviewCount + ' review' + (rv.summary.reviewCount === 1 ? '' : 's') + '</span>'
         : '<span class="pm-norate">No reviews yet</span>';
+      if (rb && rv.summary.reviewCount) {
+        rb.classList.add('pm-rating-link'); rb.setAttribute('title', 'See reviews');
+        rb.addEventListener('click', function () { var rr = document.getElementById('pm-reviews'); if (rr) rr.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      }
       var sortable = rv.reviews.length > 2;
       box.innerHTML = '<div class="pm-rev-head"><h3 class="pm-rev-title">Reviews</h3>' +
         (sortable ? '<select id="pm-rev-sort" class="pm-rev-sort" aria-label="Sort reviews"><option value="recent">Most recent</option><option value="high">Highest rated</option><option value="low">Lowest rated</option></select>' : '') +
