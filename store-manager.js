@@ -425,7 +425,8 @@
       btn("Add product", { icon: "plus", onClick: function () { S.section = "products"; render(); productDrawer(null); } }),
       btn("New coupon", { variant: "btn-outline", onClick: function () { S.section = "coupons"; render(); couponDrawer(null); } }),
       btn("Edit store settings", { variant: "btn-outline", icon: "settings", onClick: function () { S.section = "settings"; render(); } }),
-      btn("View public store", { variant: "btn-ghost", icon: "ext", onClick: function () { window.open(location.origin + "/store.html?guild=" + gid, "_blank"); } })))));
+      btn("View public store", { variant: "btn-ghost", icon: "ext", onClick: function () { window.open(location.origin + "/store.html?guild=" + gid, "_blank"); } }),
+      btn("Copy store link", { variant: "btn-ghost", onClick: function () { var u = location.origin + "/store.html?guild=" + gid; try { navigator.clipboard.writeText(u).then(function () { toast("Store link copied"); }, function () { toast("Store link copied"); }); } catch (e) { toast("Store link copied"); } } })))));
 
     // bottom: top products + recent orders
     var top = panel(panelHead("Top sellers"));
