@@ -90,9 +90,9 @@
   var DEMO_ROLES = [{ id: "1", name: "VIP" }, { id: "2", name: "Supporter" }, { id: "3", name: "MVP" }, { id: "4", name: "Founder" }];
   var DEMO_CHANNELS = [{ id: "10", name: "orders" }, { id: "11", name: "staff-fulfilment" }, { id: "12", name: "general" }];
   var DEMO_PRODUCTS = [
-    { id: 1, name: "VIP Rank", description: "Coloured name, /kit vip, 2 homes and queue priority.", image_url: null, category: "Ranks", price_money: 9.99, price_credits: 5000, fulfillment_type: "role", role_id: "1", stock: null, per_user_limit: 1, enabled: true, featured: true, rating: 4.7, reviewCount: 12, variants: [{ id: 11, name: "1 month", enabled: true }, { id: 12, name: "3 months", enabled: true }, { id: 13, name: "Lifetime", enabled: true }] },
-    { id: 2, name: "MVP Rank", description: "Everything in VIP plus a custom tag and monthly crate.", image_url: null, category: "Ranks", price_money: 19.99, price_credits: 12000, sale_price_money: 14.99, fulfillment_type: "role", role_id: "3", stock: null, per_user_limit: 1, enabled: true, featured: true },
-    { id: 3, name: "Giga lvl 150 (imprinted)", description: "Bred, imprinted Giga delivered to your tribe.", image_url: null, category: "Dinos", price_money: null, price_credits: 8000, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", stock: 5, per_user_limit: null, enabled: true, rating: 5, reviewCount: 3 },
+    { id: 1, name: "VIP Rank", description: "Coloured name, /kit vip, 2 homes and queue priority.", image_url: null, category: "Ranks", price_money: 9.99, price_credits: 5000, fulfillment_type: "role", role_id: "1", stock: null, per_user_limit: 1, enabled: true, featured: true, rating: 4.7, reviewCount: 12, soldCount: 142, variants: [{ id: 11, name: "1 month", enabled: true }, { id: 12, name: "3 months", enabled: true }, { id: 13, name: "Lifetime", enabled: true }] },
+    { id: 2, name: "MVP Rank", description: "Everything in VIP plus a custom tag and monthly crate.", image_url: null, category: "Ranks", price_money: 19.99, price_credits: 12000, sale_price_money: 14.99, fulfillment_type: "role", role_id: "3", stock: null, per_user_limit: 1, enabled: true, featured: true, soldCount: 58 },
+    { id: 3, name: "Giga lvl 150 (imprinted)", description: "Bred, imprinted Giga delivered to your tribe.", image_url: null, category: "Dinos", price_money: null, price_credits: 8000, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", stock: 5, per_user_limit: null, enabled: true, rating: 5, reviewCount: 3, soldCount: 21 },
     { id: 4, name: "Starter Kit", description: "Metal tools, 200 element, full flak.", image_url: null, category: "Kits", price_money: 4.99, price_credits: 2500, fulfillment_type: "manual", delivery_instructions: "Hand over starter kit", stock: 0, per_user_limit: null, enabled: true },
     { id: 5, name: "Tribe Logo", description: "Custom in-server tribe banner (hidden while in design).", image_url: null, category: "Cosmetic", price_money: 6, price_credits: null, fulfillment_type: "manual", delivery_instructions: "Design + deliver banner", stock: null, per_user_limit: null, enabled: false },
   ];
@@ -488,6 +488,7 @@
           p.featured ? badge("★ Featured", "ok") : null,
           p.sale_price_money != null ? badge("Sale", "warn") : null,
           p.reviewCount ? badge("★ " + Number(p.rating).toFixed(1) + " (" + p.reviewCount + ")", "") : null,
+          p.soldCount ? badge("🔥 " + fmt(p.soldCount) + " sold", "info") : null,
           badge(p.fulfillment_type === "role" ? "⚡ Instant role" : "📦 In-game", p.fulfillment_type === "role" ? "ok" : ""),
           tierCount ? badge(tierCount + " tier" + (tierCount === 1 ? "" : "s"), "info") : null,
           p.stock != null ? badge(p.stock > 0 ? p.stock + " left" : "Out of stock", p.stock > 0 ? "dim" : "warn") : null,
