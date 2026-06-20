@@ -1,15 +1,19 @@
-// Dedicated Store Manager — a full-page store admin (Settings · Products ·
-// Orders · Payments) for one guild (?guild=<id>). Reuses the same admin store
-// API as the dashboard (requireGuild-gated) and the first-party session cookie.
-// CSP-safe: DOM built via el() with addEventListener (no inline handlers).
+// Store Manager — a focused admin app for one guild's web store (?guild=<id>).
+// Sidebar shell + a small component system (fields, switches, segmented controls,
+// stat tiles, badges, a right slide-over for editing, teaching empty states).
+// Reuses the admin store API + the first-party session cookie. CSP-safe: DOM is
+// built with el() + addEventListener (no inline handlers).
 (function () {
-  var cfgSite = window.SITE_CONFIG || {};
   var root = document.getElementById("sm-root");
   var params = new URLSearchParams(location.search);
   var gid = (params.get("guild") || params.get("g") || "").trim();
   var CCY = { GBP: "£", USD: "$", EUR: "€" };
+  // Demo mode (?demo=1): render the whole manager with sample data, no backend.
+  // Lets owners preview the admin and serves as a visual reference. Writes no-op.
+  var DEMO = params.get("demo") === "1";
+  if (DEMO && !gid) gid = "000000000000000000";
 
-  // ---- DOM helper ----
+  // ── el() hyperscript ──────────────────────────────────────────────────────
   function el(tag, attrs) {
     var e = document.createElement(tag), i, k, v;
     if (attrs) for (k in attrs) {
@@ -35,7 +39,29 @@
   function fmt(n) { return (Number(n) || 0).toLocaleString(); }
   function initial(s) { return (String(s || "?").trim().charAt(0) || "?").toUpperCase(); }
 
-  // ---- API ----
+  // ── icons ─────────────────────────────────────────────────────────────────
+  var IP = {
+    overview: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
+    products: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 7 12 12l8.73-5M12 22V12",
+    orders: "M5 2v20l2.5-1.6L10 22l2-1.6L14 22l2.5-1.6L19 22V2l-2.5 1.6L14 2l-2 1.6L10 2 7.5 3.6zM9 8h6M9 12h6M9 16h4",
+    coupons: "M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4a2 2 0 0 0 0 4v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4a2 2 0 0 0 0-4zM14 5v2M14 11v2M14 17v2",
+    settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1.1V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z",
+    payments: "M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 10h20M6 15h4",
+    store: "M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0",
+    plus: "M12 5v14M5 12h14", ext: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3",
+    coin: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9.5 9a2.5 2.5 0 0 1 5 0M9.5 9v6M14.5 12H9.5", truck: "M1 3h15v13H1zM16 8h4l3 3v5h-7M5.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM18.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z",
+    chart: "M3 3v18h18M7 14l3-3 3 3 5-6", lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
+  };
+  function icon(name) {
+    var ns = "http://www.w3.org/2000/svg";
+    var s = document.createElementNS(ns, "svg");
+    s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("fill", "none"); s.setAttribute("stroke", "currentColor");
+    s.setAttribute("stroke-width", "1.8"); s.setAttribute("stroke-linecap", "round"); s.setAttribute("stroke-linejoin", "round");
+    var p = document.createElementNS(ns, "path"); p.setAttribute("d", IP[name] || IP.store); s.appendChild(p);
+    return s;
+  }
+
+  // ── API ─────────────────────────────────────────────────────────────────────
   var _csrf = "";
   function getCsrf() {
     if (_csrf) return Promise.resolve(_csrf);
@@ -44,10 +70,11 @@
   }
   function api(path, opts) {
     opts = opts || {};
+    if (DEMO) return Promise.resolve({ ok: true, status: 200, body: demoResp(path, opts) });
     var method = (opts.method || "GET").toUpperCase();
     var headers = { Accept: "application/json" };
     if (opts.body) headers["Content-Type"] = "application/json";
-    var pre = (method === "GET") ? Promise.resolve("") : getCsrf();
+    var pre = method === "GET" ? Promise.resolve("") : getCsrf();
     return pre.then(function (tok) {
       if (tok) headers["X-Arkoris-CSRF"] = tok;
       return fetch(path, { method: method, credentials: "include", headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
@@ -58,428 +85,475 @@
       });
     });
   }
+  // Sample data for ?demo=1 preview mode.
+  var DEMO_ROLES = [{ id: "1", name: "VIP" }, { id: "2", name: "Supporter" }, { id: "3", name: "MVP" }, { id: "4", name: "Founder" }];
+  var DEMO_CHANNELS = [{ id: "10", name: "orders" }, { id: "11", name: "staff-fulfilment" }, { id: "12", name: "general" }];
+  var DEMO_PRODUCTS = [
+    { id: 1, name: "VIP Rank", description: "Coloured name, /kit vip, 2 homes and queue priority.", image_url: null, category: "Ranks", price_money: 9.99, price_credits: 5000, fulfillment_type: "role", role_id: "1", stock: null, per_user_limit: 1, enabled: true },
+    { id: 2, name: "MVP Rank", description: "Everything in VIP plus a custom tag and monthly crate.", image_url: null, category: "Ranks", price_money: 19.99, price_credits: 12000, fulfillment_type: "role", role_id: "3", stock: null, per_user_limit: 1, enabled: true },
+    { id: 3, name: "Giga lvl 150 (imprinted)", description: "Bred, imprinted Giga delivered to your tribe.", image_url: null, category: "Dinos", price_money: null, price_credits: 8000, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", stock: 5, per_user_limit: null, enabled: true },
+    { id: 4, name: "Starter Kit", description: "Metal tools, 200 element, full flak.", image_url: null, category: "Kits", price_money: 4.99, price_credits: 2500, fulfillment_type: "manual", delivery_instructions: "Hand over starter kit", stock: 0, per_user_limit: null, enabled: true },
+    { id: 5, name: "Tribe Logo", description: "Custom in-server tribe banner (hidden while in design).", image_url: null, category: "Cosmetic", price_money: 6, price_credits: null, fulfillment_type: "manual", delivery_instructions: "Design + deliver banner", stock: null, per_user_limit: null, enabled: false },
+  ];
+  var DEMO_ORDERS = [
+    { id: 312, buyer_user_id: "111", buyer_username: "ApexHunter", rail: "money", total_money: 9.99, currency: "GBP", total_credits: null, status: "completed", coupon_code: null, created_at: "2026-06-19 14:02:00", items: [{ id: 1, name: "VIP Rank", quantity: 1, fulfillment_type: "role", fulfillment_status: "granted" }] },
+    { id: 311, buyer_user_id: "112", buyer_username: "RexQueen", rail: "credits", total_credits: 8000, status: "needs_delivery", coupon_code: "SUMMER20", created_at: "2026-06-19 12:40:00", items: [{ id: 2, name: "Giga lvl 150 (imprinted)", quantity: 1, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", fulfillment_status: "pending" }] },
+    { id: 310, buyer_user_id: "113", buyer_username: "MeshGod", rail: "money", total_money: 19.99, currency: "GBP", status: "paid", coupon_code: null, created_at: "2026-06-18 22:10:00", items: [{ id: 3, name: "MVP Rank", quantity: 1, fulfillment_type: "role", fulfillment_status: "granted" }] },
+  ];
+  var DEMO_COUPONS = [
+    { id: 1, code: "SUMMER20", description: "Summer sale", discount_type: "percent", percent_off: 20, amount_off_money: null, amount_off_credits: null, min_subtotal_money: null, min_subtotal_credits: null, max_redemptions: 100, per_user_limit: 1, redeemed_count: 37, starts_at: null, expires_at: "2026-08-31 23:59:59", enabled: true },
+    { id: 2, code: "WELCOME5", description: "£5 off first order", discount_type: "fixed", percent_off: null, amount_off_money: 5, amount_off_credits: null, min_subtotal_money: 10, min_subtotal_credits: null, max_redemptions: null, per_user_limit: 1, redeemed_count: 12, starts_at: null, expires_at: null, enabled: true },
+  ];
+  var DEMO_CFG = { guild_id: gid, enabled: true, title: "Velated PVP Store", description: "Donor ranks, kits and in-game items for the cluster.", currency: "GBP", accept_money: true, accept_credits: true, orders_channel_id: "10", staff_role_ids: ["4"], banner_url: null };
+  function demoResp(path, opts) {
+    if (opts && opts.method && opts.method !== "GET") return { ok: true };
+    if (/\/me$/.test(path)) return { user: { id: "0", username: "previewowner", globalName: "Preview Owner" } };
+    if (/\/store\/overview/.test(path)) return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 } };
+    if (/\/store\/products/.test(path)) return { products: DEMO_PRODUCTS };
+    if (/\/store\/coupons/.test(path)) return { coupons: DEMO_COUPONS };
+    if (/\/store\/orders/.test(path)) { var st = (path.match(/status=(\w+)/) || [])[1]; return { orders: st ? DEMO_ORDERS.filter(function (o) { return o.status === st; }) : DEMO_ORDERS }; }
+    if (/\/discord\/roles/.test(path)) return { roles: DEMO_ROLES };
+    if (/\/discord\/channels/.test(path)) return { channels: DEMO_CHANNELS };
+    return {};
+  }
+
+  function A(path) { return "/api/dashboard/guilds/" + gid + path; }
   function loginBounce() { try { sessionStorage.setItem("storeReturn", location.href); } catch (e) {} location.href = "/auth/discord/login"; }
 
+  // ── toasts ──────────────────────────────────────────────────────────────────
   function toast(msg, kind) {
-    var t = el("div", { class: "sm-toast" + (kind === "err" ? " err" : "") }); t.textContent = msg;
+    var t = el("div", { class: "toast" + (kind === "err" ? " err" : "") }, el("span", { class: "dot" }), msg);
     document.body.appendChild(t); setTimeout(function () { t.classList.add("in"); }, 10);
-    setTimeout(function () { t.classList.remove("in"); setTimeout(function () { t.remove(); }, 250); }, 2600);
+    setTimeout(function () { t.classList.remove("in"); setTimeout(function () { t.remove(); }, 250); }, 2700);
   }
-  function stateMsg(title, body, link) {
+  function fullState(iconName, title, body, action) {
     clear(root);
-    root.append(el("div", { class: "sm-state" }, el("h2", null, title), el("p", null, body), link || null));
+    root.append(el("div", { class: "state-full" }, el("div", null, el("div", { class: "e-ic" }, icon(iconName)), el("h2", null, title), el("p", null, body), action || null)));
   }
 
-  // ---- state ----
-  var S = { cfg: null, products: [], roles: [], channels: [], section: "overview" };
+  // ── components ────────────────────────────────────────────────────────────
+  function field(label, control, opts) {
+    opts = opts || {};
+    return el("label", { class: "field" }, el("span", { class: "lab" }, label), control,
+      opts.hint ? el("span", { class: "hint" }, opts.hint) : null, opts.errEl || null);
+  }
+  function inp(attrs) { return el("input", Object.assign({ class: "inp" }, attrs)); }
+  function prefixInp(prefix, attrs) { return el("div", { class: "inp-prefix" }, el("span", null, prefix), inp(attrs)); }
+  function ta(attrs) { return el("textarea", Object.assign({ class: "inp" }, attrs)); }
+  function sel(options, selected, attrs) {
+    return el("select", Object.assign({ class: "inp" }, attrs || {}), options.map(function (o) {
+      var val = Array.isArray(o) ? o[0] : o.value, lab = Array.isArray(o) ? o[1] : o.label;
+      return el("option", { value: val, selected: String(selected) === String(val) }, lab);
+    }));
+  }
+  function switchEl(checked) {
+    var input = el("input", { type: "checkbox" }); input.checked = !!checked;
+    return { input: input, node: el("label", { class: "sw" }, input, el("span", { class: "track" })) };
+  }
+  function swRow(title, desc, checked) {
+    var s = switchEl(checked);
+    return { input: s.input, node: el("div", { class: "sw-row" }, el("div", { class: "meta" }, el("div", { class: "t" }, title), desc ? el("div", { class: "d" }, desc) : null), s.node) };
+  }
+  function segmented(options, value, onChange) {
+    var state = { v: value };
+    var wrap = el("div", { class: "seg" });
+    options.forEach(function (o) {
+      var b = el("button", { type: "button", class: o.value === value ? "on" : "" }, o.label);
+      b.addEventListener("click", function () { state.v = o.value; wrap.querySelectorAll("button").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); if (onChange) onChange(o.value); });
+      wrap.append(b);
+    });
+    return { node: wrap, value: function () { return state.v; } };
+  }
+  function badge(text, variant) { return el("span", { class: "badge " + (variant || "") }, text); }
+  function panel() { var p = el("div", { class: "panel" }); for (var i = 0; i < arguments.length; i++) if (arguments[i]) p.append(arguments[i]); return p; }
+  function panelHead(title, action) { return el("div", { class: "panel-h" }, el("h2", null, title), action || null); }
+  function emptyState(iconName, title, text, action) {
+    return el("div", { class: "empty" }, el("div", { class: "e-ic" }, icon(iconName)), el("h3", null, title), el("p", null, text), action || null);
+  }
+  function btn(label, opts) {
+    opts = opts || {};
+    var b = el("button", { type: "button", class: "btn " + (opts.variant || "btn-primary"), disabled: opts.disabled, style: opts.style });
+    if (opts.icon) b.append(icon(opts.icon));
+    b.append(document.createTextNode(label));
+    if (opts.onClick) b.addEventListener("click", opts.onClick);
+    return b;
+  }
 
-  // ================= BOOT =================
-  if (!gid || !/^\d{5,25}$/.test(gid)) { stateMsg("No server", "Open the Store Manager from your dashboard.", el("a", { class: "btn btn-primary", href: "dashboard.html" }, "Go to dashboard")); return; }
+  // Slide-over drawer (used instead of centered modals).
+  var openScrim = null, onEsc = null;
+  function openDrawer(title, bodyNode, footerNode) {
+    closeDrawer();
+    var scrim = el("div", { class: "scrim" });
+    var dr = el("div", { class: "drawer" },
+      el("div", { class: "drawer-h" }, el("h2", null, title), el("button", { class: "drawer-x", "aria-label": "Close", onclick: closeDrawer }, "✕")),
+      el("div", { class: "drawer-b" }, bodyNode),
+      footerNode ? el("div", { class: "drawer-f" }, footerNode) : null);
+    scrim.addEventListener("click", closeDrawer);
+    document.body.append(scrim, dr);
+    requestAnimationFrame(function () { scrim.classList.add("in"); dr.classList.add("in"); });
+    openScrim = scrim; openScrim._dr = dr;
+    onEsc = function (e) { if (e.key === "Escape") closeDrawer(); };
+    document.addEventListener("keydown", onEsc);
+  }
+  function closeDrawer() {
+    if (!openScrim) return;
+    var scrim = openScrim, dr = scrim._dr; openScrim = null;
+    scrim.classList.remove("in"); dr.classList.remove("in");
+    setTimeout(function () { scrim.remove(); dr.remove(); }, 260);
+    if (onEsc) document.removeEventListener("keydown", onEsc);
+  }
+
+  // ── state ───────────────────────────────────────────────────────────────────
+  var S = { cfg: null, products: [], roles: [], channels: [], stats: {}, recent: [], section: "overview" };
+
+  // ── boot ──────────────────────────────────────────────────────────────────
+  if (!gid || !/^\d{5,25}$/.test(gid)) { fullState("store", "No server selected", "Open the Store Manager from your dashboard.", btn("Go to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); return; }
 
   api("/api/dashboard/me").then(function (me) {
     if (me.status === 401) { loginBounce(); return Promise.reject("redirect"); }
-    return Promise.all([
-      api("/api/dashboard/guilds/" + gid + "/store/config"),
-      api("/api/dashboard/guilds/" + gid + "/store/products"),
-      api("/api/dashboard/guilds/" + gid + "/discord/roles"),
-      api("/api/dashboard/guilds/" + gid + "/discord/channels"),
-    ]);
+    return Promise.all([api(A("/store/overview")), api(A("/store/products")), api(A("/discord/roles")), api(A("/discord/channels"))]);
   }).then(function (res) {
     if (!res) return;
-    var c = res[0];
-    if (c.status === 403 && c.body && c.body.error === "premium_required") { stateMsg("Premium required", "The web store is a Premium feature. Unlock it with /subscribe in Discord.", el("a", { class: "btn btn-primary", href: "pricing.html" }, "See Premium")); return; }
-    if (c.status === 401 || c.status === 403) { stateMsg("No access", "You don't manage this server, or your session expired.", el("a", { class: "btn btn-primary", href: "dashboard.html" }, "Back to dashboard")); return; }
-    if (!c.ok) { stateMsg("Couldn't load", "Please try again in a moment."); return; }
-    S.cfg = c.body.config;
+    var ov = res[0];
+    if (ov.status === 403 && ov.body && ov.body.error === "premium_required") { return fullState("lock", "Premium required", "The web store is a Premium feature. Unlock it with /subscribe in Discord.", btn("See Premium", { onClick: function () { location.href = "pricing.html"; } })); }
+    if (ov.status === 401 || ov.status === 403) { return fullState("lock", "No access", "You don't manage this server, or your session expired.", btn("Back to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); }
+    if (!ov.ok) { return fullState("store", "Couldn't load the store", "Please try again in a moment.", btn("Retry", { onClick: function () { location.reload(); } })); }
+    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || [];
     S.products = (res[1].body && res[1].body.products) || [];
     S.roles = (res[2].body && res[2].body.roles) || [];
     S.channels = (res[3].body && res[3].body.channels) || [];
     render();
-  }).catch(function (e) { if (e !== "redirect") stateMsg("Couldn't reach the backend", "Please try again shortly."); });
+  }).catch(function (e) { if (e !== "redirect") fullState("store", "Couldn't reach the backend", "Please try again shortly.", btn("Retry", { onClick: function () { location.reload(); } })); });
 
-  // ================= RENDER =================
+  function refreshOverview() { return api(A("/store/overview")).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; } }); }
+  function refreshProducts() { return api(A("/store/products")).then(function (r) { S.products = (r.body && r.body.products) || []; }); }
+
+  // ── shell render ──────────────────────────────────────────────────────────
+  var NAV = [["overview", "Overview", "overview"], ["products", "Products", "products"], ["orders", "Orders", "orders"], ["coupons", "Coupons", "coupons"], ["settings", "Settings", "settings"], ["payments", "Payments", "payments"]];
+  var SECTION_META = {
+    overview: ["Overview", "Your store at a glance"], products: ["Products", "What you sell"], orders: ["Orders", "Fulfil and refund purchases"],
+    coupons: ["Coupons", "Discount codes for checkout"], settings: ["Settings", "Store name, currency, payment rails, staff"], payments: ["Payments", "Connect a provider to take real money"],
+  };
   function render() {
     clear(root);
     var name = S.cfg.title || "Your store";
-    var storeUrl = location.origin + "/store.html?guild=" + gid;
+    var app = el("div", { class: "sm-app" });
 
-    root.append(el("div", { class: "sm-head" },
-      el("div", { class: "sm-logo sm-fb" }, initial(name)),
-      el("div", null, el("h1", { class: "sm-title" }, name + " — Store Manager"),
-        el("p", { class: "sm-sub" }, S.cfg.enabled ? "Store is OPEN" : "Store is closed", " · ", S.products.length + " product" + (S.products.length === 1 ? "" : "s"))),
-      el("div", { class: "sm-head-actions" },
-        el("a", { class: "btn btn-outline", href: storeUrl, target: "_blank", rel: "noopener" }, "View public store ↗"))));
-
+    // Sidebar
     var nav = el("div", { class: "sm-nav" });
-    [["overview", "Overview"], ["products", "Products"], ["orders", "Orders"], ["coupons", "Coupons"], ["settings", "Settings"], ["payments", "Payments"]].forEach(function (t) {
-      nav.append(el("button", { type: "button", class: S.section === t[0] ? "active" : "", onclick: function () { S.section = t[0]; render(); } }, t[1]));
+    NAV.forEach(function (n) {
+      var b = el("button", { class: S.section === n[0] ? "active" : "", onclick: function () { S.section = n[0]; closeMobileNav(); render(); } },
+        el("span", { class: "ic" }, icon(n[2])), n[1]);
+      if (n[0] === "orders" && S.stats.needsDelivery > 0) b.append(el("span", { class: "pip" }, S.stats.needsDelivery));
+      nav.append(b);
     });
-    root.append(nav);
+    var side = el("aside", { class: "sm-side" },
+      el("a", { class: "sm-brand", href: "dashboard.html", style: { textDecoration: "none", color: "inherit" } },
+        el("div", { class: "logo fb" }, initial(name)),
+        el("div", null, el("div", { class: "nm" }, name), el("div", { class: "sub" }, "Store Manager"))),
+      nav,
+      el("div", { class: "sm-side-foot" },
+        el("a", { href: location.origin + "/store.html?guild=" + gid, target: "_blank", rel: "noopener" }, "View public store ↗"),
+        el("a", { href: "dashboard.html" }, "← Back to dashboard")));
 
-    var body = el("div");
-    root.append(body);
-    if (S.section === "overview") renderOverview(body);
-    else if (S.section === "settings") renderSettings(body);
-    else if (S.section === "products") renderProducts(body);
-    else if (S.section === "orders") renderOrders(body);
-    else if (S.section === "coupons") renderCoupons(body);
-    else renderPayments(body);
+    // Main
+    var meta = SECTION_META[S.section];
+    var content = el("div", { class: "sm-content" });
+    var burger = el("button", { class: "sm-burger", "aria-label": "Menu", onclick: function () { app.classList.add("nav-open"); var sc = el("div", { class: "sm-nav-scrim", onclick: closeMobileNav }); app.append(sc); } }, "☰");
+    var topbar = el("div", { class: "sm-topbar" }, burger,
+      el("div", null, el("h1", null, meta[0]), el("div", { class: "sub" }, meta[1])),
+      el("div", { class: "right" },
+        el("span", { class: "pill " + (S.cfg.enabled ? "on" : "off") }, S.cfg.enabled ? "Open" : "Closed"),
+        btn("View store", { variant: "btn-outline", icon: "ext", onClick: function () { window.open(location.origin + "/store.html?guild=" + gid, "_blank"); } })));
+    var main = el("main", { class: "sm-main" }, topbar, content);
+
+    app.append(side, main);
+    root.append(app);
+
+    if (S.section === "overview") renderOverview(content);
+    else if (S.section === "products") renderProducts(content);
+    else if (S.section === "orders") renderOrders(content);
+    else if (S.section === "coupons") renderCoupons(content);
+    else if (S.section === "settings") renderSettings(content);
+    else renderPayments(content);
   }
+  function closeMobileNav() { var app = document.querySelector(".sm-app"); if (app) { app.classList.remove("nav-open"); var sc = app.querySelector(".sm-nav-scrim"); if (sc) sc.remove(); } }
 
-  function fieldRow(label, control, hint) {
-    return el("label", { class: "sm-field" }, el("span", null, label), control, hint ? el("span", { class: "hint" }, hint) : null);
-  }
-  function input(attrs) { return el("input", Object.assign({ class: "sm-input" }, attrs)); }
-  function checkbox(label, checked) { var c = el("input", { type: "checkbox" }); c.checked = !!checked; return { node: el("label", null, c, " " + label), input: c }; }
+  // ── OVERVIEW ───────────────────────────────────────────────────────────────
+  function renderOverview(c) {
+    var s = S.stats, ccy = S.cfg.currency || "GBP";
+    function stat(label, value, ic, flag) { return el("div", { class: "stat" + (flag ? " flag" : "") }, el("div", { class: "ic" }, icon(ic)), el("div", { class: "v" }, value), el("div", { class: "l" }, label)); }
+    c.append(el("div", { class: "stats" },
+      stat("Revenue (money)", money(s.revenueMoney, ccy), "payments"),
+      stat("Revenue (credits)", "🪙 " + fmt(s.revenueCredits), "coin"),
+      stat("Paid orders", fmt(s.paidOrders), "orders"),
+      stat("Awaiting delivery", fmt(s.needsDelivery || 0), "truck", s.needsDelivery > 0),
+      stat("Products live", fmt(s.enabledProducts || 0) + " / " + fmt(s.products || 0), "products"),
+      stat("Active coupons", fmt(s.activeCoupons || 0), "coupons")));
 
-  // ---- OVERVIEW ----
-  function renderOverview(body) {
-    var loading = el("div", { class: "skel", style: { height: "120px" } });
-    body.append(loading);
-    api("/api/dashboard/guilds/" + gid + "/store/overview").then(function (r) {
-      clear(body);
-      if (!r.ok) { body.append(el("p", { class: "sm-muted" }, "Couldn't load stats.")); return; }
-      var s = r.body.stats || {}, ccy = (r.body.config && r.body.config.currency) || "GBP";
-      function stat(label, value, accent) {
-        return el("div", { class: "sm-stat" + (accent ? " accent" : "") }, el("div", { class: "sm-stat-v" }, value), el("div", { class: "sm-stat-l" }, label));
-      }
-      var grid = el("div", { class: "sm-stats" },
-        stat("Revenue (money)", money(s.revenueMoney, ccy)),
-        stat("Revenue (credits)", "🪙 " + fmt(s.revenueCredits)),
-        stat("Paid orders", fmt(s.paidOrders)),
-        stat("Awaiting delivery", fmt(s.needsDelivery), s.needsDelivery > 0),
-        stat("Products live", fmt(s.enabledProducts) + " / " + fmt(s.products)),
-        stat("Active coupons", fmt(s.activeCoupons)));
-      body.append(grid);
+    c.append(panel(el("div", { style: { display: "flex", gap: "10px", flexWrap: "wrap" } },
+      btn("Add product", { icon: "plus", onClick: function () { S.section = "products"; render(); productDrawer(null); } }),
+      btn(s.needsDelivery > 0 ? "Deliver orders (" + s.needsDelivery + ")" : "View orders", { variant: "btn-outline", onClick: function () { S.section = "orders"; render(); } }),
+      btn("New coupon", { variant: "btn-outline", onClick: function () { S.section = "coupons"; render(); couponDrawer(null); } }))));
 
-      // Quick actions.
-      body.append(el("div", { class: "sm-card", style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
-        el("button", { class: "btn btn-primary", onclick: function () { S.section = "products"; render(); openProductModal(null); } }, "+ Add product"),
-        el("button", { class: "btn btn-outline", onclick: function () { S.section = "orders"; render(); } }, "View orders" + (s.needsDelivery > 0 ? " (" + s.needsDelivery + " to deliver)" : "")),
-        el("button", { class: "btn btn-outline", onclick: function () { S.section = "coupons"; render(); } }, "Coupons"),
-        el("a", { class: "btn btn-ghost", href: location.origin + "/store.html?guild=" + gid, target: "_blank", rel: "noopener" }, "Open public store ↗")));
-
-      // Recent orders.
-      var recent = (r.body.recentOrders || []);
-      var card = el("div", { class: "sm-card" }, el("h2", null, "Recent orders"));
-      if (!recent.length) card.append(el("p", { class: "sm-muted" }, "No orders yet."));
-      else {
-        var STAT = { completed: "✅ completed", needs_delivery: "⏳ needs delivery", paid: "✅ paid", pending: "… pending", cancelled: "⚪ cancelled", refunded: "↩️ refunded", failed: "❌ failed" };
-        recent.forEach(function (o) {
-          var total = o.rail === "credits" ? "🪙 " + fmt(o.total_credits) : money(o.total_money, o.currency);
-          card.append(el("div", { class: "sm-order-line", style: { justifyContent: "space-between" } },
-            el("span", null, "#" + o.id + " · @" + (o.buyer_username || o.buyer_user_id) + (o.coupon_code ? " · 🎟️" + o.coupon_code : "")),
-            el("span", { class: "sm-muted" }, STAT[o.status] || o.status), el("b", null, total)));
-        });
-      }
-      body.append(card);
+    var ord = panel(panelHead("Recent orders"));
+    if (!S.recent.length) ord.append(el("p", { class: "muted", style: { margin: 0 } }, "No orders yet. They'll appear here as customers buy."));
+    else S.recent.forEach(function (o) {
+      var total = o.rail === "credits" ? "🪙 " + fmt(o.total_credits) : money(o.total_money, o.currency);
+      ord.append(el("div", { class: "sw-row" },
+        el("div", { class: "meta" }, el("div", { class: "t" }, "#" + o.id + "  ·  @" + (o.buyer_username || o.buyer_user_id)), el("div", { class: "d" }, (o.coupon_code ? "🎟️ " + o.coupon_code + " · " : "") + new Date((o.created_at || "").replace(" ", "T") + "Z").toLocaleDateString())),
+        el("div", { style: { display: "flex", alignItems: "center", gap: "10px" } }, orderBadge(o.status), el("b", null, total))));
     });
+    c.append(ord);
+  }
+  function orderBadge(status) {
+    var m = { completed: ["Completed", "ok"], paid: ["Paid", "ok"], needs_delivery: ["Needs delivery", "warn"], pending: ["Pending", "dim"], cancelled: ["Cancelled", "dim"], refunded: ["Refunded", "info"], failed: ["Failed", "dim"] };
+    var x = m[status] || [status, "dim"]; return badge(x[0], x[1]);
   }
 
-  // ---- SETTINGS ----
-  function renderSettings(body) {
-    var c = S.cfg;
-    var enabled = checkbox("Store open", c.enabled), money_ = checkbox("Accept money", c.accept_money), credits = checkbox("Accept credits", c.accept_credits);
-    var currency = el("select", { class: "sm-select" }, ["GBP", "USD", "EUR"].map(function (x) { return el("option", { value: x, selected: c.currency === x }, x); }));
-    var title = input({ type: "text", value: c.title || "", maxlength: 100, placeholder: "Store title" });
-    var desc = input({ type: "text", value: c.description || "", maxlength: 1000, placeholder: "Short description" });
-    var banner = input({ type: "url", value: c.banner_url || "", placeholder: "https://…/banner.png" });
-    var ordersCh = el("select", { class: "sm-select" }, el("option", { value: "" }, "— none —"),
-      S.channels.map(function (ch) { return el("option", { value: ch.id, selected: c.orders_channel_id === ch.id }, "#" + (ch.name || ch.id)); }));
-    var staff = el("select", { class: "sm-select", multiple: true, style: { minHeight: "92px" } },
-      S.roles.map(function (r) { return el("option", { value: r.id, selected: (c.staff_role_ids || []).indexOf(r.id) >= 0 }, r.name); }));
-    var save = el("button", { class: "btn btn-primary" }, "Save settings");
-    save.addEventListener("click", function () {
-      save.disabled = true;
-      api("/api/dashboard/guilds/" + gid + "/store/config", { method: "POST", body: {
-        enabled: enabled.input.checked, accept_money: money_.input.checked, accept_credits: credits.input.checked,
-        currency: currency.value, title: title.value.trim() || null, description: desc.value.trim() || null,
-        banner_url: banner.value.trim() || null, orders_channel_id: ordersCh.value || null,
-        staff_role_ids: Array.prototype.map.call(staff.selectedOptions, function (o) { return o.value; }),
-      } }).then(function (r) {
-        save.disabled = false;
-        if (!r.ok) { toast((r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save", "err"); return; }
-        S.cfg = r.body.config; toast("Settings saved"); render();
-      });
-    });
-    body.append(el("div", { class: "sm-card" }, el("h2", null, "Store settings"),
-      el("div", { class: "sm-toggles" }, enabled.node, money_.node, credits.node),
-      el("div", { class: "sm-grid2" }, fieldRow("Currency", currency), fieldRow("Staff orders channel", ordersCh)),
-      fieldRow("Title", title), fieldRow("Description", desc), fieldRow("Banner image URL", banner, "https image, optional"),
-      fieldRow("Staff roles (deliver / refund)", staff, "Ctrl/Cmd-click to multi-select"),
-      save));
-  }
-
-  // ---- PRODUCTS ----
-  function renderProducts(body) {
-    var head = el("div", { class: "sm-card" },
-      el("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" } },
-        el("h2", { style: { margin: 0 } }, "Products (" + S.products.length + ")"),
-        el("button", { class: "btn btn-primary", onclick: function () { openProductModal(null); } }, "+ Add product")),
-      el("p", { class: "sm-muted", style: { margin: 0, fontSize: "13px" } }, "Sold on your public store. Price in money, credits, or both."));
-    body.append(head);
-    if (!S.products.length) { body.append(el("p", { class: "sm-muted" }, "No products yet — add your first.")); return; }
-    var grid = el("div", { class: "sm-prod-grid" });
+  // ── PRODUCTS ───────────────────────────────────────────────────────────────
+  function renderProducts(c) {
+    c.append(panel(panelHead("Products (" + S.products.length + ")", btn("Add product", { icon: "plus", onClick: function () { productDrawer(null); } })),
+      el("p", { class: "panel-sub" }, "Each product is sold on your public store. Price in money, credits, or both; deliver an instant Discord role or a manual in-game handover.")));
+    if (!S.products.length) { c.append(emptyState("products", "No products yet", "Add your first product to start selling. You can price it in real money, server credits, or both.", btn("Add your first product", { icon: "plus", onClick: function () { productDrawer(null); } }))); return; }
+    var grid = el("div", { class: "pgrid" });
     S.products.forEach(function (p) {
-      var price = [p.price_money != null ? money(p.price_money, S.cfg.currency) : null, p.price_credits != null ? "🪙" + p.price_credits : null].filter(Boolean).join(" / ");
-      var img = p.image_url ? el("img", { class: "sm-prod-img", src: p.image_url, alt: "", loading: "lazy" }) : el("div", { class: "sm-prod-img fb" }, initial(p.name));
-      grid.append(el("div", { class: "sm-prod" + (p.enabled ? "" : " off") }, img,
-        el("div", { class: "sm-prod-body" },
-          el("div", { class: "sm-prod-name" }, p.name, p.enabled ? "" : " (hidden)"),
-          el("div", { class: "sm-prod-meta" }, price + " · " + (p.fulfillment_type === "role" ? "⚡ role" : "📦 manual") + (p.stock != null ? " · stock " + p.stock : "")),
-          el("div", { class: "sm-prod-actions" },
-            el("button", { class: "btn btn-ghost", onclick: function () { openProductModal(p); } }, "Edit"),
-            el("button", { class: "btn btn-ghost", onclick: function () { delProduct(p); } }, "Delete")))));
+      var price = el("div", { class: "pr" });
+      if (p.price_money != null) price.append(money(p.price_money, S.cfg.currency));
+      if (p.price_money != null && p.price_credits != null) price.append(el("span", { class: "alt" }, "  or  "));
+      if (p.price_credits != null) price.append(el("span", { class: p.price_money != null ? "alt" : "" }, "🪙 " + fmt(p.price_credits)));
+      var img = p.image_url ? el("img", { class: "img", src: p.image_url, alt: "", loading: "lazy" }) : el("div", { class: "img fb" }, initial(p.name));
+      grid.append(el("div", { class: "pcard" + (p.enabled ? "" : " off") }, img,
+        el("div", { class: "body" },
+          el("div", { class: "nm" }, p.name),
+          el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
+            badge(p.fulfillment_type === "role" ? "⚡ Instant role" : "📦 In-game", p.fulfillment_type === "role" ? "ok" : ""),
+            p.stock != null ? badge(p.stock > 0 ? p.stock + " left" : "Out of stock", p.stock > 0 ? "dim" : "warn") : null,
+            p.enabled ? null : badge("Hidden", "dim")),
+          price,
+          el("div", { class: "foot" },
+            btn("Edit", { variant: "btn-outline", onClick: function () { productDrawer(p); } }),
+            btn("Delete", { variant: "btn-ghost", onClick: function () { delProduct(p); } })))));
     });
-    body.append(grid);
+    c.append(grid);
   }
-
   function delProduct(p) {
-    if (!confirm('Delete "' + p.name + '"?')) return;
-    api("/api/dashboard/guilds/" + gid + "/store/products/" + p.id, { method: "DELETE" }).then(function (r) {
-      if (!r.ok) return toast("Couldn't delete", "err");
-      reloadProducts("Product deleted");
-    });
+    if (!confirm('Delete "' + p.name + '"? This hides it from the store.')) return;
+    api(A("/store/products/" + p.id), { method: "DELETE" }).then(function (r) { if (!r.ok) return toast("Couldn't delete", "err"); refreshProducts().then(function () { toast("Product deleted"); render(); }); });
   }
-  function reloadProducts(msg) {
-    api("/api/dashboard/guilds/" + gid + "/store/products").then(function (r) { S.products = (r.body && r.body.products) || []; if (msg) toast(msg); render(); });
-  }
-
-  function openProductModal(existing) {
+  function productDrawer(existing) {
     var p = existing || {};
-    var name = input({ type: "text", value: p.name || "", maxlength: 120, placeholder: "Product name" });
-    var desc = input({ type: "text", value: p.description || "", maxlength: 1000, placeholder: "Description" });
-    var img = input({ type: "url", value: p.image_url || "", placeholder: "https://…/image.png" });
-    var preview = el("img", { class: "sm-preview", src: p.image_url || "", alt: "", style: { display: p.image_url ? "block" : "none" } });
-    img.addEventListener("input", function () { if (/^https:\/\/\S+\.(png|jpe?g|webp|gif)/i.test(img.value)) { preview.src = img.value; preview.style.display = "block"; } else preview.style.display = "none"; });
-    // upload
+    var name = inp({ type: "text", value: p.name || "", maxlength: 120, placeholder: "VIP Rank" });
+    var desc = ta({ value: p.description || "", maxlength: 1000, placeholder: "What the buyer gets…" });
+    var img = inp({ type: "url", value: p.image_url || "", placeholder: "https://…/image.png" });
+    var prev = el("img", { class: "img-prev", src: p.image_url || "", alt: "", style: { display: p.image_url ? "block" : "none" } });
+    img.addEventListener("input", function () { if (/^https:\/\/\S+\.(png|jpe?g|webp|gif)/i.test(img.value)) { prev.src = img.value; prev.style.display = "block"; } else prev.style.display = "none"; });
     var file = el("input", { type: "file", accept: "image/png,image/jpeg,image/webp,image/gif", style: { display: "none" } });
-    var upBtn = el("button", { type: "button", class: "btn btn-ghost", style: { fontSize: "13px", padding: "5px 12px" } }, "⬆ Upload");
-    var upMsg = el("span", { class: "sm-muted", style: { fontSize: "12px", marginLeft: "8px" } });
-    upBtn.addEventListener("click", function () { file.click(); });
+    var upMsg = el("span", { class: "hint", style: { marginLeft: "10px" } });
+    var upBtn = btn("⬆ Upload image", { variant: "btn-outline", style: { fontSize: "13px", padding: "7px 13px" }, onClick: function () { file.click(); } });
     file.addEventListener("change", function () {
       var f = file.files && file.files[0]; if (!f) return;
       if (f.size > 5 * 1024 * 1024) { upMsg.textContent = "Max 5 MB."; return; }
       upBtn.disabled = true; upMsg.textContent = "Uploading…";
       fetch("/api/store-upload", { method: "POST", credentials: "include", headers: { "content-type": f.type }, body: f })
         .then(function (r) { return r.json().catch(function () { return null; }).then(function (b) { return { s: r.status, b: b }; }); })
-        .then(function (o) {
-          if (o.s === 501) upMsg.textContent = "Uploads not set up — paste a URL.";
-          else if (!o.b || !o.b.url) upMsg.textContent = (o.b && o.b.detail) || "Upload failed.";
-          else { img.value = o.b.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; }
-        }).catch(function () { upMsg.textContent = "Upload failed."; }).then(function () { upBtn.disabled = false; file.value = ""; });
+        .then(function (o) { if (o.s === 501) upMsg.textContent = "Uploads not set up — paste a URL instead."; else if (!o.b || !o.b.url) upMsg.textContent = (o.b && o.b.detail) || "Upload failed."; else { img.value = o.b.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; } })
+        .catch(function () { upMsg.textContent = "Upload failed."; }).then(function () { upBtn.disabled = false; file.value = ""; });
     });
-    var cat = input({ type: "text", value: p.category || "", maxlength: 60, placeholder: "Category (optional)" });
-    var pm = input({ type: "number", step: "0.01", min: "0", value: p.price_money != null ? p.price_money : "", placeholder: "—" });
-    var pc = input({ type: "number", step: "1", min: "0", value: p.price_credits != null ? p.price_credits : "", placeholder: "—" });
-    var stock = input({ type: "number", step: "1", min: "0", value: p.stock != null ? p.stock : "", placeholder: "∞" });
-    var lim = input({ type: "number", step: "1", min: "0", value: p.per_user_limit != null ? p.per_user_limit : "", placeholder: "∞" });
-    var enabled = checkbox("Visible in store", existing ? p.enabled : true);
-    var ftRole = el("input", { type: "radio", name: "smft" }); ftRole.checked = p.fulfillment_type === "role";
-    var ftMan = el("input", { type: "radio", name: "smft" }); ftMan.checked = p.fulfillment_type !== "role";
-    var roleSel = el("select", { class: "sm-select" }, el("option", { value: "" }, "— pick a role —"),
-      S.roles.map(function (r) { return el("option", { value: r.id, selected: p.role_id === r.id }, r.name); }));
-    var instr = input({ type: "text", value: p.delivery_instructions || "", maxlength: 1000, placeholder: "e.g. Spawn a Giga lvl 150" });
-    var roleWrap = fieldRow("Role to grant", roleSel), manWrap = fieldRow("Delivery instructions (staff)", instr);
-    function syncFt() { roleWrap.style.display = ftRole.checked ? "block" : "none"; manWrap.style.display = ftMan.checked ? "block" : "none"; }
-    ftRole.addEventListener("change", syncFt); ftMan.addEventListener("change", syncFt);
+    var cat = inp({ type: "text", value: p.category || "", maxlength: 60, placeholder: "Ranks" });
+    var pm = inp({ type: "number", step: "0.01", min: "0", value: p.price_money != null ? p.price_money : "", placeholder: "0.00" });
+    var pc = inp({ type: "number", step: "1", min: "0", value: p.price_credits != null ? p.price_credits : "", placeholder: "0" });
+    var stock = inp({ type: "number", step: "1", min: "0", value: p.stock != null ? p.stock : "", placeholder: "Unlimited" });
+    var lim = inp({ type: "number", step: "1", min: "0", value: p.per_user_limit != null ? p.per_user_limit : "", placeholder: "No limit" });
+    var enabled = swRow("Visible in store", "Buyers can see and purchase it", existing ? p.enabled : true);
 
-    var save = el("button", { class: "btn btn-primary" }, existing ? "Save" : "Add product");
-    var errBox = el("div");
-    save.addEventListener("click", function () {
-      clear(errBox); save.disabled = true;
-      var b = {
-        name: name.value.trim(), description: desc.value.trim() || null, image_url: img.value.trim() || null, category: cat.value.trim() || null,
+    var roleSel = sel([["", "— pick a role —"]].concat(S.roles.map(function (r) { return [r.id, r.name]; })), p.role_id || "");
+    var instr = ta({ value: p.delivery_instructions || "", maxlength: 1000, placeholder: "e.g. Spawn a Giga lvl 150 for the buyer" });
+    var roleWrap = field("Role to grant", roleSel, { hint: "Auto-added to the buyer the instant they pay" });
+    var manWrap = field("Delivery instructions (shown to staff)", instr);
+    var ft = segmented([{ value: "role", label: "⚡ Discord role" }, { value: "manual", label: "📦 Manual / in-game" }], p.fulfillment_type === "role" ? "role" : "manual", function (v) { roleWrap.style.display = v === "role" ? "block" : "none"; manWrap.style.display = v === "manual" ? "block" : "none"; });
+
+    var errEl = el("div", { class: "err" });
+    var save = btn(existing ? "Save product" : "Add product", { onClick: function () {
+      errEl.textContent = ""; save.disabled = true;
+      var b = { name: name.value.trim(), description: desc.value.trim() || null, image_url: img.value.trim() || null, category: cat.value.trim() || null,
         price_money: pm.value === "" ? null : Number(pm.value), price_credits: pc.value === "" ? null : Number(pc.value),
-        fulfillment_type: ftRole.checked ? "role" : "manual", role_id: ftRole.checked ? (roleSel.value || null) : null,
-        delivery_instructions: ftMan.checked ? (instr.value.trim() || null) : null,
-        stock: stock.value === "" ? null : Number(stock.value), per_user_limit: lim.value === "" ? null : Number(lim.value), enabled: enabled.input.checked,
-      };
-      var req = existing ? api("/api/dashboard/guilds/" + gid + "/store/products/" + existing.id, { method: "PATCH", body: b })
-        : api("/api/dashboard/guilds/" + gid + "/store/products", { method: "POST", body: b });
-      req.then(function (r) {
-        if (!r.ok) { errBox.append(el("p", { style: { color: "#ef4444", fontSize: "13px" } }, (r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save")); save.disabled = false; return; }
-        closeModal(); reloadProducts(existing ? "Product saved" : "Product added");
-      });
-    });
+        fulfillment_type: ft.value(), role_id: ft.value() === "role" ? (roleSel.value || null) : null,
+        delivery_instructions: ft.value() === "manual" ? (instr.value.trim() || null) : null,
+        stock: stock.value === "" ? null : Number(stock.value), per_user_limit: lim.value === "" ? null : Number(lim.value), enabled: enabled.input.checked };
+      var req = existing ? api(A("/store/products/" + existing.id), { method: "PATCH", body: b }) : api(A("/store/products"), { method: "POST", body: b });
+      req.then(function (r) { if (!r.ok) { errEl.textContent = (r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save"; save.disabled = false; return; } closeDrawer(); refreshProducts().then(function () { toast(existing ? "Product saved" : "Product added"); render(); }); });
+    } });
 
-    var modal = el("div", { class: "sm-modal" }, el("h2", null, existing ? "Edit product" : "New product"),
-      fieldRow("Name", name), fieldRow("Description", desc),
-      fieldRow("Image URL", img, "https image, or upload"), preview, el("div", { style: { margin: "4px 0 12px" } }, upBtn, upMsg, file),
-      fieldRow("Category", cat),
-      el("div", { class: "sm-grid2" }, fieldRow("Price — money", pm), fieldRow("Price — credits", pc)),
-      el("div", { class: "sm-field" }, el("span", null, "Delivery"),
-        el("label", { style: { marginRight: "16px" } }, ftRole, " Discord role"), el("label", null, ftMan, " Manual / in-game")),
-      roleWrap, manWrap,
-      el("div", { class: "sm-grid2" }, fieldRow("Stock (blank = ∞)", stock), fieldRow("Per-user limit (blank = none)", lim)),
-      el("div", { style: { marginBottom: "6px" } }, enabled.node), errBox,
-      el("div", { class: "sm-modal-foot" }, el("button", { class: "btn btn-ghost", onclick: closeModal }, "Cancel"), save));
-    syncFt();
-    var ov = el("div", { class: "sm-modal-ov", id: "sm-modal-ov", onclick: function (e) { if (e.target.id === "sm-modal-ov") closeModal(); } }, modal);
-    document.body.append(ov);
+    var pmWrap = el("div", { class: "inp-prefix" }, el("span", null, CCY[S.cfg.currency] || ""), pm);
+    var body = el("div", null,
+      field("Name", name), field("Description", desc),
+      field("Image", img, { hint: "Paste an https image URL, or upload below" }), prev, el("div", { style: { margin: "8px 0 16px" } }, upBtn, upMsg, file),
+      field("Category (optional)", cat),
+      el("div", { class: "grid2" }, field("Price — money", pmWrap, { hint: "Blank = not sold for money" }), field("Price — credits", pc, { hint: "Blank = not sold for credits" })),
+      el("div", { class: "field" }, el("span", { class: "lab" }, "Delivery"), ft.node), roleWrap, manWrap,
+      el("div", { class: "grid2" }, field("Stock", stock, { hint: "Blank = unlimited" }), field("Per-user limit", lim, { hint: "Blank = no limit" })),
+      enabled.node, errEl);
+    roleWrap.style.display = ft.value() === "role" ? "block" : "none"; manWrap.style.display = ft.value() === "manual" ? "block" : "none";
+    openDrawer(existing ? "Edit product" : "New product", body, el("div", null, btn("Cancel", { variant: "btn-ghost", onClick: closeDrawer }), save));
   }
-  function closeModal() { var ov = document.getElementById("sm-modal-ov"); if (ov) ov.remove(); }
 
-  // ---- ORDERS ----
-  function renderOrders(body) {
-    var card = el("div", { class: "sm-card" }, el("h2", null, "Orders"));
-    body.append(card);
-    var filters = el("div", { class: "sm-filters" });
-    var listBox = el("div", { class: "sm-muted" }, "Loading…");
+  // ── ORDERS ─────────────────────────────────────────────────────────────────
+  function renderOrders(c) {
+    var wrap = panel(panelHead("Orders"));
+    c.append(wrap);
+    var chips = el("div", { class: "chips" });
+    var listBox = el("div");
+    wrap.append(chips, listBox);
     var current = "all";
     function load(f) {
-      current = f; clear(filters);
-      ["all", "needs_delivery", "completed", "refunded"].forEach(function (x) {
-        filters.append(el("button", { class: "btn " + (x === current ? "btn-primary" : "btn-ghost"), onclick: function () { load(x); } }, x.replace("_", " ")));
+      current = f; clear(chips);
+      [["all", "All"], ["needs_delivery", "Needs delivery"], ["completed", "Completed"], ["refunded", "Refunded"]].forEach(function (x) {
+        var ch = el("button", { class: "chip" + (x[0] === current ? " on" : "") }, x[1]); ch.addEventListener("click", function () { load(x[0]); }); chips.append(ch);
       });
-      listBox.textContent = "Loading…";
-      api("/api/dashboard/guilds/" + gid + "/store/orders" + (f === "all" ? "" : "?status=" + f)).then(function (r) {
+      clear(listBox); listBox.append(el("div", { class: "sk", style: { height: "70px", marginBottom: "9px" } }), el("div", { class: "sk", style: { height: "70px" } }));
+      api(A("/store/orders" + (f === "all" ? "" : "?status=" + f))).then(function (r) {
         clear(listBox);
         var orders = (r.body && r.body.orders) || [];
-        if (!orders.length) { listBox.append(el("p", { class: "sm-muted" }, "No orders.")); return; }
-        var STAT = { completed: "✅ completed", needs_delivery: "⏳ needs delivery", paid: "✅ paid", pending: "… pending", cancelled: "⚪ cancelled", refunded: "↩️ refunded", failed: "❌ failed" };
+        if (!orders.length) { listBox.append(emptyState("orders", "No orders here", f === "all" ? "Orders appear here as customers buy from your store." : "No orders with this status right now.")); return; }
         orders.forEach(function (o) {
-          var total = o.rail === "credits" ? "🪙 " + o.total_credits : money(o.total_money, o.currency);
-          var oc = el("div", { class: "sm-order" }, el("div", { class: "sm-order-top" },
-            el("span", null, "#" + o.id + " · ", el("a", { href: "https://discord.com/users/" + o.buyer_user_id, target: "_blank", rel: "noopener" }, "@" + (o.buyer_username || o.buyer_user_id))),
-            el("span", null, STAT[o.status] || o.status), el("span", null, total)));
+          var total = o.rail === "credits" ? "🪙 " + fmt(o.total_credits) : money(o.total_money, o.currency);
+          var rowTop = el("div", { class: "row", style: { flexDirection: "column", alignItems: "stretch", gap: "8px" } });
+          rowTop.append(el("div", { style: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" } },
+            el("b", null, "#" + o.id), el("a", { href: "https://discord.com/users/" + o.buyer_user_id, target: "_blank", rel: "noopener", class: "muted" }, "@" + (o.buyer_username || o.buyer_user_id)),
+            o.coupon_code ? badge("🎟️ " + o.coupon_code, "info") : null,
+            el("span", { style: { marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" } }, orderBadge(o.status), el("b", null, total))));
           (o.items || []).forEach(function (i) {
             var tick = i.fulfillment_status === "delivered" ? "✅" : i.fulfillment_status === "granted" ? "⚡" : "⏳";
-            var ln = el("div", { class: "sm-order-line" }, el("span", { style: { flex: 1 } }, tick + " " + i.quantity + "× " + i.name + (i.fulfillment_type === "manual" && i.delivery_instructions ? " — " + i.delivery_instructions : "")));
+            var ln = el("div", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13.5px" } },
+              el("span", { class: "muted", style: { flex: 1 } }, tick + " " + i.quantity + "× " + i.name + (i.fulfillment_type === "manual" && i.delivery_instructions ? " — " + i.delivery_instructions : "")));
             if (i.fulfillment_type === "manual" && i.fulfillment_status === "pending") {
-              var d = el("button", { class: "btn btn-primary", style: { padding: "3px 10px", fontSize: "12px" } }, "Deliver");
-              d.addEventListener("click", function () { d.disabled = true; api("/api/dashboard/guilds/" + gid + "/store/orders/" + o.id + "/items/" + i.id + "/deliver", { method: "POST" }).then(function (rr) { if (rr.ok) { toast("Delivered"); load(current); } else { toast("Failed", "err"); d.disabled = false; } }); });
-              ln.append(d);
+              ln.append(btn("Deliver", { style: { padding: "4px 12px", fontSize: "12px" }, onClick: function (e) { var b = e.target; b.disabled = true; api(A("/store/orders/" + o.id + "/items/" + i.id + "/deliver"), { method: "POST" }).then(function (rr) { if (rr.ok) { toast("Delivered"); refreshOverview().then(function () { load(current); }); } else { toast("Failed", "err"); b.disabled = false; } }); } }));
             }
-            oc.append(ln);
+            rowTop.append(ln);
           });
           if (o.status !== "refunded" && o.status !== "cancelled") {
-            var rf = el("button", { class: "btn btn-ghost", style: { marginTop: "8px", padding: "3px 10px", fontSize: "12px" } }, "Refund");
-            rf.addEventListener("click", function () { if (!confirm("Refund order #" + o.id + "? Roles are revoked; credits re-credited. Money refunds happen in your PayPal/Stripe dashboard.")) return; api("/api/dashboard/guilds/" + gid + "/store/orders/" + o.id + "/refund", { method: "POST" }).then(function (rr) { toast(rr.ok ? ((rr.body && rr.body.moneyRefundNote) || "Refunded") : "Failed", rr.ok ? "" : "err"); load(current); }); });
-            oc.append(rf);
+            rowTop.append(el("div", null, btn("Refund", { variant: "btn-ghost", style: { padding: "4px 12px", fontSize: "12px" }, onClick: function () { if (!confirm("Refund order #" + o.id + "? Granted roles are revoked; credits are re-credited. Money refunds happen in your PayPal/Stripe dashboard.")) return; api(A("/store/orders/" + o.id + "/refund"), { method: "POST" }).then(function (rr) { toast(rr.ok ? ((rr.body && rr.body.moneyRefundNote) || "Refunded") : "Failed", rr.ok ? "" : "err"); refreshOverview().then(function () { load(current); }); }); } })));
           }
-          listBox.append(oc);
+          listBox.append(rowTop);
         });
       });
     }
-    card.append(filters, listBox);
     load("all");
   }
 
-  // ---- COUPONS ----
+  // ── COUPONS ────────────────────────────────────────────────────────────────
   function couponSummary(c) {
-    var d = c.discount_type === "percent" ? c.percent_off + "% off"
-      : [c.amount_off_money != null ? money(c.amount_off_money, S.cfg.currency) + " off" : null, c.amount_off_credits != null ? "🪙" + c.amount_off_credits + " off" : null].filter(Boolean).join(" / ");
-    var used = c.redeemed_count + (c.max_redemptions != null ? " / " + c.max_redemptions : "") + " used";
-    return d + " · " + used;
+    var d = c.discount_type === "percent" ? c.percent_off + "% off" : [c.amount_off_money != null ? money(c.amount_off_money, S.cfg.currency) + " off" : null, c.amount_off_credits != null ? "🪙" + c.amount_off_credits + " off" : null].filter(Boolean).join(" / ");
+    return d + " · " + c.redeemed_count + (c.max_redemptions != null ? " / " + c.max_redemptions : "") + " used";
   }
-  function renderCoupons(body) {
-    var head = el("div", { class: "sm-card" },
-      el("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" } },
-        el("h2", { style: { margin: 0 } }, "Coupons"),
-        el("button", { class: "btn btn-primary", onclick: function () { openCouponModal(null); } }, "+ New coupon")),
-      el("p", { class: "sm-muted", style: { margin: 0, fontSize: "13px" } }, "Discount codes buyers enter at checkout. Percent or fixed, on money and/or credits."));
-    body.append(head);
-    var listBox = el("div", { class: "sm-muted" }, "Loading…");
-    body.append(listBox);
-    api("/api/dashboard/guilds/" + gid + "/store/coupons").then(function (r) {
+  function renderCoupons(c) {
+    c.append(panel(panelHead("Coupons", btn("New coupon", { icon: "plus", onClick: function () { couponDrawer(null); } })),
+      el("p", { class: "panel-sub" }, "Codes buyers type at checkout. Percent or fixed, on money and/or credits, with optional minimum spend, usage caps and dates.")));
+    var listBox = el("div"); c.append(listBox);
+    listBox.append(el("div", { class: "sk", style: { height: "64px" } }));
+    api(A("/store/coupons")).then(function (r) {
       clear(listBox);
       var cs = (r.body && r.body.coupons) || [];
-      if (!cs.length) { listBox.append(el("p", { class: "sm-muted" }, "No coupons yet — create your first.")); return; }
-      cs.forEach(function (c) {
-        listBox.append(el("div", { class: "sm-order", style: { opacity: c.enabled ? 1 : 0.55 } },
-          el("div", { class: "sm-order-top" },
-            el("span", null, el("code", { style: { fontSize: "15px", fontWeight: 800 } }, c.code), c.enabled ? "" : " (disabled)"),
-            el("span", { class: "sm-muted", style: { fontSize: "13px" } }, couponSummary(c)),
-            el("span", null,
-              el("button", { class: "btn btn-ghost", style: { padding: "3px 10px", fontSize: "12px" }, onclick: function () { openCouponModal(c); } }, "Edit"),
-              el("button", { class: "btn btn-ghost", style: { padding: "3px 10px", fontSize: "12px" }, onclick: function () { if (!confirm("Delete coupon " + c.code + "?")) return; api("/api/dashboard/guilds/" + gid + "/store/coupons/" + c.id, { method: "DELETE" }).then(function (rr) { if (rr.ok) { toast("Deleted"); render(); } else toast("Failed", "err"); }); } }, "Delete"))),
-          c.description ? el("div", { class: "sm-muted", style: { fontSize: "12.5px", marginTop: "4px" } }, c.description) : null,
-          (c.min_subtotal_money != null || c.min_subtotal_credits != null || c.per_user_limit != null || c.expires_at)
-            ? el("div", { class: "sm-muted", style: { fontSize: "12px", marginTop: "4px" } },
-                [c.min_subtotal_money != null ? "min " + money(c.min_subtotal_money, S.cfg.currency) : null,
-                 c.min_subtotal_credits != null ? "min 🪙" + c.min_subtotal_credits : null,
-                 c.per_user_limit != null ? c.per_user_limit + "/user" : null,
-                 c.expires_at ? "expires " + c.expires_at.slice(0, 10) : null].filter(Boolean).join(" · "))
-            : null));
+      if (!cs.length) { listBox.append(emptyState("coupons", "No coupons yet", "Create a discount code to run a sale or reward your community.", btn("Create a coupon", { icon: "plus", onClick: function () { couponDrawer(null); } }))); return; }
+      cs.forEach(function (cp) {
+        listBox.append(el("div", { class: "row", style: { opacity: cp.enabled ? 1 : 0.6 } },
+          el("div", { class: "grow" },
+            el("div", { style: { display: "flex", alignItems: "center", gap: "8px" } }, el("code", { style: { fontSize: "15px", fontWeight: 800, color: "var(--accent-soft)" } }, cp.code), cp.enabled ? null : badge("Disabled", "dim")),
+            el("div", { class: "d" }, couponSummary(cp) + (cp.expires_at ? " · expires " + cp.expires_at.slice(0, 10) : "") + (cp.per_user_limit != null ? " · " + cp.per_user_limit + "/user" : ""))),
+          btn("Edit", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { couponDrawer(cp); } }),
+          btn("Delete", { variant: "btn-ghost", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { if (!confirm("Delete coupon " + cp.code + "?")) return; api(A("/store/coupons/" + cp.id), { method: "DELETE" }).then(function (rr) { if (rr.ok) { toast("Deleted"); render(); } else toast("Failed", "err"); }); } })));
       });
     });
   }
-  function openCouponModal(existing) {
+  function couponDrawer(existing) {
     var c = existing || {};
-    var code = input({ type: "text", value: c.code || "", maxlength: 32, placeholder: "SAVE10", style: { textTransform: "uppercase" } });
-    var descI = input({ type: "text", value: c.description || "", maxlength: 200, placeholder: "Optional note (internal)" });
-    var typePct = el("input", { type: "radio", name: "smcoupon" }); typePct.checked = (c.discount_type || "percent") === "percent";
-    var typeFix = el("input", { type: "radio", name: "smcoupon" }); typeFix.checked = c.discount_type === "fixed";
-    var pct = input({ type: "number", min: "1", max: "100", step: "1", value: c.percent_off != null ? c.percent_off : "", placeholder: "10" });
-    var offM = input({ type: "number", min: "0", step: "0.01", value: c.amount_off_money != null ? c.amount_off_money : "", placeholder: "—" });
-    var offC = input({ type: "number", min: "0", step: "1", value: c.amount_off_credits != null ? c.amount_off_credits : "", placeholder: "—" });
-    var pctWrap = fieldRow("Percent off (1–100)", pct);
-    var fixWrap = el("div", { class: "sm-grid2" }, fieldRow("Money off", offM), fieldRow("Credits off", offC));
-    function syncType() { pctWrap.style.display = typePct.checked ? "block" : "none"; fixWrap.style.display = typeFix.checked ? "grid" : "none"; }
-    typePct.addEventListener("change", syncType); typeFix.addEventListener("change", syncType);
-    var minM = input({ type: "number", min: "0", step: "0.01", value: c.min_subtotal_money != null ? c.min_subtotal_money : "", placeholder: "—" });
-    var minC = input({ type: "number", min: "0", step: "1", value: c.min_subtotal_credits != null ? c.min_subtotal_credits : "", placeholder: "—" });
-    var maxR = input({ type: "number", min: "1", step: "1", value: c.max_redemptions != null ? c.max_redemptions : "", placeholder: "∞" });
-    var perU = input({ type: "number", min: "1", step: "1", value: c.per_user_limit != null ? c.per_user_limit : "", placeholder: "∞" });
-    var starts = input({ type: "date", value: c.starts_at ? c.starts_at.slice(0, 10) : "" });
-    var expires = input({ type: "date", value: c.expires_at ? c.expires_at.slice(0, 10) : "" });
-    var enabled = checkbox("Active", existing ? c.enabled : true);
-    var errBox = el("div");
-    var save = el("button", { class: "btn btn-primary" }, existing ? "Save" : "Create coupon");
-    save.addEventListener("click", function () {
-      clear(errBox); save.disabled = true;
-      var b = {
-        code: code.value.trim(), description: descI.value.trim() || null,
-        discount_type: typePct.checked ? "percent" : "fixed",
-        percent_off: typePct.checked ? (pct.value === "" ? null : Number(pct.value)) : null,
-        amount_off_money: typeFix.checked && offM.value !== "" ? Number(offM.value) : null,
-        amount_off_credits: typeFix.checked && offC.value !== "" ? Number(offC.value) : null,
-        min_subtotal_money: minM.value === "" ? null : Number(minM.value),
-        min_subtotal_credits: minC.value === "" ? null : Number(minC.value),
-        max_redemptions: maxR.value === "" ? null : Number(maxR.value),
-        per_user_limit: perU.value === "" ? null : Number(perU.value),
-        starts_at: starts.value || null, expires_at: expires.value || null, enabled: enabled.input.checked,
-      };
-      var req = existing ? api("/api/dashboard/guilds/" + gid + "/store/coupons/" + existing.id, { method: "PATCH", body: b })
-        : api("/api/dashboard/guilds/" + gid + "/store/coupons", { method: "POST", body: b });
-      req.then(function (r) {
-        if (!r.ok) { errBox.append(el("p", { style: { color: "#ef4444", fontSize: "13px" } }, (r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save")); save.disabled = false; return; }
-        closeModal(); toast(existing ? "Coupon saved" : "Coupon created"); render();
-      });
-    });
-    var modal = el("div", { class: "sm-modal" }, el("h2", null, existing ? "Edit coupon" : "New coupon"),
-      fieldRow("Code", code, "Letters/numbers/-/_, shown to buyers"), fieldRow("Description", descI),
-      el("div", { class: "sm-field" }, el("span", null, "Discount type"),
-        el("label", { style: { marginRight: "16px" } }, typePct, " Percent off"), el("label", null, typeFix, " Fixed amount")),
-      pctWrap, fixWrap,
-      el("div", { class: "sm-grid2" }, fieldRow("Min spend (money)", minM), fieldRow("Min spend (credits)", minC)),
-      el("div", { class: "sm-grid2" }, fieldRow("Max total uses (blank = ∞)", maxR), fieldRow("Per-user uses (blank = ∞)", perU)),
-      el("div", { class: "sm-grid2" }, fieldRow("Starts", starts), fieldRow("Expires", expires)),
-      el("div", { style: { marginBottom: "6px" } }, enabled.node), errBox,
-      el("div", { class: "sm-modal-foot" }, el("button", { class: "btn btn-ghost", onclick: closeModal }, "Cancel"), save));
-    syncType();
-    document.body.append(el("div", { class: "sm-modal-ov", id: "sm-modal-ov", onclick: function (e) { if (e.target.id === "sm-modal-ov") closeModal(); } }, modal));
+    var code = inp({ type: "text", value: c.code || "", maxlength: 32, placeholder: "SAVE10", style: { textTransform: "uppercase" } });
+    var descI = inp({ type: "text", value: c.description || "", maxlength: 200, placeholder: "Internal note (optional)" });
+    var pct = inp({ type: "number", min: "1", max: "100", step: "1", value: c.percent_off != null ? c.percent_off : "", placeholder: "10" });
+    var offM = prefixInp(CCY[S.cfg.currency] || "", { type: "number", min: "0", step: "0.01", value: c.amount_off_money != null ? c.amount_off_money : "", placeholder: "0.00", class: "inp" });
+    var offMInput = offM.querySelector("input");
+    var offC = inp({ type: "number", min: "0", step: "1", value: c.amount_off_credits != null ? c.amount_off_credits : "", placeholder: "0" });
+    var pctWrap = field("Percent off (1–100)", pct);
+    var fixWrap = el("div", { class: "grid2" }, field("Money off", offM), field("Credits off", offC));
+    var type = segmented([{ value: "percent", label: "Percent" }, { value: "fixed", label: "Fixed amount" }], (c.discount_type || "percent"), function (v) { pctWrap.style.display = v === "percent" ? "block" : "none"; fixWrap.style.display = v === "fixed" ? "grid" : "none"; });
+    var minM = prefixInp(CCY[S.cfg.currency] || "", { type: "number", min: "0", step: "0.01", value: c.min_subtotal_money != null ? c.min_subtotal_money : "", placeholder: "0.00", class: "inp" });
+    var minMInput = minM.querySelector("input");
+    var minC = inp({ type: "number", min: "0", step: "1", value: c.min_subtotal_credits != null ? c.min_subtotal_credits : "", placeholder: "0" });
+    var maxR = inp({ type: "number", min: "1", step: "1", value: c.max_redemptions != null ? c.max_redemptions : "", placeholder: "Unlimited" });
+    var perU = inp({ type: "number", min: "1", step: "1", value: c.per_user_limit != null ? c.per_user_limit : "", placeholder: "No limit" });
+    var starts = inp({ type: "date", value: c.starts_at ? c.starts_at.slice(0, 10) : "" });
+    var expires = inp({ type: "date", value: c.expires_at ? c.expires_at.slice(0, 10) : "" });
+    var enabled = swRow("Active", "Buyers can use this code at checkout", existing ? c.enabled : true);
+    var errEl = el("div", { class: "err" });
+    var save = btn(existing ? "Save coupon" : "Create coupon", { onClick: function () {
+      errEl.textContent = ""; save.disabled = true;
+      var b = { code: code.value.trim(), description: descI.value.trim() || null, discount_type: type.value(),
+        percent_off: type.value() === "percent" ? (pct.value === "" ? null : Number(pct.value)) : null,
+        amount_off_money: type.value() === "fixed" && offMInput.value !== "" ? Number(offMInput.value) : null,
+        amount_off_credits: type.value() === "fixed" && offC.value !== "" ? Number(offC.value) : null,
+        min_subtotal_money: minMInput.value === "" ? null : Number(minMInput.value), min_subtotal_credits: minC.value === "" ? null : Number(minC.value),
+        max_redemptions: maxR.value === "" ? null : Number(maxR.value), per_user_limit: perU.value === "" ? null : Number(perU.value),
+        starts_at: starts.value || null, expires_at: expires.value || null, enabled: enabled.input.checked };
+      var req = existing ? api(A("/store/coupons/" + existing.id), { method: "PATCH", body: b }) : api(A("/store/coupons"), { method: "POST", body: b });
+      req.then(function (r) { if (!r.ok) { errEl.textContent = (r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save"; save.disabled = false; return; } closeDrawer(); toast(existing ? "Coupon saved" : "Coupon created"); render(); });
+    } });
+    var body = el("div", null,
+      field("Code", code, { hint: "Letters, numbers, - and _. Shown to buyers." }), field("Description", descI),
+      el("div", { class: "field" }, el("span", { class: "lab" }, "Discount type"), type.node), pctWrap, fixWrap,
+      el("div", { class: "grid2" }, field("Min spend (money)", minM), field("Min spend (credits)", minC)),
+      el("div", { class: "grid2" }, field("Max total uses", maxR, { hint: "Blank = unlimited" }), field("Per-user uses", perU, { hint: "Blank = no limit" })),
+      el("div", { class: "grid2" }, field("Starts", starts), field("Expires", expires)),
+      enabled.node, errEl);
+    pctWrap.style.display = type.value() === "percent" ? "block" : "none"; fixWrap.style.display = type.value() === "fixed" ? "grid" : "none";
+    openDrawer(existing ? "Edit coupon" : "New coupon", body, el("div", null, btn("Cancel", { variant: "btn-ghost", onClick: closeDrawer }), save));
   }
 
-  // ---- PAYMENTS (connect status; one-click connect wired next) ----
-  function renderPayments(body) {
-    var c = S.cfg;
-    body.append(el("div", { class: "sm-card" }, el("h2", null, "How buyers pay"),
-      el("p", { class: "sm-muted", style: { marginTop: 0, fontSize: "13px" } }, "Products can be sold for real money (needs a connected provider) and/or server credits. Toggle these in Settings."),
-      el("div", { class: "sm-pay-row" }, el("div", { class: "sm-pay-ico" }, "💳"),
-        el("div", { class: "sm-pay-main" }, el("div", { class: "sm-pay-name" }, "Money"), el("div", { class: "sm-pay-state" }, c.accept_money ? el("span", { class: "sm-badge-ok" }, "Accepted") : el("span", { class: "sm-badge-no" }, "Off — enable in Settings")))),
-      el("div", { class: "sm-pay-row" }, el("div", { class: "sm-pay-ico" }, "🪙"),
-        el("div", { class: "sm-pay-main" }, el("div", { class: "sm-pay-name" }, "Server credits"), el("div", { class: "sm-pay-state" }, c.accept_credits ? el("span", { class: "sm-badge-ok" }, "Accepted") : el("span", { class: "sm-badge-no" }, "Off — enable in Settings"))))));
+  // ── SETTINGS ───────────────────────────────────────────────────────────────
+  function renderSettings(c) {
+    var cfg = S.cfg;
+    var open = swRow("Store open", "When off, the public store shows a ‘closed’ message", cfg.enabled);
+    var accM = swRow("Accept money", "Card / PayPal via your connected provider", cfg.accept_money);
+    var accC = swRow("Accept credits", "Buyers spend server credits they earned in Discord", cfg.accept_credits);
+    var currency = sel(["GBP", "USD", "EUR"], cfg.currency || "GBP");
+    var title = inp({ type: "text", value: cfg.title || "", maxlength: 100, placeholder: "My Server Store" });
+    var desc = ta({ value: cfg.description || "", maxlength: 1000, placeholder: "Shown under the store name" });
+    var banner = inp({ type: "url", value: cfg.banner_url || "", placeholder: "https://…/banner.png" });
+    var ordersCh = sel([["", "— none —"]].concat(S.channels.map(function (ch) { return [ch.id, "#" + (ch.name || ch.id)]; })), cfg.orders_channel_id || "");
+    var staff = el("select", { class: "inp", multiple: true, style: { minHeight: "120px" } }, S.roles.map(function (r) { return el("option", { value: r.id, selected: (cfg.staff_role_ids || []).indexOf(r.id) >= 0 }, r.name); }));
+    var save = btn("Save settings", { onClick: function () {
+      save.disabled = true;
+      api(A("/store/config"), { method: "POST", body: {
+        enabled: open.input.checked, accept_money: accM.input.checked, accept_credits: accC.input.checked, currency: currency.value,
+        title: title.value.trim() || null, description: desc.value.trim() || null, banner_url: banner.value.trim() || null,
+        orders_channel_id: ordersCh.value || null, staff_role_ids: Array.prototype.map.call(staff.selectedOptions, function (o) { return o.value; }),
+      } }).then(function (r) { save.disabled = false; if (!r.ok) { toast((r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save", "err"); return; } S.cfg = r.body.config; toast("Settings saved"); render(); });
+    } });
 
-    body.append(el("div", { class: "sm-card" }, el("h2", null, "Connect a payment provider"),
-      el("p", { class: "sm-muted", style: { marginTop: 0, fontSize: "13px" } }, "One-click connect is on the way — log in and link, no API keys to copy."),
-      el("div", { class: "sm-pay-row" }, el("div", { class: "sm-pay-ico" }, "💠"),
-        el("div", { class: "sm-pay-main" }, el("div", { class: "sm-pay-name" }, "Stripe"), el("div", { class: "sm-pay-state" }, "One-click ‘Connect with Stripe’ — coming next.")),
-        el("button", { class: "btn btn-outline", disabled: true }, "Connect (soon)")),
-      el("div", { class: "sm-pay-row" }, el("div", { class: "sm-pay-ico" }, "🅿️"),
-        el("div", { class: "sm-pay-main" }, el("div", { class: "sm-pay-name" }, "PayPal"), el("div", { class: "sm-pay-state" }, "One-click PayPal connect — pending PayPal partner approval.")),
-        el("button", { class: "btn btn-outline", disabled: true }, "Connect (soon)")),
-      el("p", { class: "sm-muted", style: { fontSize: "12.5px" } }, "For now, set up PayPal/Stripe keys in the dashboard Payments tab — those power the money rail today.")));
+    c.append(panel(panelHead("Storefront"),
+      el("p", { class: "panel-sub" }, "How the public store looks and what it accepts."),
+      open.node, accM.node, accC.node,
+      el("div", { class: "grid2", style: { marginTop: "14px" } }, field("Currency", currency), field("Title", title)),
+      field("Description", desc), field("Banner image URL", banner, { hint: "Optional, shown across the top of the store" })));
+    c.append(panel(panelHead("Staff & delivery"),
+      el("p", { class: "panel-sub" }, "Where manual orders go and who can fulfil them."),
+      field("Orders channel", ordersCh, { hint: "Manual delivery orders are posted here for staff" }),
+      field("Staff roles", staff, { hint: "These roles can claim, deliver and refund (Ctrl/Cmd-click to select several)" })));
+    c.append(el("div", { style: { display: "flex", justifyContent: "flex-end" } }, save));
+  }
+
+  // ── PAYMENTS ───────────────────────────────────────────────────────────────
+  function renderPayments(c) {
+    var cfg = S.cfg;
+    c.append(panel(panelHead("How buyers pay"),
+      el("p", { class: "panel-sub" }, "Toggle these rails in Settings. Money needs a connected provider; credits work out of the box."),
+      el("div", { class: "row" }, el("span", { style: { fontSize: "20px" } }, "💳"), el("div", { class: "grow" }, el("div", { class: "t" }, "Money"), el("div", { class: "d" }, "Card & PayPal")), cfg.accept_money ? badge("Accepted", "ok") : badge("Off", "dim")),
+      el("div", { class: "row" }, el("span", { style: { fontSize: "20px" } }, "🪙"), el("div", { class: "grow" }, el("div", { class: "t" }, "Server credits"), el("div", { class: "d" }, "Earned in Discord")), cfg.accept_credits ? badge("Accepted", "ok") : badge("Off", "dim"))));
+
+    c.append(panel(panelHead("Connect a payment provider"),
+      el("p", { class: "panel-sub" }, "One-click connect is on the way — log in once and link, no API keys to copy."),
+      el("div", { class: "row" }, el("span", { style: { fontSize: "20px" } }, "💠"), el("div", { class: "grow" }, el("div", { class: "t" }, "Stripe"), el("div", { class: "d" }, "‘Connect with Stripe’ — coming next")), badge("Soon", "info")),
+      el("div", { class: "row" }, el("span", { style: { fontSize: "20px" } }, "🅿️"), el("div", { class: "grow" }, el("div", { class: "t" }, "PayPal"), el("div", { class: "d" }, "One-click connect — pending PayPal partner approval")), badge("Soon", "info")),
+      el("p", { class: "hint", style: { marginTop: "8px" } }, "Until then, set up PayPal/Stripe keys in the dashboard Payments tab — those power the money rail today.")));
   }
 })();
