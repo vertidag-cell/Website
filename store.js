@@ -621,16 +621,24 @@
       if (rb) rb.innerHTML = rv.summary.reviewCount
         ? starDisplay(rv.summary.rating) + '<span class="prod-rating-n">' + Number(rv.summary.rating).toFixed(1) + ' · ' + rv.summary.reviewCount + ' review' + (rv.summary.reviewCount === 1 ? '' : 's') + '</span>'
         : '<span class="pm-norate">No reviews yet</span>';
-      var html = '<h3 class="pm-rev-title">Reviews</h3><div id="pm-form"></div>';
-      if (!rv.reviews.length) html += '<p class="pm-rev-empty">No reviews yet — be the first.</p>';
-      else {
-        html += '<ul class="pm-rev-list">';
-        rv.reviews.forEach(function (r) {
-          html += '<li class="pm-rev"><div class="pm-rev-top"><span class="pm-rev-who"><b>' + esc(r.username || 'Buyer') + '</b><span class="pm-verified" title="Reviews are only from verified buyers">✓ Verified</span></span>' + starDisplay(r.rating) + '</div>' + (r.comment ? '<p>' + esc(r.comment) + '</p>' : '') + (r.reply ? '<div class="pm-rev-reply"><b>↳ Store reply:</b> ' + esc(r.reply) + '</div>' : '') + '</li>';
-        });
-        html += '</ul>';
+      var sortable = rv.reviews.length > 2;
+      box.innerHTML = '<div class="pm-rev-head"><h3 class="pm-rev-title">Reviews</h3>' +
+        (sortable ? '<select id="pm-rev-sort" class="pm-rev-sort" aria-label="Sort reviews"><option value="recent">Most recent</option><option value="high">Highest rated</option><option value="low">Lowest rated</option></select>' : '') +
+        '</div><div id="pm-form"></div><div id="pm-rev-listwrap"></div>';
+      function reviewLi(r) {
+        return '<li class="pm-rev"><div class="pm-rev-top"><span class="pm-rev-who"><b>' + esc(r.username || 'Buyer') + '</b><span class="pm-verified" title="Reviews are only from verified buyers">✓ Verified</span></span>' + starDisplay(r.rating) + '</div>' + (r.comment ? '<p>' + esc(r.comment) + '</p>' : '') + (r.reply ? '<div class="pm-rev-reply"><b>↳ Store reply:</b> ' + esc(r.reply) + '</div>' : '') + '</li>';
       }
-      box.innerHTML = html;
+      function renderRevList(mode) {
+        var w = document.getElementById('pm-rev-listwrap'); if (!w) return;
+        if (!rv.reviews.length) { w.innerHTML = '<p class="pm-rev-empty">No reviews yet — be the first.</p>'; return; }
+        var arr = rv.reviews.slice();
+        if (mode === 'high') arr.sort(function (a, b) { return b.rating - a.rating; });
+        else if (mode === 'low') arr.sort(function (a, b) { return a.rating - b.rating; });
+        w.innerHTML = '<ul class="pm-rev-list">' + arr.map(reviewLi).join('') + '</ul>';
+      }
+      var sortSel = document.getElementById('pm-rev-sort');
+      if (sortSel) sortSel.addEventListener('change', function () { renderRevList(sortSel.value); });
+      renderRevList('recent');
       renderReviewForm(p, mine);
     });
   }

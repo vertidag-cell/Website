@@ -202,6 +202,9 @@
       .pm-buy { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 6px 0 4px; flex-wrap: wrap; }
       .pm-reviews { margin-top: 18px; }
       .pm-rev-title { font-size: 15px; font-weight: 800; margin: 0 0 12px; }
+      .pm-rev-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+      .pm-rev-head .pm-rev-title { margin: 0; }
+      .pm-rev-sort { padding: 5px 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--card, rgba(255,255,255,0.05)); color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer; }
       .pm-rev-load, .pm-rev-empty, .pm-rev-cta { color: var(--text-muted, #a1a1aa); font-size: 13px; }
       .pm-rev-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
       .pm-rev { border: 1px solid var(--border); border-radius: 12px; padding: 11px 13px; }
@@ -273,6 +276,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=16"></script>
+    <script src="store.js?v=17"></script>
   </body>
 </html>
