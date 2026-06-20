@@ -500,9 +500,13 @@
   }
   // ── product detail modal (description + reviews + review form) ──────────────
   var _pmKey = null;
+  function setProductParam(id) {
+    try { var u = new URL(location.href); if (id) u.searchParams.set('product', id); else u.searchParams.delete('product'); history.replaceState(null, '', u); } catch (e) {}
+  }
   function closeProductModal() {
     var ov = document.getElementById('prod-overlay'); if (ov) ov.remove();
     if (_pmKey) { document.removeEventListener('keydown', _pmKey); _pmKey = null; }
+    setProductParam(null);
   }
   function openProduct(p) {
     closeProductModal();
@@ -594,6 +598,7 @@
       else { addToCart(p.id, null, qty); closeProductModal(); }
     });
     wireImgFallbacks(ov);
+    setProductParam(p.id); // make the open product shareable / deep-linkable
     loadProductReviews(p);
   }
   function loadProductReviews(p) {
@@ -739,6 +744,9 @@
     });
     renderResults();
     renderCartButton();
+    // Deep-link: ?product=<id> opens that product's detail modal on load.
+    var dlp = parseInt(params.get('product'), 10);
+    if (dlp) { var dp = productById(dlp); if (dp) openProduct(dp); }
   }
 
   // ── boot ──────────────────────────────────────────────────────────────────────
