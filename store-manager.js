@@ -105,10 +105,20 @@
     { id: 2, code: "WELCOME5", description: "£5 off first order", discount_type: "fixed", percent_off: null, amount_off_money: 5, amount_off_credits: null, min_subtotal_money: 10, min_subtotal_credits: null, max_redemptions: null, per_user_limit: 1, redeemed_count: 12, starts_at: null, expires_at: null, enabled: true },
   ];
   var DEMO_CFG = { guild_id: gid, enabled: true, title: "Velated PVP Store", description: "Donor ranks, kits and in-game items for the cluster.", currency: "GBP", accept_money: true, accept_credits: true, orders_channel_id: "10", staff_role_ids: ["4"], banner_url: null };
+  var DEMO_SERIES = (function () {
+    var m = [18, 24, 12, 30, 22, 9.99, 40, 35, 28, 52, 44, 60, 38, 74], cr = [0, 5000, 0, 8000, 2500, 0, 5000, 12000, 0, 8000, 5000, 0, 2500, 12000];
+    return m.map(function (v, i) { return { date: "d" + i, money: v, credits: cr[i], orders: Math.round(v / 9) + (cr[i] ? 1 : 0) }; });
+  })();
+  var DEMO_TOP = [
+    { name: "VIP Rank", qty: 31, money: 309.69, credits: 0 },
+    { name: "MVP Rank", qty: 18, money: 359.82, credits: 0 },
+    { name: "Giga lvl 150 (imprinted)", qty: 11, money: 0, credits: 88000 },
+    { name: "Starter Kit", qty: 7, money: 34.93, credits: 0 },
+  ];
   function demoResp(path, opts) {
     if (opts && opts.method && opts.method !== "GET") return { ok: true };
     if (/\/me$/.test(path)) return { user: { id: "0", username: "previewowner", globalName: "Preview Owner" } };
-    if (/\/store\/overview/.test(path)) return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 } };
+    if (/\/store\/overview/.test(path)) return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: DEMO_SERIES, topProducts: DEMO_TOP, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 } };
     if (/\/store\/products/.test(path)) return { products: DEMO_PRODUCTS };
     if (/\/store\/coupons/.test(path)) return { coupons: DEMO_COUPONS };
     if (/\/store\/orders/.test(path)) { var st = (path.match(/status=(\w+)/) || [])[1]; return { orders: st ? DEMO_ORDERS.filter(function (o) { return o.status === st; }) : DEMO_ORDERS }; }
@@ -167,8 +177,8 @@
   function badge(text, variant) { return el("span", { class: "badge " + (variant || "") }, text); }
   function panel() { var p = el("div", { class: "panel" }); for (var i = 0; i < arguments.length; i++) if (arguments[i]) p.append(arguments[i]); return p; }
   function panelHead(title, action) { return el("div", { class: "panel-h" }, el("h2", null, title), action || null); }
-  function emptyState(iconName, title, text, action) {
-    return el("div", { class: "empty" }, el("div", { class: "e-ic" }, icon(iconName)), el("h3", null, title), el("p", null, text), action || null);
+  function emptyState(iconName, title, text, action, compact) {
+    return el("div", { class: "empty" + (compact ? " sm" : "") }, el("div", { class: "e-ic" }, icon(iconName)), el("h3", null, title), el("p", null, text), action || null);
   }
   function btn(label, opts) {
     opts = opts || {};
@@ -204,7 +214,7 @@
   }
 
   // ── state ───────────────────────────────────────────────────────────────────
-  var S = { cfg: null, products: [], roles: [], channels: [], stats: {}, recent: [], section: "overview" };
+  var S = { cfg: null, products: [], roles: [], channels: [], stats: {}, recent: [], series: [], top: [], section: "overview" };
 
   // ── boot ──────────────────────────────────────────────────────────────────
   if (!gid || !/^\d{5,25}$/.test(gid)) { fullState("store", "No server selected", "Open the Store Manager from your dashboard.", btn("Go to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); return; }
@@ -218,14 +228,14 @@
     if (ov.status === 403 && ov.body && ov.body.error === "premium_required") { return fullState("lock", "Premium required", "The web store is a Premium feature. Unlock it with /subscribe in Discord.", btn("See Premium", { onClick: function () { location.href = "pricing.html"; } })); }
     if (ov.status === 401 || ov.status === 403) { return fullState("lock", "No access", "You don't manage this server, or your session expired.", btn("Back to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); }
     if (!ov.ok) { return fullState("store", "Couldn't load the store", "Please try again in a moment.", btn("Retry", { onClick: function () { location.reload(); } })); }
-    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || [];
+    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || []; S.series = ov.body.series || []; S.top = ov.body.topProducts || [];
     S.products = (res[1].body && res[1].body.products) || [];
     S.roles = (res[2].body && res[2].body.roles) || [];
     S.channels = (res[3].body && res[3].body.channels) || [];
     render();
   }).catch(function (e) { if (e !== "redirect") fullState("store", "Couldn't reach the backend", "Please try again shortly.", btn("Retry", { onClick: function () { location.reload(); } })); });
 
-  function refreshOverview() { return api(A("/store/overview")).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; } }); }
+  function refreshOverview() { return api(A("/store/overview")).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; } }); }
   function refreshProducts() { return api(A("/store/products")).then(function (r) { S.products = (r.body && r.body.products) || []; }); }
 
   // ── shell render ──────────────────────────────────────────────────────────
@@ -280,31 +290,118 @@
   function closeMobileNav() { var app = document.querySelector(".sm-app"); if (app) { app.classList.remove("nav-open"); var sc = app.querySelector(".sm-nav-scrim"); if (sc) sc.remove(); } }
 
   // ── OVERVIEW ───────────────────────────────────────────────────────────────
+  var _chartId = 0;
+  function sum(a) { var t = 0; for (var i = 0; i < a.length; i++) t += a[i]; return t; }
+  // SVG area chart (CSP-safe: built as markup, injected via innerHTML — no inline JS).
+  function areaChart(values, opts) {
+    opts = opts || {}; var w = 660, h = 156, pad = 9, base = h - pad, top = pad + 16;
+    var n = values.length || 1, max = Math.max.apply(null, values.concat([1]));
+    var X = function (i) { return pad + (n === 1 ? (w - 2 * pad) / 2 : (i / (n - 1)) * (w - 2 * pad)); };
+    var Y = function (v) { return base - (v / max) * (base - top); };
+    var pts = values.map(function (v, i) { return X(i).toFixed(1) + "," + Y(v).toFixed(1); });
+    var line = "M" + pts.join(" L");
+    var area = line + " L" + X(n - 1).toFixed(1) + "," + base + " L" + X(0).toFixed(1) + "," + base + " Z";
+    var id = "scg" + (++_chartId), lx = X(n - 1).toFixed(1), ly = Y(values[n - 1] || 0).toFixed(1);
+    var col = opts.color || "var(--accent)";
+    var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">'
+      + '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0" stop-color="' + col + '" stop-opacity="0.36"/>'
+      + '<stop offset="1" stop-color="' + col + '" stop-opacity="0"/></linearGradient></defs>'
+      + '<path d="' + area + '" fill="url(#' + id + ')"/>'
+      + '<path d="' + line + '" fill="none" stroke="' + col + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'
+      + '<circle cx="' + lx + '" cy="' + ly + '" r="3.5" fill="' + col + '" vector-effect="non-scaling-stroke"/></svg>';
+    var box = el("div", { class: "chart" }); box.innerHTML = svg; return box;
+  }
+  function trendPct(series, key) {
+    if (!series || series.length < 4) return null;
+    var half = Math.floor(series.length / 2), prev = 0, cur = 0;
+    series.slice(0, half).forEach(function (d) { prev += d[key] || 0; });
+    series.slice(half).forEach(function (d) { cur += d[key] || 0; });
+    if (prev === 0) return cur > 0 ? 100 : null;
+    return Math.round(((cur - prev) / prev) * 100);
+  }
+
   function renderOverview(c) {
-    var s = S.stats, ccy = S.cfg.currency || "GBP";
-    function stat(label, value, ic, flag) { return el("div", { class: "stat" + (flag ? " flag" : "") }, el("div", { class: "ic" }, icon(ic)), el("div", { class: "v" }, value), el("div", { class: "l" }, label)); }
-    c.append(el("div", { class: "stats" },
-      stat("Revenue (money)", money(s.revenueMoney, ccy), "payments"),
-      stat("Revenue (credits)", "🪙 " + fmt(s.revenueCredits), "coin"),
-      stat("Paid orders", fmt(s.paidOrders), "orders"),
-      stat("Awaiting delivery", fmt(s.needsDelivery || 0), "truck", s.needsDelivery > 0),
-      stat("Products live", fmt(s.enabledProducts || 0) + " / " + fmt(s.products || 0), "products"),
-      stat("Active coupons", fmt(s.activeCoupons || 0), "coupons")));
+    var s = S.stats, ccy = S.cfg.currency || "GBP", series = S.series || [];
+    var d = 0; // stagger delay
+    function reveal(node) { node.classList.add("reveal"); node.style.animationDelay = (d += 70) + "ms"; return node; }
 
-    c.append(panel(el("div", { style: { display: "flex", gap: "10px", flexWrap: "wrap" } },
+    // needs-delivery call to action
+    if (s.needsDelivery > 0) {
+      c.append(reveal(el("div", { class: "alert" },
+        el("div", { class: "ai" }, icon("truck")),
+        el("div", { class: "grow" },
+          el("div", { class: "t" }, s.needsDelivery === 1 ? "1 order is waiting on you" : s.needsDelivery + " orders are waiting on you"),
+          el("div", { class: "d" }, "Customers have paid for in-game items that need hand delivery.")),
+        btn("Deliver now", { onClick: function () { S.section = "orders"; render(); } }))));
+    }
+
+    // hero revenue + chart, alongside a 2×2 stat grid
+    var moneyVals = series.map(function (x) { return x.money; });
+    var creditVals = series.map(function (x) { return x.credits; });
+    var mSum = sum(moneyVals), cSum = sum(creditVals);
+    var useCredits = mSum === 0 && cSum > 0;
+    var vals = useCredits ? creditVals : moneyVals;
+    var heroBig = useCredits ? ("🪙 " + fmt(cSum)) : money(mSum, ccy);
+    var tp = trendPct(series, useCredits ? "credits" : "money");
+    var trendCls = tp == null ? "flat" : tp >= 0 ? "up" : "down";
+    var trendTxt = tp == null ? "No change yet" : (tp >= 0 ? "▲ " : "▼ ") + Math.abs(tp) + "% vs prior week";
+    var ordSum = sum(series.map(function (x) { return x.orders; }));
+
+    var hero = el("div", { class: "hero-rev" },
+      el("div", { class: "cap" }, (useCredits ? "Credits taken" : "Revenue") + " · last 14 days"),
+      el("div", { class: "big" }, heroBig),
+      el("span", { class: "trend " + trendCls }, trendTxt),
+      areaChart(vals, { color: "var(--accent)" }),
+      el("div", { class: "hero-sub" },
+        el("div", null, el("div", { class: "v" }, money(s.revenueMoney, ccy)), el("div", { class: "l" }, "All-time money")),
+        el("div", null, el("div", { class: "v" }, "🪙 " + fmt(s.revenueCredits)), el("div", { class: "l" }, "All-time credits")),
+        el("div", null, el("div", { class: "v" }, fmt(ordSum)), el("div", { class: "l" }, "Orders this fortnight"))));
+
+    function gstat(label, value, ic, flag) {
+      return el("div", { class: "gstat" + (flag ? " flag" : "") },
+        el("div", { class: "gi" }, icon(ic)), el("div", { class: "v" }, value), el("div", { class: "l" }, label));
+    }
+    var mini = el("div", { class: "ov-mini" },
+      gstat("Paid orders", fmt(s.paidOrders), "orders"),
+      gstat("Awaiting delivery", fmt(s.needsDelivery || 0), "truck", s.needsDelivery > 0),
+      gstat("Products live", fmt(s.enabledProducts || 0) + " / " + fmt(s.products || 0), "products"),
+      gstat("Active coupons", fmt(s.activeCoupons || 0), "coupons"));
+
+    c.append(reveal(el("div", { class: "ov-grid" }, hero, mini)));
+
+    // quick actions
+    c.append(reveal(panel(panelHead("Quick actions"), el("div", { style: { display: "flex", gap: "10px", flexWrap: "wrap" } },
       btn("Add product", { icon: "plus", onClick: function () { S.section = "products"; render(); productDrawer(null); } }),
-      btn(s.needsDelivery > 0 ? "Deliver orders (" + s.needsDelivery + ")" : "View orders", { variant: "btn-outline", onClick: function () { S.section = "orders"; render(); } }),
-      btn("New coupon", { variant: "btn-outline", onClick: function () { S.section = "coupons"; render(); couponDrawer(null); } }))));
+      btn("New coupon", { variant: "btn-outline", onClick: function () { S.section = "coupons"; render(); couponDrawer(null); } }),
+      btn("Edit store settings", { variant: "btn-outline", icon: "settings", onClick: function () { S.section = "settings"; render(); } }),
+      btn("View public store", { variant: "btn-ghost", icon: "ext", onClick: function () { window.open(location.origin + "/store.html?guild=" + gid, "_blank"); } })))));
 
-    var ord = panel(panelHead("Recent orders"));
-    if (!S.recent.length) ord.append(el("p", { class: "muted", style: { margin: 0 } }, "No orders yet. They'll appear here as customers buy."));
+    // bottom: top products + recent orders
+    var top = panel(panelHead("Top sellers"));
+    if (!S.top || !S.top.length) top.append(emptyState("chart", "No sales yet", "Your best-selling products will rank here once orders start coming in.", null, true));
+    else {
+      var maxQ = Math.max.apply(null, S.top.map(function (t) { return t.qty; }).concat([1]));
+      var list = el("div", { class: "topp" });
+      S.top.forEach(function (t) {
+        var rev = t.money > 0 ? money(t.money, ccy) : t.credits > 0 ? "🪙 " + fmt(t.credits) : "";
+        list.append(el("div", null,
+          el("div", { class: "hd" }, el("span", { class: "nm" }, t.name), el("span", { class: "qv" }, fmt(t.qty) + " sold" + (rev ? " · " + rev : ""))),
+          el("div", { class: "bar" }, el("i", { style: { width: Math.max(6, Math.round((t.qty / maxQ) * 100)) + "%" } }))));
+      });
+      top.append(list);
+    }
+
+    var ord = panel(panelHead("Recent orders", S.recent.length ? btn("View all", { variant: "btn-ghost", onClick: function () { S.section = "orders"; render(); } }) : null));
+    if (!S.recent.length) ord.append(emptyState("orders", "No orders yet", "Purchases will appear here the moment customers check out.", null, true));
     else S.recent.forEach(function (o) {
       var total = o.rail === "credits" ? "🪙 " + fmt(o.total_credits) : money(o.total_money, o.currency);
       ord.append(el("div", { class: "sw-row" },
         el("div", { class: "meta" }, el("div", { class: "t" }, "#" + o.id + "  ·  @" + (o.buyer_username || o.buyer_user_id)), el("div", { class: "d" }, (o.coupon_code ? "🎟️ " + o.coupon_code + " · " : "") + new Date((o.created_at || "").replace(" ", "T") + "Z").toLocaleDateString())),
         el("div", { style: { display: "flex", alignItems: "center", gap: "10px" } }, orderBadge(o.status), el("b", null, total))));
     });
-    c.append(ord);
+
+    c.append(reveal(el("div", { class: "ov-cols" }, top, ord)));
   }
   function orderBadge(status) {
     var m = { completed: ["Completed", "ok"], paid: ["Paid", "ok"], needs_delivery: ["Needs delivery", "warn"], pending: ["Pending", "dim"], cancelled: ["Cancelled", "dim"], refunded: ["Refunded", "info"], failed: ["Failed", "dim"] };
