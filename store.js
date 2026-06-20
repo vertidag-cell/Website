@@ -121,6 +121,9 @@
         }
         S.cart = r.body; S.coupon = null; renderCartButton(); toast('Added to cart'); if (cartOpen) renderCartPanel();
         var fab = document.getElementById('cart-fab'); if (fab) { fab.classList.remove('bump'); void fab.offsetWidth; fab.classList.add('bump'); }
+        var card = document.querySelector('.prod[data-pid="' + productId + '"]');
+        var bg = card && card.querySelector('.prod-badges');
+        if (bg && !bg.querySelector('.prod-badge.incart')) bg.insertAdjacentHTML('afterbegin', '<span class="prod-badge incart">✓ In cart</span>');
       });
   }
   function setQty(productId, qty) {
@@ -412,6 +415,7 @@
     var delay = S._revealed ? '' : ' style="animation-delay:' + Math.min((idx || 0) * 30, 240) + 'ms"';
     var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + initial(p.name) + '</div>';
     var badges = '';
+    if (S.cart && S.cart.items && S.cart.items.some(function (it) { return it.productId === p.id; })) badges += '<span class="prod-badge incart">✓ In cart</span>';
     if (p.featured) badges += '<span class="prod-badge feat">★ Featured</span>';
     badges += p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
     if (!p.inStock && !hasVariants(p)) badges += '<span class="prod-badge oos">Out of stock</span>';
@@ -801,7 +805,7 @@
         return;
       }
       renderStore(data);
-      if (S.user && data.premium !== false && data.enabled !== false) loadCart().then(renderCartButton);
+      if (S.user && data.premium !== false && data.enabled !== false) loadCart().then(function () { renderCartButton(); if (S.cart && S.cart.items && S.cart.items.length) renderResults(); });
     }).catch(function () {
       state('<h2>Couldn\'t reach the store</h2><p>The store service didn\'t respond. Please try again shortly.</p><a class="btn btn-outline" href="index.html">Back to site</a>', ICON.alert);
     });
