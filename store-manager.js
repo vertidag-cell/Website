@@ -51,6 +51,7 @@
     plus: "M12 5v14M5 12h14", ext: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3",
     coin: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9.5 9a2.5 2.5 0 0 1 5 0M9.5 9v6M14.5 12H9.5", truck: "M1 3h15v13H1zM16 8h4l3 3v5h-7M5.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM18.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z",
     chart: "M3 3v18h18M7 14l3-3 3 3 5-6", lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
+    star: "M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z",
   };
   function icon(name) {
     var ns = "http://www.w3.org/2000/svg";
@@ -104,6 +105,11 @@
     { id: 1, code: "SUMMER20", description: "Summer sale", discount_type: "percent", percent_off: 20, amount_off_money: null, amount_off_credits: null, min_subtotal_money: null, min_subtotal_credits: null, max_redemptions: 100, per_user_limit: 1, redeemed_count: 37, starts_at: null, expires_at: "2026-08-31 23:59:59", enabled: true },
     { id: 2, code: "WELCOME5", description: "£5 off first order", discount_type: "fixed", percent_off: null, amount_off_money: 5, amount_off_credits: null, min_subtotal_money: 10, min_subtotal_credits: null, max_redemptions: null, per_user_limit: 1, redeemed_count: 12, starts_at: null, expires_at: null, enabled: true },
   ];
+  var DEMO_REVIEWS = [
+    { id: 1, product_id: 1, product_name: "VIP Rank", user_id: "111", username: "ApexHunter", rating: 5, comment: "Instant role, brilliant value.", status: "published", created_at: "2026-06-18 10:00:00" },
+    { id: 2, product_id: 3, product_name: "Giga lvl 150 (imprinted)", user_id: "112", username: "RexQueen", rating: 4, comment: "Delivered in-game within the hour.", status: "published", created_at: "2026-06-17 14:00:00" },
+    { id: 3, product_id: 4, product_name: "Starter Kit", user_id: "113", username: "MeshGod", rating: 2, comment: "Wanted more element in the kit.", status: "hidden", created_at: "2026-06-16 09:00:00" },
+  ];
   var DEMO_CFG = { guild_id: gid, enabled: true, title: "Velated PVP Store", description: "Donor ranks, kits and in-game items for the cluster.", currency: "GBP", accept_money: true, accept_credits: true, orders_channel_id: "10", staff_role_ids: ["4"], banner_url: null };
   var DEMO_SERIES = (function () {
     var m = [18, 24, 12, 30, 22, 9.99, 40, 35, 28, 52, 44, 60, 38, 74], cr = [0, 5000, 0, 8000, 2500, 0, 5000, 12000, 0, 8000, 5000, 0, 2500, 12000];
@@ -121,6 +127,7 @@
     if (/\/store\/overview/.test(path)) return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: DEMO_SERIES, topProducts: DEMO_TOP, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 } };
     if (/\/store\/products/.test(path)) return { products: DEMO_PRODUCTS };
     if (/\/store\/coupons/.test(path)) return { coupons: DEMO_COUPONS };
+    if (/\/store\/reviews/.test(path)) { var rst = (path.match(/status=(\w+)/) || [])[1]; return { reviews: rst ? DEMO_REVIEWS.filter(function (r) { return r.status === rst; }) : DEMO_REVIEWS }; }
     if (/\/store\/orders/.test(path)) { var st = (path.match(/status=(\w+)/) || [])[1]; return { orders: st ? DEMO_ORDERS.filter(function (o) { return o.status === st; }) : DEMO_ORDERS }; }
     if (/\/discord\/roles/.test(path)) return { roles: DEMO_ROLES };
     if (/\/discord\/channels/.test(path)) return { channels: DEMO_CHANNELS };
@@ -241,9 +248,10 @@
   function refreshProducts() { return api(A("/store/products")).then(function (r) { S.products = (r.body && r.body.products) || []; }); }
 
   // ── shell render ──────────────────────────────────────────────────────────
-  var NAV = [["overview", "Overview", "overview"], ["products", "Products", "products"], ["orders", "Orders", "orders"], ["coupons", "Coupons", "coupons"], ["settings", "Settings", "settings"], ["payments", "Payments", "payments"]];
+  var NAV = [["overview", "Overview", "overview"], ["products", "Products", "products"], ["orders", "Orders", "orders"], ["reviews", "Reviews", "star"], ["coupons", "Coupons", "coupons"], ["settings", "Settings", "settings"], ["payments", "Payments", "payments"]];
   var SECTION_META = {
     overview: ["Overview", "Your store at a glance"], products: ["Products", "What you sell"], orders: ["Orders", "Fulfil and refund purchases"],
+    reviews: ["Reviews", "Customer ratings — hide anything unfair"],
     coupons: ["Coupons", "Discount codes for checkout"], settings: ["Settings", "Store name, currency, payment rails, staff"], payments: ["Payments", "Connect a provider to take real money"],
   };
   function render() {
@@ -285,6 +293,7 @@
     if (S.section === "overview") renderOverview(content);
     else if (S.section === "products") renderProducts(content);
     else if (S.section === "orders") renderOrders(content);
+    else if (S.section === "reviews") renderReviews(content);
     else if (S.section === "coupons") renderCoupons(content);
     else if (S.section === "settings") renderSettings(content);
     else renderPayments(content);
@@ -537,6 +546,43 @@
             rowTop.append(el("div", null, btn("Refund", { variant: "btn-ghost", style: { padding: "4px 12px", fontSize: "12px" }, onClick: function () { if (!confirm("Refund order #" + o.id + "? Granted roles are revoked; credits are re-credited. Money refunds happen in your PayPal/Stripe dashboard.")) return; api(A("/store/orders/" + o.id + "/refund"), { method: "POST" }).then(function (rr) { toast(rr.ok ? ((rr.body && rr.body.moneyRefundNote) || "Refunded") : "Failed", rr.ok ? "" : "err"); refreshOverview().then(function () { load(current); }); }); } })));
           }
           listBox.append(rowTop);
+        });
+      });
+    }
+    load("all");
+  }
+
+  // ── REVIEWS (moderation) ─────────────────────────────────────────────────────
+  function starStr(n) { n = Math.max(0, Math.min(5, n | 0)); return "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n); }
+  function renderReviews(c) {
+    var wrap = panel(panelHead("Reviews"), el("p", { class: "panel-sub" }, "Ratings buyers left on your products. Hide anything unfair — hidden reviews drop out of the public score."));
+    c.append(wrap);
+    var chips = el("div", { class: "chips" });
+    var current = "all";
+    var box = el("div");
+    [["all", "All"], ["published", "Published"], ["hidden", "Hidden"]].forEach(function (f) {
+      var ch = el("button", { class: "chip" + (f[0] === current ? " on" : ""), onclick: function () { current = f[0]; chips.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); }); ch.classList.add("on"); load(f[0]); } }, f[1]);
+      chips.append(ch);
+    });
+    wrap.append(chips, box);
+    function load(st) {
+      clear(box); box.append(el("div", { class: "sk", style: { height: "90px" } }));
+      api(A("/store/reviews" + (st === "all" ? "" : "?status=" + st))).then(function (r) {
+        clear(box);
+        var reviews = (r.body && r.body.reviews) || [];
+        if (!reviews.length) { box.append(emptyState("star", "No reviews yet", "Customer reviews appear here once buyers leave them.", null, true)); return; }
+        reviews.forEach(function (rv) {
+          var hidden = rv.status === "hidden";
+          box.append(el("div", { class: "row" },
+            el("div", { class: "grow" },
+              el("div", { class: "t" }, (rv.product_name || ("Product #" + rv.product_id)) + "   " + starStr(rv.rating)),
+              el("div", { class: "d" }, "@" + (rv.username || rv.user_id) + (rv.comment ? " — " + rv.comment : ""))),
+            hidden ? badge("Hidden", "dim") : badge("Published", "ok"),
+            btn(hidden ? "Show" : "Hide", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function (e) {
+              var b = e.currentTarget; b.disabled = true;
+              api(A("/store/reviews/" + rv.id + "/status"), { method: "POST", body: { status: hidden ? "published" : "hidden" } })
+                .then(function (rr) { if (rr.ok) { toast(hidden ? "Review shown" : "Review hidden"); load(current); } else { toast("Failed", "err"); b.disabled = false; } });
+            } })));
         });
       });
     }

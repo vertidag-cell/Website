@@ -28,6 +28,12 @@
   var CCY = { GBP: '£', USD: '$', EUR: '€' };
   function money(n, currency) { return (CCY[currency] || '') + (Number(n) || 0).toFixed(2); }
   function fmt(n) { return (Number(n) || 0).toLocaleString(); }
+  function productById(id) { id = parseInt(id, 10); for (var i = 0; i < S.products.length; i++) if (S.products[i].id === id) return S.products[i]; return null; }
+  function starDisplay(rating) {
+    var full = Math.round(Number(rating) || 0), s = '';
+    for (var i = 1; i <= 5; i++) s += '<span class="star' + (i <= full ? ' on' : '') + '">★</span>';
+    return '<span class="stars">' + s + '</span>';
+  }
 
   // ── tiny API client (credentials + CSRF for unsafe methods) ─────────────────
   var _csrf = '';
@@ -314,12 +320,23 @@
       orders.forEach(function (o) {
         var ccy = o.currency || 'GBP';
         var total = o.rail === 'credits' ? '🪙 ' + fmt(o.total_credits) : money(o.total_money, ccy);
-        var items = (o.items || []).map(function (i) { return i.quantity + '× ' + esc(i.name); }).join(', ');
+        var reviewable = ['completed', 'paid', 'needs_delivery'].indexOf(o.status) >= 0;
+        var itemsHtml = (o.items || []).map(function (i) {
+          var rv = (reviewable && i.product_id) ? '<button type="button" class="order-review" data-pid="' + i.product_id + '">★ Review</button>' : '';
+          return '<div class="order-item"><span>' + i.quantity + '× ' + esc(i.name) + '</span>' + rv + '</div>';
+        }).join('');
+        var date = o.created_at ? esc(new Date(String(o.created_at).replace(' ', 'T') + 'Z').toLocaleDateString()) : '';
         html += '<li class="order-row"><div class="order-top"><b>#' + o.id + '</b><span>' + (STAT[o.status] || o.status) + '</span><b>' + total + '</b></div>' +
-          '<div class="order-items">' + items + '</div></li>';
+          '<div class="order-items">' + itemsHtml + '</div>' + (date ? '<div class="order-date">' + date + '</div>' : '') + '</li>';
       });
       html += '</ul>';
       body.innerHTML = html;
+      body.querySelectorAll('.order-review').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var pid = parseInt(b.getAttribute('data-pid'), 10);
+          openProduct(productById(pid) || { id: pid, name: 'Product' });
+        });
+      });
     });
   }
 
@@ -349,9 +366,11 @@
     if (p.price_money != null) price += '<span class="prod-money">' + money(p.price_money, s.currency) + '</span>';
     if (p.price_money != null && p.price_credits != null) price += '<span class="prod-or">or</span>';
     if (p.price_credits != null) price += '<span class="prod-credits">🪙 ' + fmt(p.price_credits) + '</span>';
-    return '<div class="prod' + (p.featured ? ' is-feat' : '') + '">' + img + '<div class="prod-body">' +
+    var rating = p.reviewCount ? '<div class="prod-rating">' + starDisplay(p.rating) + '<span class="prod-rating-n">' + Number(p.rating).toFixed(1) + ' (' + p.reviewCount + ')</span></div>' : '';
+    return '<div class="prod' + (p.featured ? ' is-feat' : '') + '" data-pid="' + p.id + '" tabindex="0" role="button">' + img + '<div class="prod-body">' +
       (p.category ? '<div class="prod-cat">' + esc(p.category) + '</div>' : '') +
       '<h3 class="prod-name">' + esc(p.name) + '</h3>' +
+      rating +
       (p.description ? '<p class="prod-desc">' + esc(p.description) + '</p>' : '') +
       '<div class="prod-badges">' + badges + '</div>' +
       '<div class="prod-foot"><div class="prod-price">' + price + '</div>' +
@@ -393,9 +412,107 @@
       '<div class="store-grid">' + list.map(productCardHtml).join('') + '</div>';
     wireImgFallbacks(box);
     box.querySelectorAll('.prod-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () { if (!btn.disabled) addToCart(parseInt(btn.getAttribute('data-pid'), 10)); });
+      btn.addEventListener('click', function (e) { e.stopPropagation(); if (!btn.disabled) addToCart(parseInt(btn.getAttribute('data-pid'), 10)); });
+    });
+    box.querySelectorAll('.prod[data-pid]').forEach(function (card) {
+      function open() { var p = productById(card.getAttribute('data-pid')); if (p) openProduct(p); }
+      card.addEventListener('click', function (e) { if (!e.target.closest('.prod-btn')) open(); });
+      card.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
     });
   }
+  // ── product detail modal (description + reviews + review form) ──────────────
+  function closeProductModal() { var ov = document.getElementById('prod-overlay'); if (ov) ov.remove(); }
+  function openProduct(p) {
+    closeProductModal();
+    var s = S.store, ccy = s.currency;
+    var price = '';
+    if (p.price_money != null) price += '<span class="prod-money">' + money(p.price_money, ccy) + '</span>';
+    if (p.price_money != null && p.price_credits != null) price += '<span class="prod-or">or</span>';
+    if (p.price_credits != null) price += '<span class="prod-credits">🪙 ' + fmt(p.price_credits) + '</span>';
+    var img = p.image_url ? '<img class="pm-img" src="' + esc(p.image_url) + '" alt="">' : '';
+    var badge = p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
+    var soldOut = p.inStock === false;
+    var ov = document.createElement('div');
+    ov.id = 'prod-overlay'; ov.className = 'pm-overlay';
+    ov.innerHTML = '<div class="pm-panel" role="dialog" aria-label="Product details">' +
+      '<button type="button" class="pm-x" aria-label="Close">✕</button>' + img +
+      '<div class="pm-body">' +
+        (p.category ? '<div class="prod-cat">' + esc(p.category) + '</div>' : '') +
+        '<h2 class="pm-name">' + esc(p.name) + '</h2>' +
+        '<div class="pm-rating" id="pm-rating"></div>' +
+        (p.description ? '<p class="pm-desc">' + esc(p.description) + '</p>' : '') +
+        '<div class="prod-badges">' + badge + (soldOut ? '<span class="prod-badge oos">Out of stock</span>' : '') + '</div>' +
+        (price ? '<div class="pm-buy"><div class="prod-price">' + price + '</div>' +
+          (soldOut ? '<button class="btn btn-outline" disabled>Out of stock</button>' : '<button class="btn btn-primary" id="pm-add">Add to cart</button>') + '</div>' : '') +
+        '<div class="pm-reviews" id="pm-reviews"><div class="pm-rev-load">Loading reviews…</div></div>' +
+      '</div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function (e) { if (e.target === ov) closeProductModal(); });
+    ov.querySelector('.pm-x').addEventListener('click', closeProductModal);
+    var add = document.getElementById('pm-add');
+    if (add) add.addEventListener('click', function () { addToCart(p.id); });
+    wireImgFallbacks(ov);
+    loadProductReviews(p);
+  }
+  function loadProductReviews(p) {
+    var box = document.getElementById('pm-reviews'); if (!box) return;
+    var qs = '?guild=' + encodeURIComponent(guildId) + '&id=' + p.id;
+    Promise.all([
+      api('/api/dashboard/store/product/reviews' + qs),
+      S.user ? api('/api/dashboard/store/reviews/mine?guild=' + encodeURIComponent(guildId) + '&productId=' + p.id) : Promise.resolve({ ok: false }),
+    ]).then(function (res) {
+      var rv = (res[0].ok && res[0].body) || { reviews: [], summary: { rating: 0, reviewCount: 0 } };
+      var mine = (res[1] && res[1].ok && res[1].body) || { review: null, canReview: false };
+      var rb = document.getElementById('pm-rating');
+      if (rb) rb.innerHTML = rv.summary.reviewCount
+        ? starDisplay(rv.summary.rating) + '<span class="prod-rating-n">' + Number(rv.summary.rating).toFixed(1) + ' · ' + rv.summary.reviewCount + ' review' + (rv.summary.reviewCount === 1 ? '' : 's') + '</span>'
+        : '<span class="pm-norate">No reviews yet</span>';
+      var html = '<h3 class="pm-rev-title">Reviews</h3><div id="pm-form"></div>';
+      if (!rv.reviews.length) html += '<p class="pm-rev-empty">No reviews yet — be the first.</p>';
+      else {
+        html += '<ul class="pm-rev-list">';
+        rv.reviews.forEach(function (r) {
+          html += '<li class="pm-rev"><div class="pm-rev-top"><b>' + esc(r.username || 'Buyer') + '</b>' + starDisplay(r.rating) + '</div>' + (r.comment ? '<p>' + esc(r.comment) + '</p>' : '') + '</li>';
+        });
+        html += '</ul>';
+      }
+      box.innerHTML = html;
+      renderReviewForm(p, mine);
+    });
+  }
+  function renderReviewForm(p, mine) {
+    var f = document.getElementById('pm-form'); if (!f) return;
+    if (!S.user) {
+      f.innerHTML = '<p class="pm-rev-cta">Bought this? <button type="button" class="cart-link" id="pm-login">Log in</button> to leave a review.</p>';
+      var l = document.getElementById('pm-login'); if (l) l.addEventListener('click', loginBounce);
+      return;
+    }
+    if (!mine.canReview) { f.innerHTML = '<p class="pm-rev-cta">Purchase this product to leave a review.</p>'; return; }
+    var cur = mine.review ? mine.review.rating : 0, picked = cur;
+    var stars = '';
+    for (var i = 1; i <= 5; i++) stars += '<button type="button" class="star-pick' + (i <= cur ? ' on' : '') + '" data-v="' + i + '" aria-label="' + i + ' stars">★</button>';
+    f.innerHTML = '<div class="pm-form-box"><div class="pm-form-h">' + (mine.review ? 'Edit your review' : 'Leave a review') + '</div>' +
+      '<div class="star-input">' + stars + '</div>' +
+      '<textarea id="pm-comment" class="pm-comment" maxlength="1000" placeholder="Share your experience (optional)">' + esc(mine.review && mine.review.comment ? mine.review.comment : '') + '</textarea>' +
+      '<button type="button" class="btn btn-primary" id="pm-submit">' + (mine.review ? 'Update review' : 'Submit review') + '</button>' +
+      '<div class="pm-form-msg" id="pm-form-msg"></div></div>';
+    f.querySelectorAll('.star-pick').forEach(function (b) {
+      b.addEventListener('click', function () { picked = parseInt(b.getAttribute('data-v'), 10); f.querySelectorAll('.star-pick').forEach(function (x) { x.classList.toggle('on', parseInt(x.getAttribute('data-v'), 10) <= picked); }); });
+    });
+    document.getElementById('pm-submit').addEventListener('click', function () {
+      var msg = document.getElementById('pm-form-msg');
+      if (!picked) { msg.textContent = 'Pick a star rating first.'; return; }
+      var btn = document.getElementById('pm-submit'); btn.disabled = true;
+      api('/api/dashboard/store/reviews?guild=' + encodeURIComponent(guildId), { method: 'POST', body: { productId: p.id, rating: picked, comment: document.getElementById('pm-comment').value } })
+        .then(function (r) {
+          btn.disabled = false;
+          if (r.status === 401) return loginBounce();
+          if (!r.ok) { msg.textContent = (r.body && r.body.error === 'not_purchased') ? 'Only buyers can review this.' : 'Could not save your review.'; return; }
+          toast('Thanks for your review!'); loadProductReviews(p);
+        });
+    });
+  }
+
   function renderStore(data) {
     S.store = data.store || {};
     S.products = data.products || [];
