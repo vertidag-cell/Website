@@ -135,6 +135,7 @@
     coin:      'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 6v12M9 9h4.5a2.5 2.5 0 0 1 0 5H9',
     creditCard:'M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM2 10h20',
     wallet:    'M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7V5a2 2 0 0 1 2-2h12v4M17 13h3',
+    store:     'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
     flame:     'M14 2c0 6 4 7 4 12a6 6 0 1 1-12 0c0-4 3-5 3-9 2 2 2 4 5 6 0-3 0-6 0-9z',
     trophy:    'M8 4h8v4a4 4 0 0 1-8 0zM4 6h4M16 6h4M12 12v4M8 20h8',
     gift:      'M20 12v9H4v-9M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7',
@@ -432,6 +433,16 @@
     tierCreate: (gid, body)   => api(`/api/dashboard/guilds/${gid}/staff-tiers`, { method: "POST", body }),
     tierUpdate: (gid, id, body) => api(`/api/dashboard/guilds/${gid}/staff-tiers/${id}`, { method: "PATCH", body }),
     tierDelete: (gid, id)     => api(`/api/dashboard/guilds/${gid}/staff-tiers/${id}`, { method: "DELETE" }),
+    // Storefront — config, products, orders (premium)
+    storeCfgGet:     (gid)          => api(`/api/dashboard/guilds/${gid}/store/config`),
+    storeCfgSave:    (gid, body)    => api(`/api/dashboard/guilds/${gid}/store/config`, { method: "POST", body }),
+    storeProdList:   (gid)          => api(`/api/dashboard/guilds/${gid}/store/products`),
+    storeProdCreate: (gid, body)    => api(`/api/dashboard/guilds/${gid}/store/products`, { method: "POST", body }),
+    storeProdUpdate: (gid, id, body) => api(`/api/dashboard/guilds/${gid}/store/products/${id}`, { method: "PATCH", body }),
+    storeProdDelete: (gid, id)      => api(`/api/dashboard/guilds/${gid}/store/products/${id}`, { method: "DELETE" }),
+    storeOrders:     (gid, status)  => api(`/api/dashboard/guilds/${gid}/store/orders${status ? `?status=${encodeURIComponent(status)}` : ""}`),
+    storeDeliver:    (gid, oid, iid) => api(`/api/dashboard/guilds/${gid}/store/orders/${oid}/items/${iid}/deliver`, { method: "POST" }),
+    storeRefund:     (gid, oid)     => api(`/api/dashboard/guilds/${gid}/store/orders/${oid}/refund`, { method: "POST" }),
     // PayPal config (write-only secrets, masked on read) — premium only
     paypalGet:  (gid)         => api(`/api/dashboard/guilds/${gid}/payments/paypal`),
     paypalSave: (gid, body)   => api(`/api/dashboard/guilds/${gid}/payments/paypal`, { method: "POST", body }),
@@ -3669,6 +3680,7 @@
       if (mod.name === "tickets") return renderTicketsCanvas(content, mod, m.values);
       if (mod.name === "staffPay") return renderStaffPayCanvas(content, mod, m.values);
       if (mod.name === "payments") return renderPaymentsCanvas(content, mod, m.values);
+      if (mod.name === "store") return renderStoreCanvas(content, mod, m.values);
       if (mod.name === "serverTemplates") return renderServerTemplatesCanvas(content, mod, m.values);
 
       // Generic schema-driven form
@@ -7098,6 +7110,247 @@
         )
       )
     );
+  }
+
+  /* ============================================================
+     Storefront management — bespoke CRUD section (premium)
+     ============================================================ */
+  async function renderStoreCanvas(content, mod) {
+    const gid = state.selectedGuildId;
+    clear(content);
+    const CCY = { GBP: "£", USD: "$", EUR: "€" };
+    const storeUrl = `${location.origin}/store.html?guild=${gid}`;
+
+    const wrap = h("div", { class: "dsx-store", style: { display: "flex", flexDirection: "column", gap: "16px" } });
+    content.append(wrap);
+
+    // Header card with the public link.
+    wrap.append(h("div", { class: "dsx-card" },
+      h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" } },
+        h("div", null,
+          h("h3", { style: { margin: "0 0 4px" } }, "Web Store"),
+          h("p", { class: "dsx-muted", style: { margin: 0, fontSize: "13px" } }, "Your shop at ", h("code", null, "/store.html"))),
+        h("a", { class: "btn btn-outline", href: storeUrl, target: "_blank", rel: "noopener" }, "Open store ↗"))));
+
+    const statusBox = h("div");
+    wrap.append(statusBox);
+    const cfgCard = h("div", { class: "dsx-card" }, h("p", { class: "dsx-muted" }, "Loading…"));
+    const prodCard = h("div", { class: "dsx-card" });
+    const orderCard = h("div", { class: "dsx-card" });
+    wrap.append(cfgCard, prodCard, orderCard);
+
+    let cfg, products = [], roles = [], channels = [];
+    try {
+      const [c, p, r, ch] = await Promise.all([
+        data.storeCfgGet(gid), data.storeProdList(gid),
+        data.roles(gid).catch(() => ({ roles: [] })), data.channels(gid).catch(() => ({ channels: [] })),
+      ]);
+      cfg = c.config; products = p.products || []; roles = r.roles || []; channels = ch.channels || [];
+    } catch (e) {
+      if (e.code === 403 && e.data && e.data.error === "premium_required") {
+        clear(wrap); wrap.append(notice("warn", "Premium required", "Activate Premium with /subscribe in Discord to open a store."));
+        return;
+      }
+      clear(wrap); return renderTabError(wrap, e);
+    }
+
+    const flash = (kind, msg) => { clear(statusBox); statusBox.append(notice(kind, kind === "error" ? "Error" : "Saved", msg)); };
+    const labeled = (label, el, hint) => h("label", { class: "dsx-field", style: { display: "block", marginBottom: "10px" } },
+      h("span", { style: { display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "4px" } }, label),
+      el, hint ? h("span", { class: "dsx-muted", style: { display: "block", fontSize: "12px", marginTop: "2px" } }, hint) : null);
+    const inputEl = (attrs) => h("input", Object.assign({ class: "dsx-input", style: { width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)" } }, attrs));
+    const checkEl = (label, checked) => { const cb = inputEl({ type: "checkbox", style: { width: "auto", marginRight: "8px" } }); cb.checked = !!checked; return { node: h("label", { style: { display: "inline-flex", alignItems: "center", marginRight: "16px", fontSize: "14px" } }, cb, label), input: cb }; };
+
+    // ---- CONFIG ----
+    function renderConfig() {
+      clear(cfgCard);
+      const enabled = checkEl("Store open", cfg.enabled);
+      const accMoney = checkEl("Accept money", cfg.accept_money);
+      const accCredits = checkEl("Accept credits", cfg.accept_credits);
+      const currency = h("select", { class: "dsx-input", style: { padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)" } },
+        ...["GBP", "USD", "EUR"].map((c) => h("option", { value: c, selected: cfg.currency === c }, c)));
+      const title = inputEl({ type: "text", value: cfg.title || "", maxlength: 100, placeholder: "Store title" });
+      const desc = inputEl({ type: "text", value: cfg.description || "", maxlength: 1000, placeholder: "Short description" });
+      const banner = inputEl({ type: "url", value: cfg.banner_url || "", placeholder: "https://…/banner.png" });
+      const ordersCh = h("select", { class: "dsx-input", style: { width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)" } },
+        h("option", { value: "" }, "— none —"),
+        ...channels.map((c) => h("option", { value: c.id, selected: cfg.orders_channel_id === c.id }, "#" + (c.name || c.id))));
+      const staffSel = h("select", { multiple: true, class: "dsx-input", style: { width: "100%", minHeight: "84px", padding: "6px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)" } },
+        ...roles.map((r) => h("option", { value: r.id, selected: (cfg.staff_role_ids || []).includes(r.id) }, r.name)));
+
+      const saveBtn = h("button", { class: "btn btn-primary" }, "Save store settings");
+      saveBtn.addEventListener("click", async () => {
+        saveBtn.disabled = true;
+        try {
+          const body = {
+            enabled: enabled.input.checked, accept_money: accMoney.input.checked, accept_credits: accCredits.input.checked,
+            currency: currency.value, title: title.value.trim() || null, description: desc.value.trim() || null,
+            banner_url: banner.value.trim() || null, orders_channel_id: ordersCh.value || null,
+            staff_role_ids: Array.from(staffSel.selectedOptions).map((o) => o.value),
+          };
+          const r = await data.storeCfgSave(gid, body);
+          cfg = r.config; flash("success", "Store settings saved."); renderConfig();
+        } catch (e) { flash("error", (e.data && e.data.errors && e.data.errors.join("; ")) || e.message); }
+        finally { saveBtn.disabled = false; }
+      });
+
+      cfgCard.append(
+        h("h3", { style: { marginTop: 0 } }, "Settings"),
+        h("div", { style: { marginBottom: "12px" } }, enabled.node, accMoney.node, accCredits.node),
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" } },
+          labeled("Currency", currency), labeled("Orders channel (staff)", ordersCh)),
+        labeled("Title", title), labeled("Description", desc),
+        labeled("Banner image URL", banner, "https image, optional"),
+        labeled("Staff roles (deliver/refund)", staffSel, "Ctrl/Cmd-click to select multiple"),
+        saveBtn,
+      );
+    }
+
+    // ---- PRODUCT EDITOR (inline) ----
+    function productForm(existing, onDone) {
+      const p = existing || {};
+      const name = inputEl({ type: "text", value: p.name || "", maxlength: 120, placeholder: "Product name" });
+      const desc = inputEl({ type: "text", value: p.description || "", maxlength: 1000, placeholder: "Description" });
+      const img = inputEl({ type: "url", value: p.image_url || "", placeholder: "https://…/image.png" });
+      const preview = h("img", { src: p.image_url || "", alt: "", style: { maxWidth: "80px", maxHeight: "56px", borderRadius: "8px", marginTop: "6px", display: p.image_url ? "block" : "none", objectFit: "cover" } });
+      img.addEventListener("input", () => { if (/^https:\/\/\S+\.(png|jpe?g|webp|gif)/i.test(img.value)) { preview.src = img.value; preview.style.display = "block"; } else preview.style.display = "none"; });
+      const cat = inputEl({ type: "text", value: p.category || "", maxlength: 60, placeholder: "Category (optional)" });
+      const money = inputEl({ type: "number", step: "0.01", min: "0", value: p.price_money != null ? p.price_money : "", placeholder: "—", style: { width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)" } });
+      const creds = inputEl({ type: "number", step: "1", min: "0", value: p.price_credits != null ? p.price_credits : "", placeholder: "—", style: { width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)" } });
+      const stock = inputEl({ type: "number", step: "1", min: "0", value: p.stock != null ? p.stock : "", placeholder: "∞" });
+      const perUser = inputEl({ type: "number", step: "1", min: "0", value: p.per_user_limit != null ? p.per_user_limit : "", placeholder: "∞" });
+      const enabled = checkEl("Enabled", existing ? p.enabled : true);
+
+      const ftype = (p.fulfillment_type || "manual");
+      const roleSel = h("select", { class: "dsx-input", style: { width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)" } },
+        h("option", { value: "" }, "— pick a role —"),
+        ...roles.map((r) => h("option", { value: r.id, selected: p.role_id === r.id }, r.name)));
+      const instr = inputEl({ type: "text", value: p.delivery_instructions || "", maxlength: 1000, placeholder: "e.g. Spawn a Giga lvl 150 for the buyer" });
+      const roleWrap = labeled("Role to grant", roleSel);
+      const instrWrap = labeled("Delivery instructions (shown to staff)", instr);
+      const radioRole = h("input", { type: "radio", name: "ft" + (p.id || "new"), value: "role" }); radioRole.checked = ftype === "role";
+      const radioManual = h("input", { type: "radio", name: "ft" + (p.id || "new"), value: "manual" }); radioManual.checked = ftype !== "role";
+      const syncFt = () => { roleWrap.style.display = radioRole.checked ? "block" : "none"; instrWrap.style.display = radioManual.checked ? "block" : "none"; };
+      radioRole.addEventListener("change", syncFt); radioManual.addEventListener("change", syncFt);
+
+      const err = h("div");
+      const save = h("button", { class: "btn btn-primary" }, existing ? "Save product" : "Add product");
+      save.addEventListener("click", async () => {
+        clear(err); save.disabled = true;
+        const body = {
+          name: name.value.trim(), description: desc.value.trim() || null, image_url: img.value.trim() || null,
+          category: cat.value.trim() || null,
+          price_money: money.value === "" ? null : Number(money.value),
+          price_credits: creds.value === "" ? null : Number(creds.value),
+          fulfillment_type: radioRole.checked ? "role" : "manual",
+          role_id: radioRole.checked ? (roleSel.value || null) : null,
+          delivery_instructions: radioManual.checked ? (instr.value.trim() || null) : null,
+          stock: stock.value === "" ? null : Number(stock.value),
+          per_user_limit: perUser.value === "" ? null : Number(perUser.value),
+          enabled: enabled.input.checked,
+        };
+        try {
+          if (existing) await data.storeProdUpdate(gid, existing.id, body); else await data.storeProdCreate(gid, body);
+          onDone(true);
+        } catch (e) { err.append(notice("error", "Couldn't save", (e.data && e.data.errors && e.data.errors.join("; ")) || e.message)); save.disabled = false; }
+      });
+      const cancel = h("button", { class: "btn btn-ghost", onclick: () => onDone(false) }, "Cancel");
+
+      const form = h("div", { class: "dsx-card", style: { background: "var(--card)", marginTop: "10px" } },
+        labeled("Name", name), labeled("Description", desc),
+        labeled("Image URL", img, "https image, optional"), preview, labeled("Category", cat),
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" } },
+          labeled("Price — money", money), labeled("Price — credits", creds)),
+        h("div", { style: { margin: "6px 0 10px" } },
+          h("span", { style: { display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "4px" } }, "Delivery"),
+          h("label", { style: { marginRight: "16px" } }, radioRole, " Discord role"),
+          h("label", null, radioManual, " Manual / in-game")),
+        roleWrap, instrWrap,
+        h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" } },
+          labeled("Stock (blank = unlimited)", stock), labeled("Per-user limit (blank = none)", perUser)),
+        h("div", { style: { marginBottom: "10px" } }, enabled.node),
+        err,
+        h("div", { style: { display: "flex", gap: "8px" } }, save, cancel));
+      syncFt();
+      return form;
+    }
+
+    // ---- PRODUCTS ----
+    function renderProducts() {
+      clear(prodCard);
+      const head = h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" } },
+        h("h3", { style: { margin: 0 } }, `Products (${products.length})`));
+      const addBtn = h("button", { class: "btn btn-primary" }, "+ Add product");
+      head.append(addBtn);
+      prodCard.append(head);
+      const formSlot = h("div");
+      prodCard.append(formSlot);
+      addBtn.addEventListener("click", () => {
+        clear(formSlot);
+        formSlot.append(productForm(null, async (saved) => { clear(formSlot); if (saved) { products = (await data.storeProdList(gid)).products || []; renderProducts(); flash("success", "Product added."); } }));
+      });
+
+      if (!products.length) { prodCard.append(h("p", { class: "dsx-muted" }, "No products yet — add your first above.")); return; }
+      const list = h("div", { style: { display: "flex", flexDirection: "column", gap: "8px" } });
+      products.forEach((p) => {
+        const price = [p.price_money != null ? (CCY[cfg.currency] || "") + Number(p.price_money).toFixed(2) : null, p.price_credits != null ? "🪙" + p.price_credits : null].filter(Boolean).join(" / ");
+        const badge = p.fulfillment_type === "role" ? "⚡ role" : "📦 manual";
+        const row = h("div", { class: "dsx-row", style: { display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: "10px", opacity: p.enabled ? 1 : 0.55 } },
+          h("div", { style: { flex: 1, minWidth: 0 } },
+            h("div", { style: { fontWeight: 700 } }, p.name, p.enabled ? "" : " (hidden)"),
+            h("div", { class: "dsx-muted", style: { fontSize: "12.5px" } }, `${price} · ${badge}${p.stock != null ? " · stock " + p.stock : ""}`)),
+          h("button", { class: "btn btn-ghost", onclick: () => { const slot = h("div"); row.replaceWith(slot); slot.append(productForm(p, async (saved) => { products = (await data.storeProdList(gid)).products || []; renderProducts(); if (saved) flash("success", "Product saved."); })); } }, "Edit"),
+          h("button", { class: "btn btn-ghost", onclick: async () => { if (!confirm(`Delete "${p.name}"?`)) return; await data.storeProdDelete(gid, p.id); products = (await data.storeProdList(gid)).products || []; renderProducts(); flash("success", "Product deleted."); } }, "Delete"));
+        list.append(row);
+      });
+      prodCard.append(list);
+    }
+
+    // ---- ORDERS ----
+    async function renderOrders(filter) {
+      clear(orderCard);
+      orderCard.append(h("h3", { style: { marginTop: 0 } }, "Orders"));
+      const filterRow = h("div", { style: { display: "flex", gap: "6px", marginBottom: "10px", flexWrap: "wrap" } });
+      ["all", "needs_delivery", "completed", "refunded"].forEach((f) => {
+        const b = h("button", { class: "btn " + (f === (filter || "all") ? "btn-primary" : "btn-ghost"), style: { padding: "5px 12px", fontSize: "13px" } }, f.replace("_", " "));
+        b.addEventListener("click", () => renderOrders(f === "all" ? undefined : f));
+        filterRow.append(b);
+      });
+      orderCard.append(filterRow);
+      const body = h("div", { class: "dsx-muted" }, "Loading orders…");
+      orderCard.append(body);
+      let orders = [];
+      try { orders = (await data.storeOrders(gid, filter)).orders || []; } catch (e) { clear(body); body.append(notice("error", "Error", e.message)); return; }
+      clear(body);
+      if (!orders.length) { body.append(h("p", { class: "dsx-muted" }, "No orders yet.")); return; }
+      const STAT = { completed: "✅ completed", needs_delivery: "⏳ needs delivery", paid: "✅ paid", pending: "… pending", cancelled: "⚪ cancelled", refunded: "↩️ refunded", failed: "❌ failed" };
+      orders.forEach((o) => {
+        const total = o.rail === "credits" ? "🪙 " + o.total_credits : (CCY[o.currency] || "") + Number(o.total_money || 0).toFixed(2);
+        const card = h("div", { style: { border: "1px solid var(--border)", borderRadius: "10px", padding: "11px 13px", marginBottom: "8px" } });
+        card.append(h("div", { style: { display: "flex", justifyContent: "space-between", gap: "8px", fontWeight: 700 } },
+          h("span", null, `#${o.id} · `, h("a", { href: `https://discord.com/users/${o.buyer_user_id}`, target: "_blank", rel: "noopener" }, "@" + (o.buyer_username || o.buyer_user_id))),
+          h("span", null, STAT[o.status] || o.status), h("span", null, total)));
+        (o.items || []).forEach((i) => {
+          const sTick = i.fulfillment_status === "delivered" ? "✅" : i.fulfillment_status === "granted" ? "⚡" : "⏳";
+          const line = h("div", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", marginTop: "5px" } },
+            h("span", { style: { flex: 1 } }, `${sTick} ${i.quantity}× ${i.name}` + (i.fulfillment_type === "manual" && i.delivery_instructions ? ` — ${i.delivery_instructions}` : "")));
+          if (i.fulfillment_type === "manual" && i.fulfillment_status === "pending") {
+            const dbtn = h("button", { class: "btn btn-primary", style: { padding: "3px 10px", fontSize: "12px" } }, "Deliver");
+            dbtn.addEventListener("click", async () => { dbtn.disabled = true; try { await data.storeDeliver(gid, o.id, i.id); renderOrders(filter); flash("success", `Delivered item on order #${o.id}.`); } catch (e) { flash("error", e.message); dbtn.disabled = false; } });
+            line.append(dbtn);
+          }
+          card.append(line);
+        });
+        if (o.status !== "refunded" && o.status !== "cancelled") {
+          const rbtn = h("button", { class: "btn btn-ghost", style: { marginTop: "8px", padding: "3px 10px", fontSize: "12px" } }, "Refund");
+          rbtn.addEventListener("click", async () => { if (!confirm(`Refund order #${o.id}? Roles are revoked; credits re-credited. Money refunds happen in your PayPal/Stripe dashboard.`)) return; try { const r = await data.storeRefund(gid, o.id); renderOrders(filter); flash("success", (r.moneyRefundNote || "Order refunded.")); } catch (e) { flash("error", e.message); } });
+          card.append(rbtn);
+        }
+        body.append(card);
+      });
+    }
+
+    renderConfig(); renderProducts(); renderOrders();
   }
 
   /* ============================================================
