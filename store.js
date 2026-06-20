@@ -466,11 +466,14 @@
     var badges = '';
     if (S.cart && S.cart.items && S.cart.items.some(function (it) { return it.productId === p.id; })) badges += '<span class="prod-badge incart">✓ In cart</span>';
     if (p.sale_price_money != null) badges += '<span class="prod-badge sale">Sale</span>';
+    if (p.bestseller) badges += '<span class="prod-badge best">🔥 Bestseller</span>';
     if (p.featured) badges += '<span class="prod-badge feat">★ Featured</span>';
     badges += p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
     if (!p.inStock && !hasVariants(p)) badges += '<span class="prod-badge oos">Out of stock</span>';
     else if (p.lowStock && !hasVariants(p)) badges += '<span class="prod-badge low">Only ' + p.lowStock + ' left</span>';
-    var rating = p.reviewCount ? '<div class="prod-rating">' + starDisplay(p.rating) + '<span class="prod-rating-n">' + Number(p.rating).toFixed(1) + ' (' + p.reviewCount + ')</span></div>' : '';
+    var ratingInner = p.reviewCount ? '<div class="prod-rating">' + starDisplay(p.rating) + '<span class="prod-rating-n">' + Number(p.rating).toFixed(1) + ' (' + p.reviewCount + ')</span></div>' : '';
+    var soldTxt = (p.soldCount && p.soldCount >= 1) ? '<span class="prod-sold">🔥 ' + fmt(p.soldCount) + ' sold</span>' : '';
+    var rating = (ratingInner || soldTxt) ? '<div class="prod-social">' + ratingInner + soldTxt + '</div>' : '';
     var varianty = hasVariants(p);
     var disabled = !varianty && !p.inStock;
     return '<div class="prod' + (p.featured ? ' is-feat' : '') + rev + '" data-pid="' + p.id + '" tabindex="0" role="button"' + delay + '>' + img + '<div class="prod-body">' +
@@ -592,8 +595,9 @@
         (p.category ? '<div class="prod-cat">' + esc(p.category) + '</div>' : '') +
         '<h2 class="pm-name">' + esc(p.name) + '</h2>' +
         '<div class="pm-rating" id="pm-rating"></div>' +
+        ((p.soldCount && p.soldCount >= 1) ? '<div class="pm-sold">🔥 ' + fmt(p.soldCount) + ' sold</div>' : '') +
         (p.description ? '<p class="pm-desc">' + esc(p.description) + '</p>' : '') +
-        '<div class="prod-badges">' + badge + (soldOut ? '<span class="prod-badge oos">Out of stock</span>' : '') + '</div>' +
+        '<div class="prod-badges">' + (p.bestseller ? '<span class="prod-badge best">🔥 Bestseller</span>' : '') + badge + (soldOut ? '<span class="prod-badge oos">Out of stock</span>' : '') + '</div>' +
         (varianty ? '<div class="pm-variants" id="pm-variants"></div>' : '') +
         '<div class="pm-stock" id="pm-stock"></div>' +
         '<div class="pm-buy"><div class="prod-price" id="pm-price"></div>' +
