@@ -89,8 +89,8 @@
   var DEMO_ROLES = [{ id: "1", name: "VIP" }, { id: "2", name: "Supporter" }, { id: "3", name: "MVP" }, { id: "4", name: "Founder" }];
   var DEMO_CHANNELS = [{ id: "10", name: "orders" }, { id: "11", name: "staff-fulfilment" }, { id: "12", name: "general" }];
   var DEMO_PRODUCTS = [
-    { id: 1, name: "VIP Rank", description: "Coloured name, /kit vip, 2 homes and queue priority.", image_url: null, category: "Ranks", price_money: 9.99, price_credits: 5000, fulfillment_type: "role", role_id: "1", stock: null, per_user_limit: 1, enabled: true },
-    { id: 2, name: "MVP Rank", description: "Everything in VIP plus a custom tag and monthly crate.", image_url: null, category: "Ranks", price_money: 19.99, price_credits: 12000, fulfillment_type: "role", role_id: "3", stock: null, per_user_limit: 1, enabled: true },
+    { id: 1, name: "VIP Rank", description: "Coloured name, /kit vip, 2 homes and queue priority.", image_url: null, category: "Ranks", price_money: 9.99, price_credits: 5000, fulfillment_type: "role", role_id: "1", stock: null, per_user_limit: 1, enabled: true, featured: true },
+    { id: 2, name: "MVP Rank", description: "Everything in VIP plus a custom tag and monthly crate.", image_url: null, category: "Ranks", price_money: 19.99, price_credits: 12000, fulfillment_type: "role", role_id: "3", stock: null, per_user_limit: 1, enabled: true, featured: true },
     { id: 3, name: "Giga lvl 150 (imprinted)", description: "Bred, imprinted Giga delivered to your tribe.", image_url: null, category: "Dinos", price_money: null, price_credits: 8000, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", stock: 5, per_user_limit: null, enabled: true },
     { id: 4, name: "Starter Kit", description: "Metal tools, 200 element, full flak.", image_url: null, category: "Kits", price_money: 4.99, price_credits: 2500, fulfillment_type: "manual", delivery_instructions: "Hand over starter kit", stock: 0, per_user_limit: null, enabled: true },
     { id: 5, name: "Tribe Logo", description: "Custom in-server tribe banner (hidden while in design).", image_url: null, category: "Cosmetic", price_money: 6, price_credits: null, fulfillment_type: "manual", delivery_instructions: "Design + deliver banner", stock: null, per_user_limit: null, enabled: false },
@@ -426,6 +426,7 @@
         el("div", { class: "body" },
           el("div", { class: "nm" }, p.name),
           el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
+            p.featured ? badge("★ Featured", "ok") : null,
             badge(p.fulfillment_type === "role" ? "⚡ Instant role" : "📦 In-game", p.fulfillment_type === "role" ? "ok" : ""),
             p.stock != null ? badge(p.stock > 0 ? p.stock + " left" : "Out of stock", p.stock > 0 ? "dim" : "warn") : null,
             p.enabled ? null : badge("Hidden", "dim")),
@@ -465,6 +466,7 @@
     var stock = inp({ type: "number", step: "1", min: "0", value: p.stock != null ? p.stock : "", placeholder: "Unlimited" });
     var lim = inp({ type: "number", step: "1", min: "0", value: p.per_user_limit != null ? p.per_user_limit : "", placeholder: "No limit" });
     var enabled = swRow("Visible in store", "Buyers can see and purchase it", existing ? p.enabled : true);
+    var featured = swRow("Featured", "Highlighted and shown first on the storefront", existing ? p.featured : false);
 
     var roleSel = sel([["", "— pick a role —"]].concat(S.roles.map(function (r) { return [r.id, r.name]; })), p.role_id || "");
     var instr = ta({ value: p.delivery_instructions || "", maxlength: 1000, placeholder: "e.g. Spawn a Giga lvl 150 for the buyer" });
@@ -479,7 +481,7 @@
         price_money: pm.value === "" ? null : Number(pm.value), price_credits: pc.value === "" ? null : Number(pc.value),
         fulfillment_type: ft.value(), role_id: ft.value() === "role" ? (roleSel.value || null) : null,
         delivery_instructions: ft.value() === "manual" ? (instr.value.trim() || null) : null,
-        stock: stock.value === "" ? null : Number(stock.value), per_user_limit: lim.value === "" ? null : Number(lim.value), enabled: enabled.input.checked };
+        stock: stock.value === "" ? null : Number(stock.value), per_user_limit: lim.value === "" ? null : Number(lim.value), enabled: enabled.input.checked, featured: featured.input.checked };
       var req = existing ? api(A("/store/products/" + existing.id), { method: "PATCH", body: b }) : api(A("/store/products"), { method: "POST", body: b });
       req.then(function (r) { if (!r.ok) { errEl.textContent = (r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save"; save.disabled = false; return; } closeDrawer(); refreshProducts().then(function () { toast(existing ? "Product saved" : "Product added"); render(); }); });
     } });
@@ -492,7 +494,7 @@
       el("div", { class: "grid2" }, field("Price — money", pmWrap, { hint: "Blank = not sold for money" }), field("Price — credits", pc, { hint: "Blank = not sold for credits" })),
       el("div", { class: "field" }, el("span", { class: "lab" }, "Delivery"), ft.node), roleWrap, manWrap,
       el("div", { class: "grid2" }, field("Stock", stock, { hint: "Blank = unlimited" }), field("Per-user limit", lim, { hint: "Blank = no limit" })),
-      enabled.node, errEl);
+      enabled.node, featured.node, errEl);
     roleWrap.style.display = ft.value() === "role" ? "block" : "none"; manWrap.style.display = ft.value() === "manual" ? "block" : "none";
     openDrawer(existing ? "Edit product" : "New product", body, el("div", null, btn("Cancel", { variant: "btn-ghost", onClick: closeDrawer }), save));
   }

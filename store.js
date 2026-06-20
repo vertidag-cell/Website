@@ -324,11 +324,85 @@
   }
 
   // ── render storefront ────────────────────────────────────────────────────────
+  function distinctCategories() {
+    var seen = {}, out = [];
+    S.products.forEach(function (p) {
+      var c = (p.category || '').trim();
+      if (c && !seen[c.toLowerCase()]) { seen[c.toLowerCase()] = 1; out.push(c); }
+    });
+    return out.sort(function (a, b) { return a.localeCompare(b); });
+  }
+  // money-or-credits sort key (money wins; credits scaled to a rough comparable).
+  function priceKey(p) {
+    if (p.price_money != null) return Number(p.price_money);
+    if (p.price_credits != null) return Number(p.price_credits) / 1000;
+    return Number.MAX_SAFE_INTEGER;
+  }
+  function productCardHtml(p) {
+    var s = S.store;
+    var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + initial(p.name) + '</div>';
+    var badges = '';
+    if (p.featured) badges += '<span class="prod-badge feat">★ Featured</span>';
+    badges += p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
+    if (!p.inStock) badges += '<span class="prod-badge oos">Out of stock</span>';
+    var price = '';
+    if (p.price_money != null) price += '<span class="prod-money">' + money(p.price_money, s.currency) + '</span>';
+    if (p.price_money != null && p.price_credits != null) price += '<span class="prod-or">or</span>';
+    if (p.price_credits != null) price += '<span class="prod-credits">🪙 ' + fmt(p.price_credits) + '</span>';
+    return '<div class="prod' + (p.featured ? ' is-feat' : '') + '">' + img + '<div class="prod-body">' +
+      (p.category ? '<div class="prod-cat">' + esc(p.category) + '</div>' : '') +
+      '<h3 class="prod-name">' + esc(p.name) + '</h3>' +
+      (p.description ? '<p class="prod-desc">' + esc(p.description) + '</p>' : '') +
+      '<div class="prod-badges">' + badges + '</div>' +
+      '<div class="prod-foot"><div class="prod-price">' + price + '</div>' +
+      '<button class="btn btn-primary prod-btn" type="button" data-pid="' + p.id + '"' + (p.inStock ? '' : ' disabled') + '>Add to cart</button>' +
+      '</div></div></div>';
+  }
+  function wireImgFallbacks(container) {
+    container.querySelectorAll('img[data-letter]').forEach(function (img) {
+      img.addEventListener('error', function () {
+        var d = document.createElement('div');
+        d.className = img.className + (img.classList.contains('prod-img') ? ' prod-fb' : ' store-fb');
+        d.textContent = img.getAttribute('data-letter') || '';
+        if (img.parentNode) img.parentNode.replaceChild(d, img);
+      });
+    });
+  }
+  // Re-render just the results grid for the current search/category/sort.
+  function renderResults() {
+    var box = document.getElementById('store-results'); if (!box) return;
+    var v = S.view, q = (v.q || '').trim().toLowerCase();
+    var list = S.products.filter(function (p) {
+      if (v.cat && (p.category || '') !== v.cat) return false;
+      if (q) {
+        var hay = (String(p.name || '') + ' ' + String(p.description || '') + ' ' + String(p.category || '')).toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+    if (v.sort === 'price_asc') list.sort(function (a, b) { return priceKey(a) - priceKey(b); });
+    else if (v.sort === 'price_desc') list.sort(function (a, b) { return priceKey(b) - priceKey(a); });
+    else if (v.sort === 'name') list.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    else list.sort(function (a, b) { return (b.featured ? 1 : 0) - (a.featured ? 1 : 0); }); // featured first
+
+    if (!list.length) {
+      box.innerHTML = '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>No matches</h2><p>Nothing matches your search or filter — try clearing them.</p></div>';
+      return;
+    }
+    box.innerHTML = '<div class="store-count">' + list.length + ' ' + (list.length === 1 ? 'product' : 'products') + '</div>' +
+      '<div class="store-grid">' + list.map(productCardHtml).join('') + '</div>';
+    wireImgFallbacks(box);
+    box.querySelectorAll('.prod-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { if (!btn.disabled) addToCart(parseInt(btn.getAttribute('data-pid'), 10)); });
+    });
+  }
   function renderStore(data) {
     S.store = data.store || {};
     S.products = data.products || [];
+    if (!S.view) S.view = { q: '', cat: '', sort: 'featured' };
     var s = S.store;
-    if (s.color) document.documentElement.style.setProperty('--accent', s.color);
+    // Only accept a valid hex accent (CSS vars can't run script, but stay strict).
+    if (s.color && /^#[0-9a-f]{6}$/i.test(s.color)) document.documentElement.style.setProperty('--accent', s.color);
     var name = s.title || s.guildName || 'Store';
     document.title = name + ' — Store';
 
@@ -357,41 +431,42 @@
 
     if (!S.products.length) {
       html += '<div class="store-state"><div class="store-state-ico">' + ICON.bag + '</div><h2>No products yet</h2><p>This store hasn\'t added any products yet. Check back soon!</p></div>';
-      root.innerHTML = html; return;
+      root.innerHTML = html;
+      wireImgFallbacks(root);
+      return;
     }
 
-    html += '<div class="store-grid">';
-    S.products.forEach(function (p) {
-      var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + initial(p.name) + '</div>';
-      var badges = p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
-      if (!p.inStock) badges += '<span class="prod-badge oos">Out of stock</span>';
-      var price = '';
-      if (p.price_money != null) price += '<span class="prod-money">' + money(p.price_money, s.currency) + '</span>';
-      if (p.price_money != null && p.price_credits != null) price += '<span class="prod-or">or</span>';
-      if (p.price_credits != null) price += '<span class="prod-credits">🪙 ' + fmt(p.price_credits) + '</span>';
-      html += '<div class="prod">' + img + '<div class="prod-body">' +
-        (p.category ? '<div class="prod-cat">' + esc(p.category) + '</div>' : '') +
-        '<h3 class="prod-name">' + esc(p.name) + '</h3>' +
-        (p.description ? '<p class="prod-desc">' + esc(p.description) + '</p>' : '') +
-        '<div class="prod-badges">' + badges + '</div>' +
-        '<div class="prod-foot"><div class="prod-price">' + price + '</div>' +
-        '<button class="btn btn-primary prod-btn" type="button" data-pid="' + p.id + '"' + (p.inStock ? '' : ' disabled') + '>Add to cart</button>' +
-        '</div></div></div>';
-    });
-    html += '</div>';
+    // Toolbar: search + sort, then category chips.
+    var cats = distinctCategories();
+    html += '<div class="store-tools">' +
+      '<input type="search" id="store-search" class="store-search" placeholder="Search products…" autocomplete="off">' +
+      '<select id="store-sort" class="store-sort" aria-label="Sort products">' +
+      '<option value="featured">Featured first</option>' +
+      '<option value="price_asc">Price: low to high</option>' +
+      '<option value="price_desc">Price: high to low</option>' +
+      '<option value="name">Name A–Z</option></select></div>';
+    if (cats.length) {
+      html += '<div class="store-cats"><button type="button" class="store-cat" data-cat="">All</button>' +
+        cats.map(function (c) { return '<button type="button" class="store-cat" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>';
+    }
+    html += '<div id="store-results"></div>';
     root.innerHTML = html;
+    wireImgFallbacks(root); // hero logo
 
-    root.querySelectorAll('img[data-letter]').forEach(function (img) {
-      img.addEventListener('error', function () {
-        var d = document.createElement('div');
-        d.className = img.className + (img.classList.contains('prod-img') ? ' prod-fb' : ' store-fb');
-        d.textContent = img.getAttribute('data-letter') || '';
-        if (img.parentNode) img.parentNode.replaceChild(d, img);
+    var search = document.getElementById('store-search');
+    if (search) { search.value = S.view.q; search.addEventListener('input', function () { S.view.q = search.value; renderResults(); }); }
+    var sort = document.getElementById('store-sort');
+    if (sort) { sort.value = S.view.sort; sort.addEventListener('change', function () { S.view.sort = sort.value; renderResults(); }); }
+    root.querySelectorAll('.store-cat').forEach(function (b) {
+      if (b.getAttribute('data-cat') === (S.view.cat || '')) b.classList.add('on');
+      b.addEventListener('click', function () {
+        S.view.cat = b.getAttribute('data-cat');
+        root.querySelectorAll('.store-cat').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        renderResults();
       });
     });
-    root.querySelectorAll('.prod-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () { if (!btn.disabled) addToCart(parseInt(btn.getAttribute('data-pid'), 10)); });
-    });
+    renderResults();
     renderCartButton();
   }
 
