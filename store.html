@@ -60,8 +60,10 @@
         background: var(--card, rgba(255,255,255,0.05)); transition: border-color .15s, transform .15s; }
       .prod:hover { border-color: var(--border-strong, rgba(255,255,255,0.18)); transform: translateY(-2px); }
       .prod-img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #15151c; display: block; }
-      .prod-img.prod-fb { display: grid; place-items: center; font-weight: 800; font-size: 30px; color: var(--text-dim, #71717a);
-        background: color-mix(in srgb, var(--accent) 10%, rgba(255,255,255,0.04)); }
+      .prod-img.prod-fb { display: grid; place-items: center; font-weight: 900; font-size: 34px; letter-spacing: -.02em;
+        color: color-mix(in srgb, var(--accent) 70%, #fff);
+        background: radial-gradient(120% 120% at 28% 18%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 62%),
+                    linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.015)); }
       .prod-body { padding: 14px 15px 15px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
       .prod-cat { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
       .prod-name { font-weight: 800; font-size: 16px; margin: 0; }
