@@ -678,6 +678,7 @@
       rowTop.append(el("div", { style: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" } },
         el("b", null, "#" + o.id), el("a", { href: "https://discord.com/users/" + o.buyer_user_id, target: "_blank", rel: "noopener", class: "muted" }, "@" + (o.buyer_username || o.buyer_user_id)),
         o.coupon_code ? badge("🎟️ " + o.coupon_code, "info") : null,
+        o.created_at ? el("span", { class: "muted", style: { fontSize: "12px" } }, new Date((o.created_at || "").replace(" ", "T") + "Z").toLocaleDateString()) : null,
         el("span", { style: { marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" } }, orderBadge(o.status), el("b", null, total))));
       (o.items || []).forEach(function (i) {
         var tick = i.fulfillment_status === "delivered" ? "✅" : i.fulfillment_status === "granted" ? "⚡" : "⏳";
