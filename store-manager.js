@@ -459,14 +459,24 @@
   }
 
   // ── PRODUCTS ───────────────────────────────────────────────────────────────
-  function productCard(p) {
+  function productCard(p, sel) {
     var price = el("div", { class: "pr" });
     if (p.price_money != null) price.append(money(p.price_money, S.cfg.currency));
     if (p.price_money != null && p.price_credits != null) price.append(el("span", { class: "alt" }, "  or  "));
     if (p.price_credits != null) price.append(el("span", { class: p.price_money != null ? "alt" : "" }, "🪙 " + fmt(p.price_credits)));
     var tierCount = (p.variants || []).filter(function (v) { return v.enabled !== false; }).length;
     var img = p.image_url ? el("img", { class: "img", src: p.image_url, alt: "", loading: "lazy" }) : el("div", { class: "img fb" }, initial(p.name));
-    return el("div", { class: "pcard" + (p.enabled ? "" : " off") }, img,
+    var check = null;
+    if (sel) {
+      var cb = el("input", { type: "checkbox", "aria-label": "Select " + p.name }); cb.checked = !!sel.set[p.id];
+      cb.addEventListener("change", function () {
+        if (cb.checked) sel.set[p.id] = true; else delete sel.set[p.id];
+        var card = cb.closest(".pcard"); if (card) card.classList.toggle("sel", cb.checked);
+        sel.onChange();
+      });
+      check = el("label", { class: "pcard-check" }, cb);
+    }
+    return el("div", { class: "pcard" + (p.enabled ? "" : " off") + (sel && sel.set[p.id] ? " sel" : "") }, check, img,
       el("div", { class: "body" },
         el("div", { class: "nm" }, p.name),
         el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
@@ -485,20 +495,40 @@
     c.append(panel(panelHead("Products (" + S.products.length + ")", btn("Add product", { icon: "plus", onClick: function () { productDrawer(null); } })),
       el("p", { class: "panel-sub" }, "Each product is sold on your public store. Price in money, credits, or both; deliver an instant Discord role or a manual in-game handover.")));
     if (!S.products.length) { c.append(emptyState("products", "No products yet", "Add your first product to start selling. You can price it in real money, server credits, or both.", btn("Add your first product", { icon: "plus", onClick: function () { productDrawer(null); } }))); return; }
+    // Bulk selection — show/hide many products at once.
+    var selected = {};
+    function clearSel() { Object.keys(selected).forEach(function (k) { delete selected[k]; }); }
+    var bar = el("div", { class: "bulk-bar" }); bar.style.display = "none";
+    function refreshBar() {
+      var ids = Object.keys(selected);
+      if (!ids.length) { bar.style.display = "none"; clear(bar); return; }
+      bar.style.display = "flex"; clear(bar);
+      bar.append(el("span", { class: "bulk-count" }, ids.length + " selected"),
+        btn("Show", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { bulk(true); } }),
+        btn("Hide", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { bulk(false); } }),
+        btn("Clear", { variant: "btn-ghost", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { clearSel(); renderGrid(searchEl ? searchEl.value : ""); refreshBar(); } }));
+    }
+    function bulk(enabled) {
+      var ids = Object.keys(selected); if (!ids.length) return;
+      Promise.all(ids.map(function (id) { return api(A("/store/products/" + id), { method: "PATCH", body: { enabled: enabled } }); }))
+        .then(function () { clearSel(); toast(enabled ? "Products shown" : "Products hidden"); refreshProducts().then(function () { render(); }); });
+    }
+    var sel = { set: selected, onChange: refreshBar };
     var grid = el("div", { class: "pgrid" });
     function renderGrid(q) {
       clear(grid);
       q = (q || "").trim().toLowerCase();
       var list = S.products.filter(function (p) { return !q || ((p.name || "") + " " + (p.category || "")).toLowerCase().indexOf(q) >= 0; });
       if (!list.length) { grid.append(emptyState("products", "No matches", "No products match your search — try a different term.", null, true)); return; }
-      list.forEach(function (p) { grid.append(productCard(p)); });
+      list.forEach(function (p) { grid.append(productCard(p, sel)); });
     }
+    var searchEl = null;
     if (S.products.length > 3) {
-      var search = inp({ type: "search", placeholder: "Search products by name or category…", style: { marginBottom: "14px" } });
-      search.addEventListener("input", function () { renderGrid(search.value); });
-      c.append(search);
+      searchEl = inp({ type: "search", placeholder: "Search products by name or category…", style: { marginBottom: "14px" } });
+      searchEl.addEventListener("input", function () { renderGrid(searchEl.value); });
+      c.append(searchEl);
     }
-    c.append(grid);
+    c.append(bar, grid);
     renderGrid("");
   }
   function delProduct(p) {
