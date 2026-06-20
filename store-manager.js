@@ -542,15 +542,23 @@
       var ids = Object.keys(selected);
       if (!ids.length) { bar.style.display = "none"; clear(bar); return; }
       bar.style.display = "flex"; clear(bar);
+      var bb = function (label, patch, msg, variant) { return btn(label, { variant: variant || "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { bulkPatch(patch, msg); } }); };
       bar.append(el("span", { class: "bulk-count" }, ids.length + " selected"),
-        btn("Show", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { bulk(true); } }),
-        btn("Hide", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { bulk(false); } }),
+        bb("Show", { enabled: true }, "Products shown"),
+        bb("Hide", { enabled: false }, "Products hidden"),
+        bb("Feature", { featured: true }, "Products featured"),
+        bb("Unfeature", { featured: false }, "Products unfeatured"),
+        btn("Set category", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () {
+          var v = prompt("Set category for " + ids.length + " product(s) — leave blank to clear:");
+          if (v === null) return; // cancelled
+          bulkPatch({ category: v.trim() || null }, "Category updated");
+        } }),
         btn("Clear", { variant: "btn-ghost", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { clearSel(); renderGrid(searchEl ? searchEl.value : ""); refreshBar(); } }));
     }
-    function bulk(enabled) {
+    function bulkPatch(patch, msg) {
       var ids = Object.keys(selected); if (!ids.length) return;
-      Promise.all(ids.map(function (id) { return api(A("/store/products/" + id), { method: "PATCH", body: { enabled: enabled } }); }))
-        .then(function () { clearSel(); toast(enabled ? "Products shown" : "Products hidden"); refreshProducts().then(function () { render(); }); });
+      Promise.all(ids.map(function (id) { return api(A("/store/products/" + id), { method: "PATCH", body: patch }); }))
+        .then(function () { clearSel(); toast(msg); refreshProducts().then(function () { render(); }); });
     }
     var sel = { set: selected, onChange: refreshBar };
     // Reorder: swap with the neighbour in S.products and persist the new order.
