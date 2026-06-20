@@ -553,6 +553,26 @@
     if (!confirm('Delete "' + p.name + '"? This hides it from the store.')) return;
     api(A("/store/products/" + p.id), { method: "DELETE" }).then(function (r) { if (!r.ok) return toast("Couldn't delete", "err"); refreshProducts().then(function () { toast("Product deleted"); render(); }); });
   }
+  // Clone a product (fields + active tiers) as a new HIDDEN product to edit.
+  function duplicateProduct(p) {
+    var body = {
+      name: (p.name || "Product") + " (copy)", description: p.description || null, image_url: p.image_url || null, category: p.category || null,
+      price_money: p.price_money != null ? p.price_money : null, price_credits: p.price_credits != null ? p.price_credits : null,
+      fulfillment_type: p.fulfillment_type, role_id: p.fulfillment_type === "role" ? (p.role_id || null) : null,
+      delivery_instructions: p.fulfillment_type === "manual" ? (p.delivery_instructions || null) : null,
+      stock: p.stock != null ? p.stock : null, per_user_limit: p.per_user_limit != null ? p.per_user_limit : null,
+      featured: false, enabled: false,
+    };
+    api(A("/store/products"), { method: "POST", body: body }).then(function (r) {
+      if (!r.ok) return toast((r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't duplicate", "err");
+      var newId = r.body.product && r.body.product.id;
+      var vars = (p.variants || []).filter(function (v) { return v.enabled !== false; });
+      function finish() { closeDrawer(); refreshProducts().then(function () { toast("Duplicated — now hidden, edit then show it"); render(); }); }
+      if (newId && vars.length) {
+        Promise.all(vars.map(function (v) { return api(A("/store/products/" + newId + "/variants"), { method: "POST", body: { name: v.name, price_money: v.price_money, price_credits: v.price_credits, stock: v.stock, role_id: v.role_id, delivery_instructions: v.delivery_instructions } }); })).then(finish);
+      } else finish();
+    });
+  }
   // Tiers / variants editor — lives inside the product drawer (existing product).
   function variantManager(product) {
     var box = el("div", { class: "var-mgr" });
@@ -643,7 +663,11 @@
       el("div", { class: "grid2" }, field("Stock", stock, { hint: "Blank = unlimited" }), field("Per-user limit", lim, { hint: "Blank = no limit" })),
       enabled.node, featured.node, errEl);
     roleWrap.style.display = ft.value() === "role" ? "block" : "none"; manWrap.style.display = ft.value() === "manual" ? "block" : "none";
-    openDrawer(existing ? "Edit product" : "New product", body, el("div", null, btn("Cancel", { variant: "btn-ghost", onClick: closeDrawer }), save));
+    var foot = el("div", { style: { display: "flex", gap: "8px", alignItems: "center", width: "100%" } },
+      existing ? btn("Duplicate", { variant: "btn-ghost", onClick: function () { duplicateProduct(existing); } }) : null,
+      el("div", { style: { flex: "1" } }),
+      btn("Cancel", { variant: "btn-ghost", onClick: closeDrawer }), save);
+    openDrawer(existing ? "Edit product" : "New product", body, foot);
   }
 
   // ── ORDERS ─────────────────────────────────────────────────────────────────
