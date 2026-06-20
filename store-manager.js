@@ -111,7 +111,7 @@
         el("a", { class: "btn btn-outline", href: storeUrl, target: "_blank", rel: "noopener" }, "View public store ↗"))));
 
     var nav = el("div", { class: "sm-nav" });
-    [["products", "Products"], ["orders", "Orders"], ["settings", "Settings"], ["payments", "Payments"]].forEach(function (t) {
+    [["products", "Products"], ["orders", "Orders"], ["coupons", "Coupons"], ["settings", "Settings"], ["payments", "Payments"]].forEach(function (t) {
       nav.append(el("button", { type: "button", class: S.section === t[0] ? "active" : "", onclick: function () { S.section = t[0]; render(); } }, t[1]));
     });
     root.append(nav);
@@ -121,6 +121,7 @@
     if (S.section === "settings") renderSettings(body);
     else if (S.section === "products") renderProducts(body);
     else if (S.section === "orders") renderOrders(body);
+    else if (S.section === "coupons") renderCoupons(body);
     else renderPayments(body);
   }
 
@@ -318,6 +319,102 @@
     }
     card.append(filters, listBox);
     load("all");
+  }
+
+  // ---- COUPONS ----
+  function couponSummary(c) {
+    var d = c.discount_type === "percent" ? c.percent_off + "% off"
+      : [c.amount_off_money != null ? money(c.amount_off_money, S.cfg.currency) + " off" : null, c.amount_off_credits != null ? "🪙" + c.amount_off_credits + " off" : null].filter(Boolean).join(" / ");
+    var used = c.redeemed_count + (c.max_redemptions != null ? " / " + c.max_redemptions : "") + " used";
+    return d + " · " + used;
+  }
+  function renderCoupons(body) {
+    var head = el("div", { class: "sm-card" },
+      el("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" } },
+        el("h2", { style: { margin: 0 } }, "Coupons"),
+        el("button", { class: "btn btn-primary", onclick: function () { openCouponModal(null); } }, "+ New coupon")),
+      el("p", { class: "sm-muted", style: { margin: 0, fontSize: "13px" } }, "Discount codes buyers enter at checkout. Percent or fixed, on money and/or credits."));
+    body.append(head);
+    var listBox = el("div", { class: "sm-muted" }, "Loading…");
+    body.append(listBox);
+    api("/api/dashboard/guilds/" + gid + "/store/coupons").then(function (r) {
+      clear(listBox);
+      var cs = (r.body && r.body.coupons) || [];
+      if (!cs.length) { listBox.append(el("p", { class: "sm-muted" }, "No coupons yet — create your first.")); return; }
+      cs.forEach(function (c) {
+        listBox.append(el("div", { class: "sm-order", style: { opacity: c.enabled ? 1 : 0.55 } },
+          el("div", { class: "sm-order-top" },
+            el("span", null, el("code", { style: { fontSize: "15px", fontWeight: 800 } }, c.code), c.enabled ? "" : " (disabled)"),
+            el("span", { class: "sm-muted", style: { fontSize: "13px" } }, couponSummary(c)),
+            el("span", null,
+              el("button", { class: "btn btn-ghost", style: { padding: "3px 10px", fontSize: "12px" }, onclick: function () { openCouponModal(c); } }, "Edit"),
+              el("button", { class: "btn btn-ghost", style: { padding: "3px 10px", fontSize: "12px" }, onclick: function () { if (!confirm("Delete coupon " + c.code + "?")) return; api("/api/dashboard/guilds/" + gid + "/store/coupons/" + c.id, { method: "DELETE" }).then(function (rr) { if (rr.ok) { toast("Deleted"); render(); } else toast("Failed", "err"); }); } }, "Delete"))),
+          c.description ? el("div", { class: "sm-muted", style: { fontSize: "12.5px", marginTop: "4px" } }, c.description) : null,
+          (c.min_subtotal_money != null || c.min_subtotal_credits != null || c.per_user_limit != null || c.expires_at)
+            ? el("div", { class: "sm-muted", style: { fontSize: "12px", marginTop: "4px" } },
+                [c.min_subtotal_money != null ? "min " + money(c.min_subtotal_money, S.cfg.currency) : null,
+                 c.min_subtotal_credits != null ? "min 🪙" + c.min_subtotal_credits : null,
+                 c.per_user_limit != null ? c.per_user_limit + "/user" : null,
+                 c.expires_at ? "expires " + c.expires_at.slice(0, 10) : null].filter(Boolean).join(" · "))
+            : null));
+      });
+    });
+  }
+  function openCouponModal(existing) {
+    var c = existing || {};
+    var code = input({ type: "text", value: c.code || "", maxlength: 32, placeholder: "SAVE10", style: { textTransform: "uppercase" } });
+    var descI = input({ type: "text", value: c.description || "", maxlength: 200, placeholder: "Optional note (internal)" });
+    var typePct = el("input", { type: "radio", name: "smcoupon" }); typePct.checked = (c.discount_type || "percent") === "percent";
+    var typeFix = el("input", { type: "radio", name: "smcoupon" }); typeFix.checked = c.discount_type === "fixed";
+    var pct = input({ type: "number", min: "1", max: "100", step: "1", value: c.percent_off != null ? c.percent_off : "", placeholder: "10" });
+    var offM = input({ type: "number", min: "0", step: "0.01", value: c.amount_off_money != null ? c.amount_off_money : "", placeholder: "—" });
+    var offC = input({ type: "number", min: "0", step: "1", value: c.amount_off_credits != null ? c.amount_off_credits : "", placeholder: "—" });
+    var pctWrap = fieldRow("Percent off (1–100)", pct);
+    var fixWrap = el("div", { class: "sm-grid2" }, fieldRow("Money off", offM), fieldRow("Credits off", offC));
+    function syncType() { pctWrap.style.display = typePct.checked ? "block" : "none"; fixWrap.style.display = typeFix.checked ? "grid" : "none"; }
+    typePct.addEventListener("change", syncType); typeFix.addEventListener("change", syncType);
+    var minM = input({ type: "number", min: "0", step: "0.01", value: c.min_subtotal_money != null ? c.min_subtotal_money : "", placeholder: "—" });
+    var minC = input({ type: "number", min: "0", step: "1", value: c.min_subtotal_credits != null ? c.min_subtotal_credits : "", placeholder: "—" });
+    var maxR = input({ type: "number", min: "1", step: "1", value: c.max_redemptions != null ? c.max_redemptions : "", placeholder: "∞" });
+    var perU = input({ type: "number", min: "1", step: "1", value: c.per_user_limit != null ? c.per_user_limit : "", placeholder: "∞" });
+    var starts = input({ type: "date", value: c.starts_at ? c.starts_at.slice(0, 10) : "" });
+    var expires = input({ type: "date", value: c.expires_at ? c.expires_at.slice(0, 10) : "" });
+    var enabled = checkbox("Active", existing ? c.enabled : true);
+    var errBox = el("div");
+    var save = el("button", { class: "btn btn-primary" }, existing ? "Save" : "Create coupon");
+    save.addEventListener("click", function () {
+      clear(errBox); save.disabled = true;
+      var b = {
+        code: code.value.trim(), description: descI.value.trim() || null,
+        discount_type: typePct.checked ? "percent" : "fixed",
+        percent_off: typePct.checked ? (pct.value === "" ? null : Number(pct.value)) : null,
+        amount_off_money: typeFix.checked && offM.value !== "" ? Number(offM.value) : null,
+        amount_off_credits: typeFix.checked && offC.value !== "" ? Number(offC.value) : null,
+        min_subtotal_money: minM.value === "" ? null : Number(minM.value),
+        min_subtotal_credits: minC.value === "" ? null : Number(minC.value),
+        max_redemptions: maxR.value === "" ? null : Number(maxR.value),
+        per_user_limit: perU.value === "" ? null : Number(perU.value),
+        starts_at: starts.value || null, expires_at: expires.value || null, enabled: enabled.input.checked,
+      };
+      var req = existing ? api("/api/dashboard/guilds/" + gid + "/store/coupons/" + existing.id, { method: "PATCH", body: b })
+        : api("/api/dashboard/guilds/" + gid + "/store/coupons", { method: "POST", body: b });
+      req.then(function (r) {
+        if (!r.ok) { errBox.append(el("p", { style: { color: "#ef4444", fontSize: "13px" } }, (r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save")); save.disabled = false; return; }
+        closeModal(); toast(existing ? "Coupon saved" : "Coupon created"); render();
+      });
+    });
+    var modal = el("div", { class: "sm-modal" }, el("h2", null, existing ? "Edit coupon" : "New coupon"),
+      fieldRow("Code", code, "Letters/numbers/-/_, shown to buyers"), fieldRow("Description", descI),
+      el("div", { class: "sm-field" }, el("span", null, "Discount type"),
+        el("label", { style: { marginRight: "16px" } }, typePct, " Percent off"), el("label", null, typeFix, " Fixed amount")),
+      pctWrap, fixWrap,
+      el("div", { class: "sm-grid2" }, fieldRow("Min spend (money)", minM), fieldRow("Min spend (credits)", minC)),
+      el("div", { class: "sm-grid2" }, fieldRow("Max total uses (blank = ∞)", maxR), fieldRow("Per-user uses (blank = ∞)", perU)),
+      el("div", { class: "sm-grid2" }, fieldRow("Starts", starts), fieldRow("Expires", expires)),
+      el("div", { style: { marginBottom: "6px" } }, enabled.node), errBox,
+      el("div", { class: "sm-modal-foot" }, el("button", { class: "btn btn-ghost", onclick: closeModal }, "Cancel"), save));
+    syncType();
+    document.body.append(el("div", { class: "sm-modal-ov", id: "sm-modal-ov", onclick: function (e) { if (e.target.id === "sm-modal-ov") closeModal(); } }, modal));
   }
 
   // ---- PAYMENTS (connect status; one-click connect wired next) ----

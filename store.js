@@ -16,7 +16,7 @@
   var params = new URLSearchParams(location.search);
   var guildId = (params.get('guild') || params.get('g') || '').trim();
 
-  var S = { store: null, products: [], user: null, cart: null }; // page state
+  var S = { store: null, products: [], user: null, cart: null, coupon: null }; // page state
 
   // ── helpers ────────────────────────────────────────────────────────────────
   function esc(s) {
@@ -98,26 +98,54 @@
   }
 
   // ── cart mutations ─────────────────────────────────────────────────────────
+  // Changing the cart invalidates any previewed coupon discount (it was priced
+  // against the old subtotal) — drop it so the buyer re-applies against the new total.
   function addToCart(productId) {
     api('/api/dashboard/store/cart/items?guild=' + encodeURIComponent(guildId), { method: 'POST', body: { productId: productId, quantity: 1 } })
       .then(function (r) {
         if (r.status === 401) return loginBounce();
         if (!r.ok) return toast((r.body && r.body.error) || 'Could not add to cart', 'err');
-        S.cart = r.body; renderCartButton(); toast('Added to cart'); if (cartOpen) renderCartPanel();
+        S.cart = r.body; S.coupon = null; renderCartButton(); toast('Added to cart'); if (cartOpen) renderCartPanel();
       });
   }
   function setQty(productId, qty) {
     api('/api/dashboard/store/cart/items/' + productId + '?guild=' + encodeURIComponent(guildId), { method: 'PATCH', body: { quantity: qty } })
-      .then(function (r) { if (r.status === 401) return loginBounce(); if (r.ok) { S.cart = r.body; renderCartButton(); renderCartPanel(); } });
+      .then(function (r) { if (r.status === 401) return loginBounce(); if (r.ok) { S.cart = r.body; S.coupon = null; renderCartButton(); renderCartPanel(); } });
   }
   function removeItem(productId) {
     api('/api/dashboard/store/cart/items/' + productId + '?guild=' + encodeURIComponent(guildId), { method: 'DELETE' })
-      .then(function (r) { if (r.ok) { S.cart = r.body; renderCartButton(); renderCartPanel(); } });
+      .then(function (r) { if (r.ok) { S.cart = r.body; S.coupon = null; renderCartButton(); renderCartPanel(); } });
+  }
+  function couponErr(e) {
+    var map = { coupon_invalid_code: "That code isn't valid.", coupon_expired: "That code has expired.", coupon_not_started: "That code isn't active yet.", coupon_exhausted: "That code has been fully used.", coupon_user_limit: "You've already used that code.", coupon_min_not_met: "Your cart doesn't meet this code's minimum.", coupon_not_applicable: "That code doesn't apply to this payment method.", coupon_no_discount: "That code gives no discount here." };
+    return map[e] || "Couldn't apply that code.";
+  }
+  function applyCoupon(code) {
+    code = (code || '').trim(); if (!code) return;
+    var r = (S.cart && S.cart.rails) || {};
+    var rails = [];
+    if (r.canMoney && S.store.acceptMoney) rails.push('money');
+    if (r.canCredits && S.store.acceptCredits) rails.push('credits');
+    if (!rails.length) return;
+    var msg = document.querySelector('.cart-promo-msg'); if (msg) msg.textContent = 'Checking…';
+    Promise.all(rails.map(function (rail) {
+      return api('/api/dashboard/store/coupon/preview?guild=' + encodeURIComponent(guildId), { method: 'POST', body: { code: code, rail: rail } }).then(function (res) { return { rail: rail, res: res }; });
+    })).then(function (results) {
+      var coupon = { code: code.toUpperCase(), money: null, credits: null }; var anyOk = false, lastErr = null;
+      results.forEach(function (o) {
+        if (o.res.ok) { anyOk = true; coupon.code = o.res.body.code; if (o.rail === 'money') coupon.money = { discount: o.res.body.discountMoney, newTotal: o.res.body.newTotalMoney }; else coupon.credits = { discount: o.res.body.discountCredits, newTotal: o.res.body.newTotalCredits }; }
+        else lastErr = o.res.body && o.res.body.error;
+      });
+      if (!anyOk) { if (msg) msg.textContent = couponErr(lastErr); return; }
+      S.coupon = coupon; renderCartPanel();
+    });
   }
   function checkout(rail) {
     var btns = document.querySelectorAll('.cart-rail-btn');
     btns.forEach(function (b) { b.disabled = true; });
-    api('/api/dashboard/store/checkout?guild=' + encodeURIComponent(guildId), { method: 'POST', body: { rail: rail } })
+    var body = { rail: rail };
+    if (S.coupon && S.coupon.code) body.coupon = S.coupon.code;
+    api('/api/dashboard/store/checkout?guild=' + encodeURIComponent(guildId), { method: 'POST', body: body })
       .then(function (r) {
         if (r.status === 401) return loginBounce();
         if (!r.ok) { btns.forEach(function (b) { b.disabled = false; }); return toast(checkoutError(r.body), 'err'); }
@@ -220,6 +248,16 @@
     html += '</div>';
 
     var blocked = r.blocked;
+    var cm = S.coupon && S.coupon.money, cc = S.coupon && S.coupon.credits;
+
+    // Promo code row.
+    if (!blocked) {
+      html += '<div class="cart-promo">';
+      if (S.coupon) html += '<div class="cart-promo-applied">🎟️ <b>' + esc(S.coupon.code) + '</b> applied <button type="button" class="cart-promo-x">remove</button></div>';
+      else html += '<input type="text" class="cart-promo-input" placeholder="Promo code" autocomplete="off"><button type="button" class="cart-promo-apply">Apply</button>';
+      html += '<div class="cart-promo-msg"></div></div>';
+    }
+
     html += '<div class="cart-rails">';
     if (blocked) {
       html += '<p class="cart-warn">Some items can\'t be checked out together — remove the flagged ones to continue.</p>';
@@ -227,14 +265,23 @@
       var canMoney = r.canMoney && S.store.acceptMoney;
       var canCredits = r.canCredits && S.store.acceptCredits;
       if (!canMoney && !canCredits) html += '<p class="cart-warn">This cart can\'t be checked out (mixed money-only and credits-only items).</p>';
-      if (canMoney) html += '<button type="button" class="btn btn-primary cart-rail-btn" data-rail="money">Pay ' + money(r.totalMoney, ccy) + '</button>';
+      if (canMoney) {
+        var mTotal = cm ? cm.newTotal : r.totalMoney;
+        html += '<button type="button" class="btn btn-primary cart-rail-btn" data-rail="money">Pay ' + money(mTotal, ccy) + (cm && cm.discount > 0 ? ' <s style="opacity:.6;font-weight:400">' + money(r.totalMoney, ccy) + '</s>' : '') + '</button>';
+      }
       if (canCredits) {
-        var lacking = typeof c.creditBalance === 'number' && c.creditBalance < r.totalCredits;
-        html += '<button type="button" class="btn ' + (canMoney ? 'btn-outline' : 'btn-primary') + ' cart-rail-btn" data-rail="credits"' + (lacking ? ' disabled title="Not enough credits"' : '') + '>Pay 🪙 ' + fmt(r.totalCredits) + (lacking ? ' (low balance)' : '') + '</button>';
+        var cTotal = cc ? cc.newTotal : r.totalCredits;
+        var lacking = typeof c.creditBalance === 'number' && c.creditBalance < cTotal;
+        html += '<button type="button" class="btn ' + (canMoney ? 'btn-outline' : 'btn-primary') + ' cart-rail-btn" data-rail="credits"' + (lacking ? ' disabled title="Not enough credits"' : '') + '>Pay 🪙 ' + fmt(cTotal) + (cc && cc.discount > 0 ? ' <s style="opacity:.6;font-weight:400">' + fmt(r.totalCredits) + '</s>' : '') + (lacking ? ' (low balance)' : '') + '</button>';
       }
     }
     html += '</div>';
     body.innerHTML = html;
+
+    var promoApply = body.querySelector('.cart-promo-apply'), promoInput = body.querySelector('.cart-promo-input'), promoX = body.querySelector('.cart-promo-x');
+    if (promoApply) promoApply.addEventListener('click', function () { applyCoupon(promoInput.value); });
+    if (promoInput) promoInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') applyCoupon(promoInput.value); });
+    if (promoX) promoX.addEventListener('click', function () { S.coupon = null; renderCartPanel(); });
 
     body.querySelectorAll('.cart-line').forEach(function (li) {
       var pid = parseInt(li.getAttribute('data-pid'), 10);
