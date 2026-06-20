@@ -106,11 +106,16 @@
   // ── cart mutations ─────────────────────────────────────────────────────────
   // Changing the cart invalidates any previewed coupon discount (it was priced
   // against the old subtotal) — drop it so the buyer re-applies against the new total.
-  function addToCart(productId) {
-    api('/api/dashboard/store/cart/items?guild=' + encodeURIComponent(guildId), { method: 'POST', body: { productId: productId, quantity: 1 } })
+  function addToCart(productId, variantId) {
+    var body = { productId: productId, quantity: 1 };
+    if (variantId) body.variantId = variantId;
+    api('/api/dashboard/store/cart/items?guild=' + encodeURIComponent(guildId), { method: 'POST', body: body })
       .then(function (r) {
         if (r.status === 401) return loginBounce();
-        if (!r.ok) return toast((r.body && r.body.error) || 'Could not add to cart', 'err');
+        if (!r.ok) {
+          var m = { variant_required: 'Choose an option first.', variant_unavailable: 'That option isn\'t available.', product_unavailable: 'That product is no longer available.' };
+          return toast((r.body && m[r.body.error]) || (r.body && r.body.error) || 'Could not add to cart', 'err');
+        }
         S.cart = r.body; S.coupon = null; renderCartButton(); toast('Added to cart'); if (cartOpen) renderCartPanel();
       });
   }
@@ -231,7 +236,7 @@
     var html = '<ul class="cart-lines">';
     c.items.forEach(function (i) {
       var p = i.product || {};
-      var name = p.name || ('Item ' + i.productId);
+      var name = (p.name || ('Item ' + i.productId)) + (i.variantName ? ' — ' + i.variantName : '');
       var line = '';
       if (i.lineMoney != null) line += money(i.lineMoney, ccy);
       if (i.lineMoney != null && i.lineCredits != null) line += ' / ';
@@ -355,26 +360,44 @@
     if (p.price_credits != null) return Number(p.price_credits) / 1000;
     return Number.MAX_SAFE_INTEGER;
   }
-  function productCardHtml(p) {
+  function hasVariants(p) { return p.variants && p.variants.length > 0; }
+  // Card price: a fixed price, or "from <cheapest tier>" when variants exist.
+  function cardPriceHtml(p) {
     var s = S.store;
-    var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + initial(p.name) + '</div>';
-    var badges = '';
-    if (p.featured) badges += '<span class="prod-badge feat">★ Featured</span>';
-    badges += p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
-    if (!p.inStock) badges += '<span class="prod-badge oos">Out of stock</span>';
+    if (hasVariants(p)) {
+      var ms = [], cs = [];
+      p.variants.forEach(function (v) {
+        var m = v.price_money != null ? v.price_money : p.price_money;
+        var c = v.price_credits != null ? v.price_credits : p.price_credits;
+        if (m != null) ms.push(m); if (c != null) cs.push(c);
+      });
+      if (ms.length) return '<span class="prod-money">from ' + money(Math.min.apply(null, ms), s.currency) + '</span>';
+      if (cs.length) return '<span class="prod-credits">from 🪙 ' + fmt(Math.min.apply(null, cs)) + '</span>';
+      return '';
+    }
     var price = '';
     if (p.price_money != null) price += '<span class="prod-money">' + money(p.price_money, s.currency) + '</span>';
     if (p.price_money != null && p.price_credits != null) price += '<span class="prod-or">or</span>';
     if (p.price_credits != null) price += '<span class="prod-credits">🪙 ' + fmt(p.price_credits) + '</span>';
+    return price;
+  }
+  function productCardHtml(p) {
+    var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + initial(p.name) + '</div>';
+    var badges = '';
+    if (p.featured) badges += '<span class="prod-badge feat">★ Featured</span>';
+    badges += p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
+    if (!p.inStock && !hasVariants(p)) badges += '<span class="prod-badge oos">Out of stock</span>';
     var rating = p.reviewCount ? '<div class="prod-rating">' + starDisplay(p.rating) + '<span class="prod-rating-n">' + Number(p.rating).toFixed(1) + ' (' + p.reviewCount + ')</span></div>' : '';
+    var varianty = hasVariants(p);
+    var disabled = !varianty && !p.inStock;
     return '<div class="prod' + (p.featured ? ' is-feat' : '') + '" data-pid="' + p.id + '" tabindex="0" role="button">' + img + '<div class="prod-body">' +
       (p.category ? '<div class="prod-cat">' + esc(p.category) + '</div>' : '') +
       '<h3 class="prod-name">' + esc(p.name) + '</h3>' +
       rating +
       (p.description ? '<p class="prod-desc">' + esc(p.description) + '</p>' : '') +
       '<div class="prod-badges">' + badges + '</div>' +
-      '<div class="prod-foot"><div class="prod-price">' + price + '</div>' +
-      '<button class="btn btn-primary prod-btn" type="button" data-pid="' + p.id + '"' + (p.inStock ? '' : ' disabled') + '>Add to cart</button>' +
+      '<div class="prod-foot"><div class="prod-price">' + cardPriceHtml(p) + '</div>' +
+      '<button class="btn btn-primary prod-btn" type="button" data-pid="' + p.id + '"' + (disabled ? ' disabled' : '') + '>' + (varianty ? 'Choose options' : 'Add to cart') + '</button>' +
       '</div></div></div>';
   }
   function wireImgFallbacks(container) {
@@ -412,7 +435,13 @@
       '<div class="store-grid">' + list.map(productCardHtml).join('') + '</div>';
     wireImgFallbacks(box);
     box.querySelectorAll('.prod-btn').forEach(function (btn) {
-      btn.addEventListener('click', function (e) { e.stopPropagation(); if (!btn.disabled) addToCart(parseInt(btn.getAttribute('data-pid'), 10)); });
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (btn.disabled) return;
+        var p = productById(btn.getAttribute('data-pid'));
+        if (p && hasVariants(p)) openProduct(p); // must pick a tier
+        else addToCart(parseInt(btn.getAttribute('data-pid'), 10));
+      });
     });
     box.querySelectorAll('.prod[data-pid]').forEach(function (card) {
       function open() { var p = productById(card.getAttribute('data-pid')); if (p) openProduct(p); }
@@ -425,13 +454,10 @@
   function openProduct(p) {
     closeProductModal();
     var s = S.store, ccy = s.currency;
-    var price = '';
-    if (p.price_money != null) price += '<span class="prod-money">' + money(p.price_money, ccy) + '</span>';
-    if (p.price_money != null && p.price_credits != null) price += '<span class="prod-or">or</span>';
-    if (p.price_credits != null) price += '<span class="prod-credits">🪙 ' + fmt(p.price_credits) + '</span>';
+    var varianty = hasVariants(p);
     var img = p.image_url ? '<img class="pm-img" src="' + esc(p.image_url) + '" alt="">' : '';
     var badge = p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
-    var soldOut = p.inStock === false;
+    var soldOut = !varianty && p.inStock === false;
     var ov = document.createElement('div');
     ov.id = 'prod-overlay'; ov.className = 'pm-overlay';
     ov.innerHTML = '<div class="pm-panel" role="dialog" aria-label="Product details">' +
@@ -442,15 +468,58 @@
         '<div class="pm-rating" id="pm-rating"></div>' +
         (p.description ? '<p class="pm-desc">' + esc(p.description) + '</p>' : '') +
         '<div class="prod-badges">' + badge + (soldOut ? '<span class="prod-badge oos">Out of stock</span>' : '') + '</div>' +
-        (price ? '<div class="pm-buy"><div class="prod-price">' + price + '</div>' +
-          (soldOut ? '<button class="btn btn-outline" disabled>Out of stock</button>' : '<button class="btn btn-primary" id="pm-add">Add to cart</button>') + '</div>' : '') +
+        (varianty ? '<div class="pm-variants" id="pm-variants"></div>' : '') +
+        '<div class="pm-buy"><div class="prod-price" id="pm-price"></div><button class="btn btn-primary" id="pm-add">Add to cart</button></div>' +
         '<div class="pm-reviews" id="pm-reviews"><div class="pm-rev-load">Loading reviews…</div></div>' +
       '</div></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', function (e) { if (e.target === ov) closeProductModal(); });
     ov.querySelector('.pm-x').addEventListener('click', closeProductModal);
-    var add = document.getElementById('pm-add');
-    if (add) add.addEventListener('click', function () { addToCart(p.id); });
+
+    var selected = null;
+    function priceForVariant(v) {
+      var m = v && v.price_money != null ? v.price_money : p.price_money;
+      var c = v && v.price_credits != null ? v.price_credits : p.price_credits;
+      var out = '';
+      if (m != null) out += '<span class="prod-money">' + money(m, ccy) + '</span>';
+      if (m != null && c != null) out += '<span class="prod-or">or</span>';
+      if (c != null) out += '<span class="prod-credits">🪙 ' + fmt(c) + '</span>';
+      return out;
+    }
+    function refreshBuy() {
+      var priceEl = document.getElementById('pm-price'), addEl = document.getElementById('pm-add');
+      if (varianty) {
+        priceEl.innerHTML = selected ? priceForVariant(selected) : '<span class="pm-norate">Choose an option</span>';
+        var oos = selected && selected.inStock === false;
+        addEl.disabled = !selected || oos;
+        addEl.textContent = oos ? 'Out of stock' : 'Add to cart';
+      } else {
+        priceEl.innerHTML = priceForVariant(null);
+        addEl.disabled = soldOut; addEl.textContent = soldOut ? 'Out of stock' : 'Add to cart';
+      }
+    }
+    if (varianty) {
+      var vc = document.getElementById('pm-variants');
+      vc.innerHTML = '<div class="pm-var-label">Choose an option</div><div class="pm-var-opts">' +
+        p.variants.map(function (v, idx) { return '<button type="button" class="pm-var" data-i="' + idx + '"' + (v.inStock === false ? ' disabled' : '') + '>' + esc(v.name) + (v.inStock === false ? ' · out' : '') + '</button>'; }).join('') + '</div>';
+      var firstIdx = -1;
+      for (var i = 0; i < p.variants.length; i++) { if (p.variants[i].inStock !== false) { firstIdx = i; break; } }
+      var optBtns = vc.querySelectorAll('.pm-var');
+      optBtns.forEach(function (b) {
+        b.addEventListener('click', function () {
+          if (b.disabled) return;
+          selected = p.variants[parseInt(b.getAttribute('data-i'), 10)];
+          optBtns.forEach(function (x) { x.classList.remove('on'); });
+          b.classList.add('on'); refreshBuy();
+        });
+      });
+      if (firstIdx >= 0) { selected = p.variants[firstIdx]; optBtns[firstIdx].classList.add('on'); }
+    }
+    refreshBuy();
+    document.getElementById('pm-add').addEventListener('click', function () {
+      if (varianty) { if (selected) { addToCart(p.id, selected.id); closeProductModal(); } }
+      else { addToCart(p.id); closeProductModal(); }
+    });
     wireImgFallbacks(ov);
     loadProductReviews(p);
   }

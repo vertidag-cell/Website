@@ -105,6 +105,11 @@
     { id: 1, code: "SUMMER20", description: "Summer sale", discount_type: "percent", percent_off: 20, amount_off_money: null, amount_off_credits: null, min_subtotal_money: null, min_subtotal_credits: null, max_redemptions: 100, per_user_limit: 1, redeemed_count: 37, starts_at: null, expires_at: "2026-08-31 23:59:59", enabled: true },
     { id: 2, code: "WELCOME5", description: "£5 off first order", discount_type: "fixed", percent_off: null, amount_off_money: 5, amount_off_credits: null, min_subtotal_money: 10, min_subtotal_credits: null, max_redemptions: null, per_user_limit: 1, redeemed_count: 12, starts_at: null, expires_at: null, enabled: true },
   ];
+  var DEMO_VARIANTS = [
+    { id: 11, product_id: 1, name: "1 month", price_money: 9.99, price_credits: 5000, stock: null, enabled: true },
+    { id: 12, product_id: 1, name: "3 months", price_money: 24.99, price_credits: 13000, stock: null, enabled: true },
+    { id: 13, product_id: 1, name: "Lifetime", price_money: 59.99, price_credits: null, stock: 10, enabled: true },
+  ];
   var DEMO_REVIEWS = [
     { id: 1, product_id: 1, product_name: "VIP Rank", user_id: "111", username: "ApexHunter", rating: 5, comment: "Instant role, brilliant value.", status: "published", created_at: "2026-06-18 10:00:00" },
     { id: 2, product_id: 3, product_name: "Giga lvl 150 (imprinted)", user_id: "112", username: "RexQueen", rating: 4, comment: "Delivered in-game within the hour.", status: "published", created_at: "2026-06-17 14:00:00" },
@@ -125,6 +130,7 @@
     if (opts && opts.method && opts.method !== "GET") return { ok: true };
     if (/\/me$/.test(path)) return { user: { id: "0", username: "previewowner", globalName: "Preview Owner" } };
     if (/\/store\/overview/.test(path)) return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: DEMO_SERIES, topProducts: DEMO_TOP, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 } };
+    if (/\/variants/.test(path)) return { variants: DEMO_VARIANTS };
     if (/\/store\/products/.test(path)) return { products: DEMO_PRODUCTS };
     if (/\/store\/coupons/.test(path)) return { coupons: DEMO_COUPONS };
     if (/\/store\/reviews/.test(path)) { var rst = (path.match(/status=(\w+)/) || [])[1]; return { reviews: rst ? DEMO_REVIEWS.filter(function (r) { return r.status === rst; }) : DEMO_REVIEWS }; }
@@ -450,6 +456,39 @@
     if (!confirm('Delete "' + p.name + '"? This hides it from the store.')) return;
     api(A("/store/products/" + p.id), { method: "DELETE" }).then(function (r) { if (!r.ok) return toast("Couldn't delete", "err"); refreshProducts().then(function () { toast("Product deleted"); render(); }); });
   }
+  // Tiers / variants editor — lives inside the product drawer (existing product).
+  function variantManager(product) {
+    var box = el("div", { class: "var-mgr" });
+    function load() {
+      api(A("/store/products/" + product.id + "/variants")).then(function (r) { render((r.body && r.body.variants) || []); });
+    }
+    function render(vars) {
+      clear(box);
+      if (!vars.length) box.append(el("p", { class: "hint", style: { margin: "0 0 6px" } }, "No tiers yet. Add options like “1 month / 3 months / lifetime” — each with its own price and stock. Leave a tier’s price blank to use the product price above."));
+      vars.forEach(function (v) {
+        var sub = [v.price_money != null ? money(v.price_money, S.cfg.currency) : null, v.price_credits != null ? "🪙" + fmt(v.price_credits) : null, v.stock != null ? v.stock + " in stock" : null].filter(Boolean).join(" · ") || "uses product price";
+        box.append(el("div", { class: "var-row" },
+          el("div", { class: "grow" }, el("div", { class: "t" }, v.name), el("div", { class: "d" }, sub)),
+          btn("Delete", { variant: "btn-ghost", style: { padding: "4px 11px", fontSize: "12px" }, onClick: function (e) {
+            var b = e.currentTarget; b.disabled = true;
+            api(A("/store/products/" + product.id + "/variants/" + v.id), { method: "DELETE" }).then(function (rr) { if (rr.ok) { toast("Tier removed"); load(); } else { toast("Failed", "err"); b.disabled = false; } });
+          } })));
+      });
+      var nm = inp({ type: "text", placeholder: "Tier name (e.g. 3 months)", maxlength: 80 });
+      var pm = inp({ type: "number", step: "0.01", min: "0", placeholder: "Money" });
+      var pc = inp({ type: "number", step: "1", min: "0", placeholder: "Credits" });
+      var stk = inp({ type: "number", step: "1", min: "0", placeholder: "Stock" });
+      var addB = btn("Add tier", { variant: "btn-outline", onClick: function () {
+        if (!nm.value.trim()) { toast("Name the tier first", "err"); return; }
+        addB.disabled = true;
+        api(A("/store/products/" + product.id + "/variants"), { method: "POST", body: { name: nm.value.trim(), price_money: pm.value === "" ? null : Number(pm.value), price_credits: pc.value === "" ? null : Number(pc.value), stock: stk.value === "" ? null : Number(stk.value) } })
+          .then(function (rr) { addB.disabled = false; if (!rr.ok) { toast((rr.body && rr.body.errors && rr.body.errors.join("; ")) || "Couldn't add tier", "err"); return; } toast("Tier added"); load(); });
+      } });
+      box.append(el("div", { class: "var-add" }, nm, el("div", { class: "var-add-row" }, pm, pc, stk, addB)));
+    }
+    if (DEMO) render(typeof DEMO_VARIANTS !== "undefined" ? DEMO_VARIANTS : []); else load();
+    return box;
+  }
   function productDrawer(existing) {
     var p = existing || {};
     var name = inp({ type: "text", value: p.name || "", maxlength: 120, placeholder: "VIP Rank" });
@@ -501,6 +540,8 @@
       field("Image", img, { hint: "Paste an https image URL, or upload below" }), prev, el("div", { style: { margin: "8px 0 16px" } }, upBtn, upMsg, file),
       field("Category (optional)", cat),
       el("div", { class: "grid2" }, field("Price — money", pmWrap, { hint: "Blank = not sold for money" }), field("Price — credits", pc, { hint: "Blank = not sold for credits" })),
+      el("div", { class: "field" }, el("span", { class: "lab" }, "Tiers / variants (optional)"),
+        existing ? variantManager(existing) : el("p", { class: "hint", style: { margin: 0 } }, "Save this product first, then reopen it to add tiers like 1 month / 3 months / lifetime.")),
       el("div", { class: "field" }, el("span", { class: "lab" }, "Delivery"), ft.node), roleWrap, manWrap,
       el("div", { class: "grid2" }, field("Stock", stock, { hint: "Blank = unlimited" }), field("Per-user limit", lim, { hint: "Blank = no limit" })),
       enabled.node, featured.node, errEl);
