@@ -83,6 +83,8 @@
   function toast(msg, kind) {
     var t = document.createElement('div');
     t.className = 'store-toast' + (kind ? ' ' + kind : '');
+    t.setAttribute('role', 'status');
+    t.setAttribute('aria-live', 'polite');
     t.textContent = msg;
     document.body.appendChild(t);
     setTimeout(function () { t.classList.add('in'); }, 10);
@@ -219,11 +221,15 @@
     ov.addEventListener('click', function (e) { if (e.target === ov) closeCart(); });
     document.getElementById('cart-close').addEventListener('click', closeCart);
     document.getElementById('cart-orders').addEventListener('click', showOrders);
+    _cartKey = function (e) { if (e.key === 'Escape') closeCart(); };
+    document.addEventListener('keydown', _cartKey);
     loadCart().then(renderCartPanel);
   }
+  var _cartKey = null;
   function closeCart() {
     cartOpen = false;
     var ov = document.getElementById('cart-overlay'); if (ov) ov.remove();
+    if (_cartKey) { document.removeEventListener('keydown', _cartKey); _cartKey = null; }
   }
   function renderCartPanel() {
     var body = document.getElementById('cart-body'); if (!body) return;
@@ -450,7 +456,15 @@
     else list.sort(function (a, b) { return (b.featured ? 1 : 0) - (a.featured ? 1 : 0); }); // featured first
 
     if (!list.length) {
-      box.innerHTML = '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>No matches</h2><p>Nothing matches your search or filter — try clearing them.</p></div>';
+      box.innerHTML = '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>No matches</h2><p>Nothing matches your search or filter.</p><button type="button" class="btn btn-outline" id="store-clear">Clear filters</button></div>';
+      var cb = document.getElementById('store-clear');
+      if (cb) cb.addEventListener('click', function () {
+        S.view = { q: '', cat: '', sort: 'featured' };
+        var se = document.getElementById('store-search'); if (se) se.value = '';
+        var so = document.getElementById('store-sort'); if (so) so.value = 'featured';
+        root.querySelectorAll('.store-cat').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-cat') === ''); });
+        renderResults();
+      });
       return;
     }
     box.innerHTML = '<div class="store-count">' + list.length + ' ' + (list.length === 1 ? 'product' : 'products') + '</div>' +
@@ -473,7 +487,11 @@
     });
   }
   // ── product detail modal (description + reviews + review form) ──────────────
-  function closeProductModal() { var ov = document.getElementById('prod-overlay'); if (ov) ov.remove(); }
+  var _pmKey = null;
+  function closeProductModal() {
+    var ov = document.getElementById('prod-overlay'); if (ov) ov.remove();
+    if (_pmKey) { document.removeEventListener('keydown', _pmKey); _pmKey = null; }
+  }
   function openProduct(p) {
     closeProductModal();
     var s = S.store, ccy = s.currency;
@@ -500,7 +518,11 @@
       '</div></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', function (e) { if (e.target === ov) closeProductModal(); });
-    ov.querySelector('.pm-x').addEventListener('click', closeProductModal);
+    var xBtn = ov.querySelector('.pm-x');
+    xBtn.addEventListener('click', closeProductModal);
+    _pmKey = function (e) { if (e.key === 'Escape') closeProductModal(); };
+    document.addEventListener('keydown', _pmKey);
+    try { xBtn.focus(); } catch (e) {}
 
     var selected = null, qty = 1;
     function priceForVariant(v) {
