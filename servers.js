@@ -32,6 +32,11 @@
     var lb = (s.premium && s.id)
       ? '<a class="srv-lb" href="leaderboards.html?guild=' + esc(s.id) + '" style="display:block;text-align:center;margin-top:10px;font-size:13px;font-weight:600;color:var(--text-muted,#a1a1aa)">🏆 View leaderboards <span aria-hidden="true">→</span></a>'
       : "";
+    // Open stores get a shop link too (the backend only sets store:true when the
+    // store is premium AND enabled, so this never dead-ends).
+    var store = (s.store && s.id)
+      ? '<a class="srv-store" href="store.html?guild=' + esc(s.id) + '" style="display:block;text-align:center;margin-top:8px;font-size:13px;font-weight:700;color:var(--accent,#2bff9e)">🛒 Visit store <span aria-hidden="true">→</span></a>'
+      : "";
     return (
       '<div class="feature-card srv-card' + (s.premium ? " premium" : "") + '">' +
       prem +
@@ -40,6 +45,7 @@
       blurb +
       join +
       lb +
+      store +
       "</div>"
     );
   }
