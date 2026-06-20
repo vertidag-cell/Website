@@ -7524,6 +7524,18 @@
     // Premium skeleton while we fetch identity + guild list.
     root.append(renderPickerBootSkeleton());
     await consumeAuthHandoff();
+    // Login-to-buy bounce: the storefront stashes its URL before sending the
+    // buyer to Discord login (the OAuth callback always lands here on
+    // dashboard.html). The session cookie is now first-party for the whole
+    // origin, so hand the buyer straight back to the store they came from.
+    try {
+      const back = sessionStorage.getItem("storeReturn");
+      if (back && /[?&]guild=\d{5,25}/.test(back) && /\/store\.html/.test(back)) {
+        sessionStorage.removeItem("storeReturn");
+        location.replace(back);
+        return;
+      }
+    } catch {}
     try {
       const me = await data.me();
       state.user = me.user;
