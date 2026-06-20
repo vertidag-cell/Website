@@ -124,6 +124,8 @@
     if (/\/store\/orders/.test(path)) { var st = (path.match(/status=(\w+)/) || [])[1]; return { orders: st ? DEMO_ORDERS.filter(function (o) { return o.status === st; }) : DEMO_ORDERS }; }
     if (/\/discord\/roles/.test(path)) return { roles: DEMO_ROLES };
     if (/\/discord\/channels/.test(path)) return { channels: DEMO_CHANNELS };
+    if (/\/payments\/stripe/.test(path)) return { brandName: "Velated PVP Store", secretKey: { configured: true, source: "guild", last4: "9aF2" }, webhookSecret: { configured: true }, mode: "live", webhookUrl: location.origin + "/webhooks/stripe", isConfigured: true };
+    if (/\/payments\/paypal/.test(path)) return { mode: "live", prefer: "orders", brandName: "Velated PVP Store", clientId: { configured: false, source: "unset" }, clientSecret: { configured: false }, webhookId: { configured: false }, webhookUrl: location.origin + "/webhooks/paypal", isConfigured: false };
     return {};
   }
 
@@ -643,14 +645,171 @@
   function renderPayments(c) {
     var cfg = S.cfg;
     c.append(panel(panelHead("How buyers pay"),
-      el("p", { class: "panel-sub" }, "Toggle these rails in Settings. Money needs a connected provider; credits work out of the box."),
-      el("div", { class: "row" }, el("span", { style: { fontSize: "20px" } }, "💳"), el("div", { class: "grow" }, el("div", { class: "t" }, "Money"), el("div", { class: "d" }, "Card & PayPal")), cfg.accept_money ? badge("Accepted", "ok") : badge("Off", "dim")),
-      el("div", { class: "row" }, el("span", { style: { fontSize: "20px" } }, "🪙"), el("div", { class: "grow" }, el("div", { class: "t" }, "Server credits"), el("div", { class: "d" }, "Earned in Discord")), cfg.accept_credits ? badge("Accepted", "ok") : badge("Off", "dim"))));
+      el("p", { class: "panel-sub" }, "Connect a provider below to take real money straight into your own account. Server credits work with no setup."),
+      payRail("💳", "Card & PayPal", "Real money — needs a connected provider", cfg.accept_money),
+      payRail("🪙", "Server credits", "Earned by members in Discord — always ready", cfg.accept_credits)));
 
-    c.append(panel(panelHead("Connect a payment provider"),
-      el("p", { class: "panel-sub" }, "One-click connect is on the way — log in once and link, no API keys to copy."),
-      el("div", { class: "row" }, el("span", { style: { fontSize: "20px" } }, "💠"), el("div", { class: "grow" }, el("div", { class: "t" }, "Stripe"), el("div", { class: "d" }, "‘Connect with Stripe’ — coming next")), badge("Soon", "info")),
-      el("div", { class: "row" }, el("span", { style: { fontSize: "20px" } }, "🅿️"), el("div", { class: "grow" }, el("div", { class: "t" }, "PayPal"), el("div", { class: "d" }, "One-click connect — pending PayPal partner approval")), badge("Soon", "info")),
-      el("p", { class: "hint", style: { marginTop: "8px" } }, "Until then, set up PayPal/Stripe keys in the dashboard Payments tab — those power the money rail today.")));
+    var holder = el("div", null, el("div", { class: "sk", style: { height: "200px", borderRadius: "var(--radius-lg)" } }));
+    c.append(holder);
+
+    Promise.all([api(A("/payments/stripe")), api(A("/payments/paypal"))]).then(function (res) {
+      clear(holder);
+      holder.append(el("div", { class: "ov-cols" }, providerCard("stripe", res[0]), providerCard("paypal", res[1])));
+      holder.append(el("p", { class: "hint", style: { marginTop: "14px" } },
+        "Coming soon: one-tap “Connect with Stripe” and PayPal login linking, so there are no keys to copy. The setup below works today and takes about two minutes."));
+    });
+  }
+  function payRail(ic, title, desc, on) {
+    return el("div", { class: "row" }, el("span", { style: { fontSize: "20px" } }, ic),
+      el("div", { class: "grow" }, el("div", { class: "t" }, title), el("div", { class: "d" }, desc)),
+      on ? badge("On", "ok") : badge("Off", "dim"));
+  }
+  function providerCard(kind, resp) {
+    var isStripe = kind === "stripe";
+    var name = isStripe ? "Stripe" : "PayPal";
+    var ic = isStripe ? "💠" : "🅿️";
+    var blurb = isStripe ? "Cards, Apple Pay & Google Pay" : "Cards + PayPal balance";
+    var box = el("div", { class: "panel", style: { margin: 0 } });
+    if (!resp || !resp.ok) {
+      box.append(
+        el("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
+          el("span", { style: { fontSize: "24px" } }, ic), el("div", { class: "grow" }, el("div", { class: "t", style: { fontWeight: "800" } }, name)), badge("Unavailable", "dim")),
+        el("p", { class: "muted", style: { fontSize: "13px", margin: "10px 0 0" } }, "Couldn’t load — refresh to try again."));
+      return box;
+    }
+    var b = resp.body, on = b.isConfigured, fp = isStripe ? b.secretKey : b.clientId;
+    box.append(el("div", { style: { display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" } },
+      el("span", { style: { fontSize: "24px" } }, ic),
+      el("div", { class: "grow" },
+        el("div", { class: "t", style: { fontWeight: "800", fontSize: "16px" } }, name),
+        el("div", { class: "d", style: { fontSize: "12.5px", color: "var(--text-muted)" } }, blurb)),
+      on ? badge("Connected", "ok") : badge("Not connected", "dim")));
+
+    if (on) {
+      var live = b.mode === "live";
+      var hookSet = isStripe ? (b.webhookSecret && b.webhookSecret.configured) : (b.webhookId && b.webhookId.configured);
+      box.append(el("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "14px" } },
+        badge(live ? "Live mode" : (isStripe ? "Test mode" : "Sandbox"), live ? "ok" : "warn"),
+        (fp && fp.last4) ? badge("key ••" + fp.last4, "dim") : null,
+        hookSet ? badge("Webhook set", "ok") : badge("No webhook yet", "warn")));
+    } else {
+      box.append(el("p", { class: "muted", style: { fontSize: "13px", margin: "0 0 14px", lineHeight: "1.5" } },
+        isStripe ? "Paste your Stripe secret key to accept card payments." : "Add your PayPal API credentials to accept card & PayPal payments."));
+    }
+
+    var actions = el("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+      btn(on ? "Manage" : "Connect", { icon: on ? null : "plus", onClick: function () { paymentDrawer(kind, b); } }));
+    if (on) actions.append(btn("Test", { variant: "btn-outline", onClick: function (e) { testProvider(kind, e.currentTarget); } }));
+    box.append(actions);
+    return box;
+  }
+  function testProvider(kind, b) {
+    var name = kind === "stripe" ? "Stripe" : "PayPal", orig = b.textContent;
+    b.disabled = true; b.textContent = "Testing…";
+    api(A("/payments/" + kind + "/test"), { method: "POST" }).then(function (r) {
+      b.disabled = false; b.textContent = orig;
+      if (r.ok && r.body && r.body.ok) {
+        var a = r.body.account;
+        toast(name + " connected ✓" + (a && a.business ? " — " + a.business : (a && a.email ? " — " + a.email : "")));
+      } else {
+        toast((r.body && r.body.message) || (name + " test failed"), "err");
+      }
+    });
+  }
+  function steps(arr) {
+    return el("ol", { class: "steps" }, arr.map(function (s) { return el("li", null, s); }));
+  }
+  function copyField(label, value) {
+    var input = inp({ type: "text", value: value, readonly: true, style: { flex: "1" }, onfocus: function (e) { e.target.select(); } });
+    var copy = btn("Copy", { variant: "btn-outline", style: { flex: "none" }, onClick: function () {
+      try { navigator.clipboard.writeText(value).then(function () { toast("Copied"); }); }
+      catch (err) { input.focus(); input.select(); toast("Copied"); }
+    } });
+    return field(label, el("div", { style: { display: "flex", gap: "8px" } }, input, copy), { hint: "Paste this into your provider’s webhook settings." });
+  }
+  function disconnectProvider(kind) {
+    var name = kind === "stripe" ? "Stripe" : "PayPal";
+    if (!confirm("Disconnect " + name + "? The money rail stops working until you reconnect.")) return;
+    var payload = kind === "stripe" ? { secretKey: "", webhookSecret: "" } : { clientId: "", clientSecret: "", webhookId: "" };
+    api(A("/payments/" + kind), { method: "POST", body: payload }).then(function (r) {
+      if (!r.ok) return toast("Couldn’t disconnect", "err");
+      closeDrawer(); toast(name + " disconnected"); render();
+    });
+  }
+  function paymentDrawer(kind, data) {
+    var isStripe = kind === "stripe";
+    data = data || {};
+    var errEl = el("div", { class: "err" });
+    var hookUrl = data.webhookUrl || (location.origin + (isStripe ? "/webhooks/stripe" : "/webhooks/paypal"));
+    var body, save;
+
+    if (isStripe) {
+      var skSaved = data.secretKey && data.secretKey.configured;
+      var sk = inp({ type: "password", placeholder: skSaved ? "Saved ••" + data.secretKey.last4 + " — leave blank to keep" : "sk_live_… or sk_test_…", autocomplete: "off" });
+      var whSaved = data.webhookSecret && data.webhookSecret.configured;
+      var wh = inp({ type: "password", placeholder: whSaved ? "Saved — leave blank to keep" : "whsec_…", autocomplete: "off" });
+      var brand = inp({ type: "text", value: data.brandName || "", maxlength: 128, placeholder: "Shown on the Stripe checkout page" });
+      body = el("div", null,
+        steps([
+          "Open dashboard.stripe.com → Developers → API keys.",
+          "Copy your Secret key (sk_live_… for real money, or sk_test_… to trial it) and paste it below.",
+          "Developers → Webhooks → Add endpoint: paste the URL below, choose events checkout.session.completed and charge.refunded, then copy its Signing secret (whsec_…).",
+        ]),
+        field("Secret key", sk, { hint: "Starts with sk_live_ or sk_test_. Stored encrypted; never shown again." }),
+        copyField("Webhook endpoint URL", hookUrl),
+        field("Webhook signing secret", wh, { hint: "The whsec_… value — this is what auto-confirms paid orders." }),
+        field("Brand name (optional)", brand),
+        errEl);
+      save = btn("Save Stripe keys", { onClick: function () {
+        errEl.textContent = ""; save.disabled = true;
+        var payload = { brandName: brand.value.trim() };
+        if (sk.value.trim()) payload.secretKey = sk.value.trim();
+        if (wh.value.trim()) payload.webhookSecret = wh.value.trim();
+        api(A("/payments/stripe"), { method: "POST", body: payload }).then(function (r) {
+          save.disabled = false;
+          if (!r.ok) { errEl.textContent = (r.body && r.body.message) || "Couldn’t save"; return; }
+          closeDrawer(); toast("Stripe saved"); render();
+        });
+      } });
+    } else {
+      var modeSeg = segmented([{ value: "live", label: "Live" }, { value: "sandbox", label: "Sandbox" }], (data.mode === "sandbox" ? "sandbox" : "live"));
+      var cidSaved = data.clientId && data.clientId.configured;
+      var cid = inp({ type: "text", placeholder: cidSaved ? "Saved ••" + data.clientId.last4 + " — leave blank to keep" : "PayPal Client ID", autocomplete: "off" });
+      var cs = inp({ type: "password", placeholder: (data.clientSecret && data.clientSecret.configured) ? "Saved — leave blank to keep" : "PayPal Client Secret", autocomplete: "off" });
+      var wid = inp({ type: "text", placeholder: (data.webhookId && data.webhookId.configured) ? "Saved — leave blank to keep" : "Webhook ID (e.g. 1AB23…)", autocomplete: "off" });
+      var brandP = inp({ type: "text", value: data.brandName || "", maxlength: 128, placeholder: "Shown on the PayPal checkout page" });
+      body = el("div", null,
+        steps([
+          "Open developer.paypal.com → Apps & Credentials. Use the Live tab for real money (Sandbox to trial it).",
+          "Open or create an app, then copy its Client ID and Secret into the fields below.",
+          "In the app’s Webhooks, add the URL below, subscribe to “Payment capture completed” and “…refunded”, then copy the Webhook ID.",
+        ]),
+        el("label", { class: "field" }, el("span", { class: "lab" }, "Mode"), modeSeg.node),
+        field("Client ID", cid),
+        field("Client Secret", cs, { hint: "Stored encrypted; never shown again." }),
+        copyField("Webhook endpoint URL", hookUrl),
+        field("Webhook ID", wid, { hint: "From the webhook you created in the PayPal app — confirms paid orders." }),
+        field("Brand name (optional)", brandP),
+        errEl);
+      save = btn("Save PayPal keys", { onClick: function () {
+        errEl.textContent = ""; save.disabled = true;
+        var payload = { mode: modeSeg.value(), brandName: brandP.value.trim() };
+        if (cid.value.trim()) payload.clientId = cid.value.trim();
+        if (cs.value.trim()) payload.clientSecret = cs.value.trim();
+        if (wid.value.trim()) payload.webhookId = wid.value.trim();
+        api(A("/payments/paypal"), { method: "POST", body: payload }).then(function (r) {
+          save.disabled = false;
+          if (!r.ok) { errEl.textContent = (r.body && r.body.message) || "Couldn’t save"; return; }
+          closeDrawer(); toast("PayPal saved"); render();
+        });
+      } });
+    }
+
+    var configured = isStripe ? (data.secretKey && data.secretKey.configured) : (data.clientId && data.clientId.configured);
+    var foot = el("div", { style: { display: "flex", gap: "8px", alignItems: "center", width: "100%" } },
+      configured ? btn("Disconnect", { variant: "btn-ghost", style: { color: "#fda4a4" }, onClick: function () { disconnectProvider(kind); } }) : null,
+      el("div", { style: { flex: "1" } }),
+      btn("Cancel", { variant: "btn-ghost", onClick: closeDrawer }), save);
+    openDrawer((isStripe ? "Stripe" : "PayPal") + " setup", body, foot);
   }
 })();

@@ -244,6 +244,12 @@
 
       .empty.sm { padding: 26px 16px; } .empty.sm .e-ic { width: 40px; height: 40px; } .empty.sm h3 { font-size: 15px; }
 
+      /* guided setup steps (payment provider drawers) */
+      .steps { margin: 0 0 20px; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 12px; }
+      .steps li { counter-increment: step; position: relative; padding-left: 38px; font-size: 13.5px; line-height: 1.5; color: var(--text-muted); }
+      .steps li::before { content: counter(step); position: absolute; left: 0; top: -1px; width: 26px; height: 26px; border-radius: 50%;
+        display: grid; place-items: center; font-weight: 800; font-size: 13px; color: var(--accent); background: var(--accent-tint); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
     </style>
   </head>
@@ -252,6 +258,6 @@
       <div class="state-full"><div class="sk" style="width:min(900px,90vw);height:60vh"></div></div>
     </div>
     <script src="config.js"></script>
-    <script src="store-manager.js?v=3"></script>
+    <script src="store-manager.js?v=4"></script>
   </body>
 </html>
