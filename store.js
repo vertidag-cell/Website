@@ -585,7 +585,7 @@
     if (varianty) {
       var vc = document.getElementById('pm-variants');
       vc.innerHTML = '<div class="pm-var-label">Choose an option</div><div class="pm-var-opts">' +
-        p.variants.map(function (v, idx) { return '<button type="button" class="pm-var" data-i="' + idx + '"' + (v.inStock === false ? ' disabled' : '') + '>' + esc(v.name) + (v.inStock === false ? ' · out' : '') + '</button>'; }).join('') + '</div>';
+        p.variants.map(function (v, idx) { return '<button type="button" class="pm-var" data-i="' + idx + '"' + (v.inStock === false ? ' disabled' : '') + '>' + esc(v.name) + (v.inStock === false ? ' · out' : (v.lowStock ? ' · ' + v.lowStock + ' left' : '')) + '</button>'; }).join('') + '</div>';
       var firstIdx = -1;
       for (var i = 0; i < p.variants.length; i++) { if (p.variants[i].inStock !== false) { firstIdx = i; break; } }
       var optBtns = vc.querySelectorAll('.pm-var');
@@ -626,7 +626,7 @@
       else {
         html += '<ul class="pm-rev-list">';
         rv.reviews.forEach(function (r) {
-          html += '<li class="pm-rev"><div class="pm-rev-top"><b>' + esc(r.username || 'Buyer') + '</b>' + starDisplay(r.rating) + '</div>' + (r.comment ? '<p>' + esc(r.comment) + '</p>' : '') + (r.reply ? '<div class="pm-rev-reply"><b>↳ Store reply:</b> ' + esc(r.reply) + '</div>' : '') + '</li>';
+          html += '<li class="pm-rev"><div class="pm-rev-top"><span class="pm-rev-who"><b>' + esc(r.username || 'Buyer') + '</b><span class="pm-verified" title="Reviews are only from verified buyers">✓ Verified</span></span>' + starDisplay(r.rating) + '</div>' + (r.comment ? '<p>' + esc(r.comment) + '</p>' : '') + (r.reply ? '<div class="pm-rev-reply"><b>↳ Store reply:</b> ' + esc(r.reply) + '</div>' : '') + '</li>';
         });
         html += '</ul>';
       }
