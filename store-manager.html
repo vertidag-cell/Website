@@ -132,6 +132,13 @@
       .pcard-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
       .bulk-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 14px; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--accent-tint); }
       .bulk-count { font-weight: 800; font-size: 13.5px; margin-right: auto; }
+
+      /* Review owner replies (moderation tab) */
+      .rev-item { margin-bottom: 9px; }
+      .rev-item .row { margin-bottom: 0; }
+      .rev-reply { margin: 6px 0 0 14px; padding: 8px 12px; font-size: 13px; color: var(--text-muted); border-left: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); background: var(--accent-tint); border-radius: 0 8px 8px 0; }
+      .rev-reply b { color: var(--accent); }
+      .rev-editor { margin: 8px 0 0 14px; display: flex; flex-direction: column; gap: 8px; }
       .pcard:hover { transform: translateY(-2px); border-color: var(--border-strong); }
       .pcard.off { opacity: .55; }
       .pcard .img { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: var(--bg-soft); }
@@ -285,6 +292,6 @@
       <div class="state-full"><div class="sk" style="width:min(900px,90vw);height:60vh"></div></div>
     </div>
     <script src="config.js"></script>
-    <script src="store-manager.js?v=14"></script>
+    <script src="store-manager.js?v=15"></script>
   </body>
 </html>

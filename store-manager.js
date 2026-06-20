@@ -111,7 +111,7 @@
     { id: 13, product_id: 1, name: "Lifetime", price_money: 59.99, price_credits: null, stock: 10, enabled: true },
   ];
   var DEMO_REVIEWS = [
-    { id: 1, product_id: 1, product_name: "VIP Rank", user_id: "111", username: "ApexHunter", rating: 5, comment: "Instant role, brilliant value.", status: "published", created_at: "2026-06-18 10:00:00" },
+    { id: 1, product_id: 1, product_name: "VIP Rank", user_id: "111", username: "ApexHunter", rating: 5, comment: "Instant role, brilliant value.", status: "published", created_at: "2026-06-18 10:00:00", reply: "Thanks for the support — enjoy the perks!" },
     { id: 2, product_id: 3, product_name: "Giga lvl 150 (imprinted)", user_id: "112", username: "RexQueen", rating: 4, comment: "Delivered in-game within the hour.", status: "published", created_at: "2026-06-17 14:00:00" },
     { id: 3, product_id: 4, product_name: "Starter Kit", user_id: "113", username: "MeshGod", rating: 2, comment: "Wanted more element in the kit.", status: "hidden", created_at: "2026-06-16 09:00:00" },
   ];
@@ -718,16 +718,39 @@
         if (!reviews.length) { box.append(emptyState("star", "No reviews yet", "Customer reviews appear here once buyers leave them.", null, true)); return; }
         reviews.forEach(function (rv) {
           var hidden = rv.status === "hidden";
-          box.append(el("div", { class: "row" },
+          var tiny = { padding: "5px 13px", fontSize: "13px" };
+          var item = el("div", { class: "rev-item" });
+          var replyView = el("div"), editorWrap = el("div");
+          function renderReplyView() { clear(replyView); if (rv.reply) replyView.append(el("div", { class: "rev-reply" }, el("b", null, "↳ Your reply: "), rv.reply)); }
+          function toggleEditor() {
+            if (editorWrap.firstChild) { clear(editorWrap); return; }
+            var ta2 = ta({ value: rv.reply || "", placeholder: "Write a public reply…", maxlength: 1000 });
+            var saveB = btn("Save reply", { style: tiny, onClick: function () {
+              saveB.disabled = true;
+              api(A("/store/reviews/" + rv.id + "/reply"), { method: "POST", body: { reply: ta2.value } }).then(function (r) {
+                if (!r.ok) { toast("Failed", "err"); saveB.disabled = false; return; }
+                rv.reply = ta2.value.trim() || null; renderReplyView(); clear(editorWrap); toast("Reply saved");
+              });
+            } });
+            var rmB = rv.reply ? btn("Remove", { variant: "btn-ghost", style: tiny, onClick: function () {
+              api(A("/store/reviews/" + rv.id + "/reply"), { method: "POST", body: { reply: "" } }).then(function (r) { if (r.ok) { rv.reply = null; renderReplyView(); clear(editorWrap); toast("Reply removed"); } });
+            } }) : null;
+            editorWrap.append(el("div", { class: "rev-editor" }, ta2, el("div", { style: { display: "flex", gap: "8px" } }, saveB, rmB)));
+          }
+          item.append(el("div", { class: "row" },
             el("div", { class: "grow" },
               el("div", { class: "t" }, (rv.product_name || ("Product #" + rv.product_id)) + "   " + starStr(rv.rating)),
               el("div", { class: "d" }, "@" + (rv.username || rv.user_id) + (rv.comment ? " — " + rv.comment : ""))),
             hidden ? badge("Hidden", "dim") : badge("Published", "ok"),
-            btn(hidden ? "Show" : "Hide", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function (e) {
+            btn(rv.reply ? "Edit reply" : "Reply", { variant: "btn-ghost", style: tiny, onClick: toggleEditor }),
+            btn(hidden ? "Show" : "Hide", { variant: "btn-outline", style: tiny, onClick: function (e) {
               var b = e.currentTarget; b.disabled = true;
               api(A("/store/reviews/" + rv.id + "/status"), { method: "POST", body: { status: hidden ? "published" : "hidden" } })
                 .then(function (rr) { if (rr.ok) { toast(hidden ? "Review shown" : "Review hidden"); load(current); } else { toast("Failed", "err"); b.disabled = false; } });
             } })));
+          renderReplyView();
+          item.append(replyView, editorWrap);
+          box.append(item);
         });
       });
     }

@@ -626,7 +626,7 @@
       else {
         html += '<ul class="pm-rev-list">';
         rv.reviews.forEach(function (r) {
-          html += '<li class="pm-rev"><div class="pm-rev-top"><b>' + esc(r.username || 'Buyer') + '</b>' + starDisplay(r.rating) + '</div>' + (r.comment ? '<p>' + esc(r.comment) + '</p>' : '') + '</li>';
+          html += '<li class="pm-rev"><div class="pm-rev-top"><b>' + esc(r.username || 'Buyer') + '</b>' + starDisplay(r.rating) + '</div>' + (r.comment ? '<p>' + esc(r.comment) + '</p>' : '') + (r.reply ? '<div class="pm-rev-reply"><b>↳ Store reply:</b> ' + esc(r.reply) + '</div>' : '') + '</li>';
         });
         html += '</ul>';
       }
