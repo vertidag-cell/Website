@@ -22,17 +22,19 @@ export async function onRequest(context) {
     return Response.redirect('https://arkoris.net' + url.pathname + url.search, 301);
   }
 
-  if (isDashboardPage(url.pathname)) {
+  if (isAppPage(url.pathname)) {
     return noStore(await context.next());
   }
 
   return context.next();
 }
 
-// The dashboard page only, with or without the .html suffix, case-insensitively.
-function isDashboardPage(pathname) {
-  const p = pathname.toLowerCase();
-  return p === '/dashboard' || p === '/dashboard.html';
+// App-shell pages we iterate on: always-fresh HTML so a deploy is visible
+// immediately. Their JS/CSS carry ?v=N cache-busters, so the assets refresh too.
+// (with or without the .html suffix, case-insensitively.)
+function isAppPage(pathname) {
+  const p = pathname.toLowerCase().replace(/\.html$/, '');
+  return p === '/dashboard' || p === '/store-manager' || p === '/store';
 }
 
 // Re-wrap a response with a no-store cache policy so it's always fresh.
