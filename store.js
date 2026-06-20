@@ -34,6 +34,7 @@
     for (var i = 1; i <= 5; i++) s += '<span class="star' + (i <= full ? ' on' : '') + '">★</span>';
     return '<span class="stars">' + s + '</span>';
   }
+  function fmtDate(d) { try { return esc(new Date(String(d).replace(' ', 'T') + 'Z').toLocaleDateString()); } catch (e) { return ''; } }
 
   // ── tiny API client (credentials + CSRF for unsafe methods) ─────────────────
   var _csrf = '';
@@ -649,7 +650,7 @@
         (sortable ? '<select id="pm-rev-sort" class="pm-rev-sort" aria-label="Sort reviews"><option value="recent">Most recent</option><option value="high">Highest rated</option><option value="low">Lowest rated</option></select>' : '') +
         '</div><div id="pm-form"></div><div id="pm-rev-listwrap"></div>';
       function reviewLi(r) {
-        return '<li class="pm-rev"><div class="pm-rev-top"><span class="pm-rev-who"><b>' + esc(r.username || 'Buyer') + '</b><span class="pm-verified" title="Reviews are only from verified buyers">✓ Verified</span></span>' + starDisplay(r.rating) + '</div>' + (r.comment ? '<p>' + esc(r.comment) + '</p>' : '') + (r.reply ? '<div class="pm-rev-reply"><b>↳ Store reply:</b> ' + esc(r.reply) + '</div>' : '') + '</li>';
+        return '<li class="pm-rev"><div class="pm-rev-top"><span class="pm-rev-who"><b>' + esc(r.username || 'Buyer') + '</b><span class="pm-verified" title="Reviews are only from verified buyers">✓ Verified</span></span>' + starDisplay(r.rating) + '</div>' + (r.created_at ? '<div class="pm-rev-date">' + fmtDate(r.created_at) + '</div>' : '') + (r.comment ? '<p>' + esc(r.comment) + '</p>' : '') + (r.reply ? '<div class="pm-rev-reply"><b>↳ Store reply:</b> ' + esc(r.reply) + '</div>' : '') + '</li>';
       }
       function renderRevList(mode) {
         var w = document.getElementById('pm-rev-listwrap'); if (!w) return;
