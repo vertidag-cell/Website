@@ -709,23 +709,38 @@
     var d = c.discount_type === "percent" ? c.percent_off + "% off" : [c.amount_off_money != null ? money(c.amount_off_money, S.cfg.currency) + " off" : null, c.amount_off_credits != null ? "🪙" + c.amount_off_credits + " off" : null].filter(Boolean).join(" / ");
     return d + " · " + c.redeemed_count + (c.max_redemptions != null ? " / " + c.max_redemptions : "") + " used";
   }
+  function couponRow(cp) {
+    return el("div", { class: "row", style: { opacity: cp.enabled ? 1 : 0.6 } },
+      el("div", { class: "grow" },
+        el("div", { style: { display: "flex", alignItems: "center", gap: "8px" } }, el("code", { style: { fontSize: "15px", fontWeight: 800, color: "var(--accent-soft)" } }, cp.code), cp.enabled ? null : badge("Disabled", "dim")),
+        el("div", { class: "d" }, couponSummary(cp) + (cp.expires_at ? " · expires " + cp.expires_at.slice(0, 10) : "") + (cp.per_user_limit != null ? " · " + cp.per_user_limit + "/user" : ""))),
+      btn("Edit", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { couponDrawer(cp); } }),
+      btn("Delete", { variant: "btn-ghost", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { if (!confirm("Delete coupon " + cp.code + "?")) return; api(A("/store/coupons/" + cp.id), { method: "DELETE" }).then(function (rr) { if (rr.ok) { toast("Deleted"); render(); } else toast("Failed", "err"); }); } }));
+  }
   function renderCoupons(c) {
     c.append(panel(panelHead("Coupons", btn("New coupon", { icon: "plus", onClick: function () { couponDrawer(null); } })),
       el("p", { class: "panel-sub" }, "Codes buyers type at checkout. Percent or fixed, on money and/or credits, with optional minimum spend, usage caps and dates.")));
-    var listBox = el("div"); c.append(listBox);
+    var loaded = [];
+    var search = inp({ type: "search", placeholder: "Search coupons by code…", style: { marginBottom: "12px", display: "none" } });
+    var listBox = el("div");
+    c.append(search, listBox);
+    search.addEventListener("input", renderRows);
+    function renderRows() {
+      clear(listBox);
+      var q = search.value.trim().toLowerCase();
+      var cs = q ? loaded.filter(function (cp) { return ((cp.code || "") + " " + (cp.description || "")).toLowerCase().indexOf(q) >= 0; }) : loaded;
+      if (!cs.length) {
+        if (q) listBox.append(emptyState("coupons", "No matches", "No coupons match your search.", null, true));
+        else listBox.append(emptyState("coupons", "No coupons yet", "Create a discount code to run a sale or reward your community.", btn("Create a coupon", { icon: "plus", onClick: function () { couponDrawer(null); } })));
+        return;
+      }
+      cs.forEach(function (cp) { listBox.append(couponRow(cp)); });
+    }
     listBox.append(el("div", { class: "sk", style: { height: "64px" } }));
     api(A("/store/coupons")).then(function (r) {
-      clear(listBox);
-      var cs = (r.body && r.body.coupons) || [];
-      if (!cs.length) { listBox.append(emptyState("coupons", "No coupons yet", "Create a discount code to run a sale or reward your community.", btn("Create a coupon", { icon: "plus", onClick: function () { couponDrawer(null); } }))); return; }
-      cs.forEach(function (cp) {
-        listBox.append(el("div", { class: "row", style: { opacity: cp.enabled ? 1 : 0.6 } },
-          el("div", { class: "grow" },
-            el("div", { style: { display: "flex", alignItems: "center", gap: "8px" } }, el("code", { style: { fontSize: "15px", fontWeight: 800, color: "var(--accent-soft)" } }, cp.code), cp.enabled ? null : badge("Disabled", "dim")),
-            el("div", { class: "d" }, couponSummary(cp) + (cp.expires_at ? " · expires " + cp.expires_at.slice(0, 10) : "") + (cp.per_user_limit != null ? " · " + cp.per_user_limit + "/user" : ""))),
-          btn("Edit", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { couponDrawer(cp); } }),
-          btn("Delete", { variant: "btn-ghost", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { if (!confirm("Delete coupon " + cp.code + "?")) return; api(A("/store/coupons/" + cp.id), { method: "DELETE" }).then(function (rr) { if (rr.ok) { toast("Deleted"); render(); } else toast("Failed", "err"); }); } })));
-      });
+      loaded = (r.body && r.body.coupons) || [];
+      if (loaded.length > 4) search.style.display = "";
+      renderRows();
     });
   }
   function couponDrawer(existing) {
