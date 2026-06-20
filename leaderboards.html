@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Leaderboards — Arkoris</title>
+    <meta name="description" content="Live XP and Cluster Alpha leaderboards for your Discord server, powered by Arkoris." />
+    <meta name="robots" content="noindex" />
+    <meta property="og:title" content="Leaderboards — Arkoris" />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="assets/logo.png?v=2" />
+    <link rel="stylesheet" href="styles.css?v=57" />
+    <link rel="stylesheet" href="lx-site.css?v=1" />
+    <style>
+      :root { --accent: var(--red, #2bff9e); }
+      .lbhub-wrap { max-width: 920px; margin: 0 auto; padding: 28px 20px 80px; }
+      .lbhub-hero {
+        position: relative; text-align: center; padding: 38px 24px 28px; margin-bottom: 24px;
+        border: 1px solid var(--border); border-radius: var(--radius-lg, 20px);
+        background: radial-gradient(620px 240px at 50% -40px, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%), var(--card, rgba(255,255,255,0.06));
+        overflow: hidden;
+      }
+      .lbhub-logo { width: 72px; height: 72px; border-radius: 18px; object-fit: cover; margin: 0 auto 14px; display: block;
+        border: 1px solid var(--border-strong, rgba(255,255,255,0.16)); box-shadow: 0 10px 40px color-mix(in srgb, var(--accent) 30%, transparent); }
+      .lbhub-logo.lbhub-fb, .lbhub-crest.lbhub-fb { display: flex; align-items: center; justify-content: center; font-weight: 800;
+        color: var(--text); background: color-mix(in srgb, var(--accent) 22%, rgba(255,255,255,0.06)); }
+      .lbhub-logo.lbhub-fb { font-size: 28px; }
+      .lbhub-title { font-size: clamp(24px, 4.5vw, 36px); font-weight: 900; letter-spacing: -0.02em; margin: 0 0 6px; }
+      .lbhub-sub { color: var(--text-muted, #a1a1aa); font-size: 15px; margin: 0; }
+
+      .lbhub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 640px) { .lbhub-grid { grid-template-columns: 1fr; } }
+      .lbhub-card { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 18px;
+        background: var(--card, rgba(255,255,255,0.05)); padding: 22px 20px 20px; }
+      .lbhub-card-head { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
+      .lbhub-ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+      .lbhub-ico svg { width: 22px; height: 22px; }
+      .lbhub-card h2 { font-size: 18px; margin: 0; font-weight: 800; }
+      .lbhub-card .lbhub-kind { font-size: 12px; color: var(--text-dim, #71717a); margin-top: 1px; }
+      .lbhub-rows { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+      .lbhub-row { display: grid; grid-template-columns: 22px 28px 1fr auto; align-items: center; gap: 10px;
+        padding: 8px 11px; border: 1px solid var(--border); border-radius: 11px; background: rgba(255,255,255,0.03); }
+      .lbhub-rk { font-weight: 800; font-size: 13px; color: var(--text-dim, #71717a); text-align: center; }
+      .lbhub-crest { width: 28px; height: 28px; border-radius: 50%; font-size: 12px; }
+      .lbhub-crest img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+      .lbhub-nm { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .lbhub-val { font-weight: 800; font-size: 13px; color: var(--accent); white-space: nowrap; }
+      .lbhub-empty { color: var(--text-muted, #a1a1aa); font-size: 13.5px; padding: 14px 2px; flex: 1; }
+      .lbhub-card .btn { width: 100%; justify-content: center; }
+      .lbhub-foot { text-align: center; color: var(--text-dim, #71717a); font-size: 13px; margin-top: 26px; }
+      .lbhub-foot a { color: var(--text-muted, #a1a1aa); }
+      .lbhub-state { text-align: center; padding: 54px 28px; border: 1px solid var(--border); border-radius: var(--radius-lg, 20px);
+        background: radial-gradient(520px 200px at 50% -24px, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%), var(--card, rgba(255,255,255,0.04)); }
+      .lbhub-state h2 { font-size: 22px; margin: 0 0 10px; }
+      .lbhub-state p { color: var(--text-muted, #a1a1aa); max-width: 460px; margin: 0 auto 22px; line-height: 1.55; }
+      .lbhub-badge { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; letter-spacing: .08em;
+        text-transform: uppercase; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+        background: color-mix(in srgb, var(--accent) 12%, transparent); padding: 5px 12px; border-radius: 999px; margin-bottom: 16px; }
+      .skel { background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: 16px; }
+      @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="container nav-inner">
+        <a class="brand" href="index.html">
+          <span class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/><path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/></svg></span>
+          <span class="brand-text"><span class="name">Arkoris</span><span class="sub">Discord Automation · ARK</span></span>
+        </a>
+        <div class="nav-cta">
+          <a class="btn btn-ghost nav-hide-sm" data-link="inviteBot" href="#">Invite Bot</a>
+          <a class="btn btn-primary" data-link="subscribe" href="pricing.html">Get Premium</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="lbhub-wrap">
+        <div id="lbhub-root">
+          <div class="skel" style="height:170px;margin-bottom:24px"></div>
+          <div class="lbhub-grid">
+            <div class="skel" style="height:300px"></div>
+            <div class="skel" style="height:300px"></div>
+          </div>
+        </div>
+        <p class="lbhub-foot">Powered by <a href="index.html">Arkoris</a> · Live rankings for your Discord server</p>
+      </div>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="leaderboards.js"></script>
+  </body>
+</html>

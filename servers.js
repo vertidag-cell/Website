@@ -26,6 +26,12 @@
     var join = validInvite
       ? '<a class="srv-join" href="' + esc(s.invite) + '" target="_blank" rel="noopener noreferrer">Join Server <span aria-hidden="true" class="srv-join-arr">→</span></a>'
       : '<span class="srv-private">Private — invite only</span>';
+    // Premium servers expose shareable web leaderboards (XP + Cluster Alpha) — a
+    // quiet secondary link to the per-guild hub. Free servers' leaderboards are
+    // locked, so we don't surface a dead-end upsell on the public directory.
+    var lb = (s.premium && s.id)
+      ? '<a class="srv-lb" href="leaderboards.html?guild=' + esc(s.id) + '" style="display:block;text-align:center;margin-top:10px;font-size:13px;font-weight:600;color:var(--text-muted,#a1a1aa)">🏆 View leaderboards <span aria-hidden="true">→</span></a>'
+      : "";
     return (
       '<div class="feature-card srv-card' + (s.premium ? " premium" : "") + '">' +
       prem +
@@ -33,6 +39,7 @@
       '<div class="srv-id"><h3 class="srv-name">' + esc(s.name) + "</h3>" + members + "</div></div>" +
       blurb +
       join +
+      lb +
       "</div>"
     );
   }
