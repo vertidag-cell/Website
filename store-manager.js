@@ -408,15 +408,18 @@
         el("div", null, el("div", { class: "v" }, "🪙 " + fmt(s.revenueCredits)), el("div", { class: "l" }, "All-time credits")),
         el("div", null, el("div", { class: "v" }, fmt(ordSum)), el("div", { class: "l" }, "Orders · last " + range + "d"))));
 
-    function gstat(label, value, ic, flag) {
-      return el("div", { class: "gstat" + (flag ? " flag" : "") },
+    function go(section) { return function () { S.section = section; render(); }; }
+    function gstat(label, value, ic, flag, onGo) {
+      var n = el("div", { class: "gstat" + (flag ? " flag" : "") + (onGo ? " clk" : "") },
         el("div", { class: "gi" }, icon(ic)), el("div", { class: "v" }, value), el("div", { class: "l" }, label));
+      if (onGo) { n.setAttribute("role", "button"); n.setAttribute("tabindex", "0"); n.addEventListener("click", onGo); n.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onGo(); } }); }
+      return n;
     }
     var mini = el("div", { class: "ov-mini" },
-      gstat("Paid orders", fmt(s.paidOrders), "orders"),
-      gstat("Awaiting delivery", fmt(s.needsDelivery || 0), "truck", s.needsDelivery > 0),
-      gstat("Products live", fmt(s.enabledProducts || 0) + " / " + fmt(s.products || 0), "products"),
-      gstat("Active coupons", fmt(s.activeCoupons || 0), "coupons"));
+      gstat("Paid orders", fmt(s.paidOrders), "orders", false, go("orders")),
+      gstat("Awaiting delivery", fmt(s.needsDelivery || 0), "truck", s.needsDelivery > 0, go("orders")),
+      gstat("Products live", fmt(s.enabledProducts || 0) + " / " + fmt(s.products || 0), "products", false, go("products")),
+      gstat("Active coupons", fmt(s.activeCoupons || 0), "coupons", false, go("coupons")));
 
     c.append(reveal(el("div", { class: "ov-grid" }, hero, mini)));
 
