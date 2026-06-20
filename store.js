@@ -523,9 +523,14 @@
     var img = p.image_url ? '<img class="pm-img" src="' + esc(p.image_url) + '" alt="">' : '';
     var badge = p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
     var soldOut = !varianty && p.inStock === false;
+    // Prev/next neighbours in the catalogue order (lightbox-style browsing).
+    var pIdx = -1; for (var pi = 0; pi < S.products.length; pi++) { if (S.products[pi].id === p.id) { pIdx = pi; break; } }
+    var prevP = pIdx > 0 ? S.products[pIdx - 1] : null;
+    var nextP = (pIdx >= 0 && pIdx < S.products.length - 1) ? S.products[pIdx + 1] : null;
     var ov = document.createElement('div');
     ov.id = 'prod-overlay'; ov.className = 'pm-overlay';
-    ov.innerHTML = '<div class="pm-panel" role="dialog" aria-label="Product details">' +
+    ov.innerHTML = '<button type="button" class="pm-nav pm-prev" aria-label="Previous product"' + (prevP ? '' : ' style="display:none"') + '>‹</button>' +
+      '<div class="pm-panel" role="dialog" aria-label="Product details">' +
       '<button type="button" class="pm-share" id="pm-share" aria-label="Copy product link" title="Copy link">🔗</button>' +
       '<button type="button" class="pm-x" aria-label="Close">✕</button>' + img +
       '<div class="pm-body">' +
@@ -540,18 +545,28 @@
           '<div class="pm-actions"><div class="pm-qty"><button type="button" class="pm-qd" data-d="-1" aria-label="Less">−</button><span id="pm-qn">1</span><button type="button" class="pm-qd" data-d="1" aria-label="More">+</button></div>' +
           '<button class="btn btn-primary" id="pm-add">Add to cart</button></div></div>' +
         '<div class="pm-reviews" id="pm-reviews"><div class="pm-rev-load">Loading reviews…</div></div>' +
-      '</div></div>';
+      '</div></div>' +
+      '<button type="button" class="pm-nav pm-next" aria-label="Next product"' + (nextP ? '' : ' style="display:none"') + '>›</button>';
     document.body.appendChild(ov);
     ov.addEventListener('click', function (e) { if (e.target === ov) closeProductModal(); });
     var xBtn = ov.querySelector('.pm-x');
     xBtn.addEventListener('click', closeProductModal);
+    var prevBtn = ov.querySelector('.pm-prev'); if (prevBtn && prevP) prevBtn.addEventListener('click', function () { openProduct(prevP); });
+    var nextBtn = ov.querySelector('.pm-next'); if (nextBtn && nextP) nextBtn.addEventListener('click', function () { openProduct(nextP); });
     var shareBtn = ov.querySelector('.pm-share');
     if (shareBtn) shareBtn.addEventListener('click', function () {
       var link = location.href; // ?product=<id> is set on open
       try { navigator.clipboard.writeText(link).then(function () { toast('Link copied'); }, function () { toast('Link copied'); }); }
       catch (e) { toast('Link copied'); }
     });
-    _pmKey = function (e) { if (e.key === 'Escape') closeProductModal(); };
+    _pmKey = function (e) {
+      if (e.key === 'Escape') { closeProductModal(); return; }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        var t = document.activeElement; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+        if (e.key === 'ArrowLeft' && prevP) openProduct(prevP);
+        else if (e.key === 'ArrowRight' && nextP) openProduct(nextP);
+      }
+    };
     document.addEventListener('keydown', _pmKey);
     try { xBtn.focus(); } catch (e) {}
 

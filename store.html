@@ -181,6 +181,10 @@
       .pm-x { position: absolute; top: 12px; right: 12px; z-index: 2; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(0,0,0,0.5); color: #fff; font-size: 15px; cursor: pointer; }
       .pm-share { position: absolute; top: 12px; right: 52px; z-index: 2; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(0,0,0,0.5); color: #fff; font-size: 14px; cursor: pointer; }
       .pm-share:hover, .pm-x:hover { background: rgba(0,0,0,0.7); }
+      .pm-nav { position: fixed; top: 50%; transform: translateY(-50%); z-index: 71; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border-strong, rgba(255,255,255,0.16)); background: rgba(0,0,0,0.6); color: #fff; font-size: 26px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+      .pm-prev { left: 16px; } .pm-next { right: 16px; }
+      .pm-nav:hover { background: rgba(0,0,0,0.85); border-color: var(--accent); }
+      @media (max-width: 720px) { .pm-nav { display: none !important; } }
       .pm-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; background: #15151c; }
       .pm-body { padding: 20px 22px 24px; }
       .pm-name { font-size: 22px; font-weight: 900; margin: 4px 0 8px; letter-spacing: -0.01em; }
@@ -277,6 +281,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=18"></script>
+    <script src="store.js?v=19"></script>
   </body>
 </html>
