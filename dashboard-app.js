@@ -7122,6 +7122,14 @@
     const CCY = { GBP: "£", USD: "$", EUR: "€" };
     const storeUrl = `${location.origin}/store.html?guild=${gid}`;
 
+    // Primary entry point: the dedicated full-page Store Manager. The inline
+    // editor below stays as a quick-edit fallback.
+    content.append(h("div", { class: "dsx-card", style: { display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" } },
+      h("div", { style: { flex: "1", minWidth: "200px" } },
+        h("h3", { style: { margin: "0 0 4px" } }, "Store Manager"),
+        h("p", { class: "dsx-muted", style: { margin: "0", fontSize: "13px" } }, "Manage products, orders, settings and payment connections in a dedicated full-page workspace.")),
+      h("a", { class: "btn btn-primary", href: `store-manager.html?guild=${gid}` }, "Open Store Manager →")));
+
     const wrap = h("div", { class: "dsx-store", style: { display: "flex", flexDirection: "column", gap: "16px" } });
     content.append(wrap);
 
@@ -7806,7 +7814,7 @@
     // origin, so hand the buyer straight back to the store they came from.
     try {
       const back = sessionStorage.getItem("storeReturn");
-      if (back && /[?&]guild=\d{5,25}/.test(back) && /\/store\.html/.test(back)) {
+      if (back && /[?&]guild=\d{5,25}/.test(back) && /\/store(-manager)?\.html/.test(back)) {
         sessionStorage.removeItem("storeReturn");
         location.replace(back);
         return;

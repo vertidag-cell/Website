@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Store Manager — Arkoris</title>
+    <meta name="robots" content="noindex" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="assets/logo.png?v=2" />
+    <link rel="stylesheet" href="styles.css?v=57" />
+    <link rel="stylesheet" href="lx-site.css?v=1" />
+    <style>
+      :root { --accent: var(--red, #2bff9e); }
+      .sm-wrap { max-width: 1080px; margin: 0 auto; padding: 24px 20px 80px; }
+      .sm-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+      .sm-logo { width: 52px; height: 52px; border-radius: 13px; object-fit: cover; border: 1px solid var(--border-strong, rgba(255,255,255,0.16)); }
+      .sm-logo.sm-fb { display: grid; place-items: center; font-weight: 800; font-size: 22px; background: color-mix(in srgb, var(--accent) 20%, rgba(255,255,255,0.06)); color: var(--text); }
+      .sm-title { font-size: clamp(20px, 3.5vw, 28px); font-weight: 900; letter-spacing: -0.02em; margin: 0; }
+      .sm-sub { color: var(--text-muted, #a1a1aa); font-size: 13px; margin: 2px 0 0; }
+      .sm-head-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+      .sm-nav { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; flex-wrap: wrap; }
+      .sm-nav button { background: none; border: none; color: var(--text-muted, #a1a1aa); font-weight: 700; font-size: 14px; padding: 11px 16px; cursor: pointer; border-bottom: 2px solid transparent; }
+      .sm-nav button.active { color: var(--text); border-bottom-color: var(--accent); }
+
+      .sm-card { border: 1px solid var(--border); border-radius: 16px; background: var(--card, rgba(255,255,255,0.05)); padding: 20px 22px; margin-bottom: 16px; }
+      .sm-card h2 { margin: 0 0 14px; font-size: 17px; font-weight: 800; }
+      .sm-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      @media (max-width: 640px) { .sm-grid2 { grid-template-columns: 1fr; } }
+      .sm-field { display: block; margin-bottom: 12px; }
+      .sm-field > span { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+      .sm-field .hint { font-weight: 400; color: var(--text-muted, #a1a1aa); font-size: 12px; margin-top: 3px; display: block; }
+      .sm-input, .sm-select { width: 100%; padding: 9px 11px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg, #0b0f1a); color: var(--text); font: inherit; font-size: 14px; }
+      .sm-toggles { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+      .sm-toggles label { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+
+      .sm-prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+      .sm-prod { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--bg, #0b0f1a); display: flex; flex-direction: column; }
+      .sm-prod.off { opacity: .55; }
+      .sm-prod-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: #15151c; }
+      .sm-prod-img.fb { display: grid; place-items: center; font-weight: 800; font-size: 26px; color: var(--text-dim, #71717a); background: color-mix(in srgb, var(--accent) 8%, rgba(255,255,255,0.03)); }
+      .sm-prod-body { padding: 12px 13px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+      .sm-prod-name { font-weight: 800; font-size: 15px; }
+      .sm-prod-meta { color: var(--text-muted, #a1a1aa); font-size: 12.5px; }
+      .sm-prod-actions { margin-top: auto; display: flex; gap: 6px; padding-top: 8px; }
+      .sm-prod-actions .btn { flex: 1; justify-content: center; padding: 6px; font-size: 13px; }
+
+      .sm-order { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 9px; }
+      .sm-order-top { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; flex-wrap: wrap; }
+      .sm-order-line { display: flex; align-items: center; gap: 8px; font-size: 13.5px; margin-top: 6px; }
+      .sm-filters { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+      .sm-filters button { padding: 5px 13px; font-size: 13px; }
+
+      .sm-pay-row { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; }
+      .sm-pay-ico { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; font-size: 20px; background: color-mix(in srgb, var(--accent) 12%, transparent); flex: none; }
+      .sm-pay-main { flex: 1; min-width: 0; }
+      .sm-pay-name { font-weight: 800; }
+      .sm-pay-state { font-size: 12.5px; color: var(--text-muted, #a1a1aa); }
+      .sm-badge-ok { color: #22c55e; font-weight: 700; }
+      .sm-badge-no { color: var(--text-dim, #71717a); }
+
+      .sm-modal-ov { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 20px; }
+      .sm-modal { width: min(560px, 100%); max-height: 90vh; overflow-y: auto; background: var(--bg, #0b0f1a); border: 1px solid var(--border-strong, rgba(255,255,255,0.16)); border-radius: 18px; padding: 22px 22px 24px; }
+      .sm-modal h2 { margin: 0 0 14px; }
+      .sm-modal-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+      .sm-preview { max-width: 120px; max-height: 70px; border-radius: 8px; object-fit: cover; margin-top: 6px; }
+
+      .sm-state { text-align: center; padding: 64px 24px; }
+      .sm-state h2 { font-size: 22px; margin: 0 0 10px; }
+      .sm-state p { color: var(--text-muted, #a1a1aa); max-width: 440px; margin: 0 auto 22px; }
+      .sm-toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 16px); z-index: 80; opacity: 0; background: #14181f; color: #fff; border: 1px solid var(--border-strong, rgba(255,255,255,0.16)); border-radius: 12px; padding: 11px 18px; font-weight: 700; font-size: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.5); transition: opacity .22s, transform .22s; }
+      .sm-toast.in { opacity: 1; transform: translate(-50%, 0); }
+      .sm-toast.err { border-color: rgba(239,68,68,0.5); }
+      .sm-muted { color: var(--text-muted, #a1a1aa); }
+      .skel { background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.1), rgba(255,255,255,0.05)); background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: 14px; }
+      @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="container nav-inner">
+        <a class="brand" href="dashboard.html">
+          <span class="brand-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L20 5v7c0 4.5-3.5 8.5-8 9-4.5-.5-8-4.5-8-9V5l8-3z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" stroke-width="0.9"/><path d="M13.2 6.5l-4.3 7h3l-1 4 4.3-7h-3l1-4z" fill="#fff"/></svg></span>
+          <span class="brand-text"><span class="name">Arkoris</span><span class="sub">Store Manager</span></span>
+        </a>
+        <div class="nav-cta">
+          <a class="btn btn-ghost" href="dashboard.html">← Dashboard</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="sm-wrap">
+        <div id="sm-root">
+          <div class="skel" style="height:60px;margin-bottom:18px"></div>
+          <div class="skel" style="height:260px"></div>
+        </div>
+      </div>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="store-manager.js"></script>
+  </body>
+</html>
