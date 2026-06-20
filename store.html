@@ -239,6 +239,23 @@
       .pm-buy { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 6px 0 4px; flex-wrap: wrap; }
       .pm-reviews { margin-top: 18px; }
       .pm-rev-title { font-size: 15px; font-weight: 800; margin: 0 0 12px; }
+      /* Cross-sell row */
+      .pm-related { margin-top: 22px; border-top: 1px solid var(--border); padding-top: 18px; }
+      .pm-rel-title { font-size: 15px; font-weight: 800; margin: 0 0 12px; }
+      .pm-rel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .pm-rel-card { position: relative; display: flex; align-items: center; gap: 10px; padding: 8px; text-align: left; cursor: pointer;
+        border: 1px solid var(--border); border-radius: 12px; background: var(--card, rgba(255,255,255,0.03)); transition: border-color .15s, transform .15s; }
+      .pm-rel-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+      .pm-rel-img { width: 46px; height: 46px; flex: none; border-radius: 9px; object-fit: cover; }
+      .pm-rel-fb { display: grid; place-items: center; font-weight: 800; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+      .pm-rel-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+      .pm-rel-name { font-size: 13px; font-weight: 700; color: var(--text, #e4e4e7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .pm-rel-price { font-size: 12.5px; }
+      .pm-rel-price .prod-money { font-size: 13px; }
+      .pm-rel-tag { position: absolute; top: 6px; right: 6px; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px; }
+      .pm-rel-tag.sale { color: #06120c; background: #fb7185; }
+      .pm-rel-tag.best { background: transparent; font-size: 13px; padding: 0; }
+      @media (max-width: 420px) { .pm-rel-grid { grid-template-columns: 1fr; } }
       .pm-rev-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
       .pm-rev-head .pm-rev-title { margin: 0; }
       .pm-rev-sort { padding: 5px 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--card, rgba(255,255,255,0.05)); color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer; }
@@ -314,6 +331,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=27"></script>
+    <script src="store.js?v=28"></script>
   </body>
 </html>

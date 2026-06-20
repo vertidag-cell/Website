@@ -604,6 +604,7 @@
           '<div class="pm-actions"><div class="pm-qty"><button type="button" class="pm-qd" data-d="-1" aria-label="Less">−</button><span id="pm-qn">1</span><button type="button" class="pm-qd" data-d="1" aria-label="More">+</button></div>' +
           '<button class="btn btn-primary" id="pm-add">Add to cart</button></div></div>' +
         '<div class="pm-reviews" id="pm-reviews"><div class="pm-rev-load">Loading reviews…</div></div>' +
+        '<div class="pm-related" id="pm-related"></div>' +
       '</div></div>' +
       '<button type="button" class="pm-nav pm-next" aria-label="Next product"' + (nextP ? '' : ' style="display:none"') + '>›</button>';
     document.body.appendChild(ov);
@@ -692,6 +693,43 @@
     wireImgFallbacks(ov);
     setProductParam(p.id); // make the open product shareable / deep-linkable
     loadProductReviews(p);
+    renderRelated(p);
+  }
+  // Cross-sell — "You might also like": same category first, then bestsellers/
+  // featured, then anything else. In-stock preferred, up to 4.
+  function relatedProducts(p) {
+    var pool = S.products.filter(function (x) { return x.id !== p.id; });
+    var inStock = function (x) { return x.inStock !== false || hasVariants(x); };
+    var score = function (x) {
+      var s = 0;
+      if (p.category && x.category === p.category) s += 100;
+      if (x.bestseller) s += 30;
+      if (x.featured) s += 20;
+      s += Math.min(x.soldCount || 0, 50) / 10;
+      if (!inStock(x)) s -= 200;
+      return s;
+    };
+    return pool.sort(function (a, b) { return score(b) - score(a); }).slice(0, 4);
+  }
+  function renderRelated(p) {
+    var box = document.getElementById('pm-related'); if (!box) return;
+    var rel = relatedProducts(p);
+    if (!rel.length) { box.innerHTML = ''; return; }
+    box.innerHTML = '<h3 class="pm-rel-title">You might also like</h3><div class="pm-rel-grid">' +
+      rel.map(function (x) {
+        var thumb = x.image_url ? '<img class="pm-rel-img" src="' + esc(x.image_url) + '" alt="" loading="lazy" data-letter="' + initial(x.name) + '">' : '<div class="pm-rel-img pm-rel-fb">' + initial(x.name) + '</div>';
+        var tags = (x.bestseller ? '<span class="pm-rel-tag best">🔥</span>' : '') + (x.sale_price_money != null ? '<span class="pm-rel-tag sale">Sale</span>' : '');
+        return '<button type="button" class="pm-rel-card" data-pid="' + x.id + '">' + thumb + tags +
+          '<div class="pm-rel-info"><span class="pm-rel-name">' + esc(x.name) + '</span>' +
+          '<span class="pm-rel-price">' + cardPriceHtml(x) + '</span></div></button>';
+      }).join('') + '</div>';
+    wireImgFallbacks(box);
+    box.querySelectorAll('.pm-rel-card').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var x = productById(parseInt(b.getAttribute('data-pid'), 10));
+        if (x) openProduct(x);
+      });
+    });
   }
   function loadProductReviews(p) {
     var box = document.getElementById('pm-reviews'); if (!box) return;
