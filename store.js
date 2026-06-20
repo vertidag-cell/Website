@@ -450,8 +450,11 @@
     } catch (e) {}
   }
   // Re-render just the results grid for the current search/category/sort.
-  function renderResults() {
+  // `more` = true keeps growing the visible page (Load more); otherwise resets.
+  var PAGE = 24;
+  function renderResults(more) {
     var box = document.getElementById('store-results'); if (!box) return;
+    S._shown = more ? (S._shown || PAGE) + PAGE : PAGE;
     updateUrl();
     var v = S.view, q = (v.q || '').trim().toLowerCase();
     var list = S.products.filter(function (p) {
@@ -479,9 +482,14 @@
       });
       return;
     }
-    box.innerHTML = '<div class="store-count">' + list.length + ' ' + (list.length === 1 ? 'product' : 'products') + '</div>' +
-      '<div class="store-grid">' + list.map(productCardHtml).join('') + '</div>';
+    var shown = Math.min(S._shown, list.length);
+    var slice = list.slice(0, shown);
+    box.innerHTML = '<div class="store-count">' + (shown < list.length ? 'Showing ' + shown + ' of ' + list.length : list.length + ' ' + (list.length === 1 ? 'product' : 'products')) + '</div>' +
+      '<div class="store-grid">' + slice.map(productCardHtml).join('') + '</div>' +
+      (shown < list.length ? '<div class="store-more"><button type="button" class="btn btn-outline" id="store-loadmore">Load more (' + (list.length - shown) + ')</button></div>' : '');
     S._revealed = true; // animate only the first paint
+    var lm = document.getElementById('store-loadmore');
+    if (lm) lm.addEventListener('click', function () { renderResults(true); });
     wireImgFallbacks(box);
     box.querySelectorAll('.prod-btn').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
