@@ -458,6 +458,20 @@
     if (p.price_credits != null) price += '<span class="prod-credits">🪙 ' + fmt(p.price_credits) + '</span>';
     return price;
   }
+  // Human countdown to a sale's end ("2d 4h" / "5h 12m" / "23m"); '' if no/expired.
+  function saleCountdown(iso) {
+    if (!iso) return '';
+    var end = Date.parse(iso); if (!isFinite(end)) return '';
+    var ms = end - Date.now(); if (ms <= 0) return '';
+    var mins = Math.floor(ms / 60000), hrs = Math.floor(mins / 60), days = Math.floor(hrs / 24);
+    if (days >= 1) return days + 'd ' + (hrs % 24) + 'h';
+    if (hrs >= 1) return hrs + 'h ' + (mins % 60) + 'm';
+    return Math.max(1, mins) + 'm';
+  }
+  function saleEndsHtml(p) {
+    var cd = (p.sale_price_money != null && p.sale_ends_at) ? saleCountdown(p.sale_ends_at) : '';
+    return cd ? '<div class="prod-sale-ends">⏳ Sale ends in ' + cd + '</div>' : '';
+  }
   function productCardHtml(p, idx) {
     // Stagger a fade-up on the FIRST paint only (not on every filter re-render).
     var rev = S._revealed ? '' : ' reveal';
@@ -482,6 +496,7 @@
       rating +
       (p.description ? '<p class="prod-desc">' + esc(p.description) + '</p>' : '') +
       '<div class="prod-badges">' + badges + '</div>' +
+      saleEndsHtml(p) +
       '<div class="prod-foot"><div class="prod-price">' + cardPriceHtml(p) + '</div>' +
       '<button class="btn btn-primary prod-btn" type="button" data-pid="' + p.id + '"' + (disabled ? ' disabled' : '') + '>' + (varianty ? 'Choose options' : 'Add to cart') + '</button>' +
       '</div></div></div>';
@@ -597,7 +612,8 @@
         '<div class="pm-rating" id="pm-rating"></div>' +
         ((p.soldCount && p.soldCount >= 1) ? '<div class="pm-sold">🔥 ' + fmt(p.soldCount) + ' sold</div>' : '') +
         (p.description ? '<p class="pm-desc">' + esc(p.description) + '</p>' : '') +
-        '<div class="prod-badges">' + (p.bestseller ? '<span class="prod-badge best">🔥 Bestseller</span>' : '') + badge + (soldOut ? '<span class="prod-badge oos">Out of stock</span>' : '') + '</div>' +
+        '<div class="prod-badges">' + (p.sale_price_money != null ? '<span class="prod-badge sale">Sale</span>' : '') + (p.bestseller ? '<span class="prod-badge best">🔥 Bestseller</span>' : '') + badge + (soldOut ? '<span class="prod-badge oos">Out of stock</span>' : '') + '</div>' +
+        saleEndsHtml(p) +
         (varianty ? '<div class="pm-variants" id="pm-variants"></div>' : '') +
         '<div class="pm-stock" id="pm-stock"></div>' +
         '<div class="pm-buy"><div class="prod-price" id="pm-price"></div>' +
