@@ -733,6 +733,13 @@
       } }).then(function (r) { save.disabled = false; if (!r.ok) { toast((r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save", "err"); return; } S.cfg = r.body.config; toast("Settings saved"); render(); });
     } });
 
+    var storeUrl = location.origin + "/store.html?guild=" + gid;
+    c.append(panel(panelHead("Share your store", el("span", { class: "pill " + (cfg.enabled ? "on" : "off") }, cfg.enabled ? "Open" : "Closed")),
+      el("p", { class: "panel-sub" }, "Send this link to your community — it's where customers browse and buy."),
+      copyField("Public store link", storeUrl, "Anyone with the link can browse; they sign in with Discord to buy."),
+      el("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+        btn("Open store", { variant: "btn-outline", icon: "ext", onClick: function () { window.open(storeUrl, "_blank"); } }))));
+
     c.append(panel(panelHead("Storefront"),
       el("p", { class: "panel-sub" }, "How the public store looks and what it accepts."),
       open.node, accM.node, accC.node,
@@ -823,13 +830,13 @@
   function steps(arr) {
     return el("ol", { class: "steps" }, arr.map(function (s) { return el("li", null, s); }));
   }
-  function copyField(label, value) {
+  function copyField(label, value, hint) {
     var input = inp({ type: "text", value: value, readonly: true, style: { flex: "1" }, onfocus: function (e) { e.target.select(); } });
     var copy = btn("Copy", { variant: "btn-outline", style: { flex: "none" }, onClick: function () {
       try { navigator.clipboard.writeText(value).then(function () { toast("Copied"); }); }
       catch (err) { input.focus(); input.select(); toast("Copied"); }
     } });
-    return field(label, el("div", { style: { display: "flex", gap: "8px" } }, input, copy), { hint: "Paste this into your provider’s webhook settings." });
+    return field(label, el("div", { style: { display: "flex", gap: "8px" } }, input, copy), { hint: hint || "Paste this into your provider’s webhook settings." });
   }
   function disconnectProvider(kind) {
     var name = kind === "stripe" ? "Stripe" : "PayPal";

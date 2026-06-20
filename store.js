@@ -344,7 +344,8 @@
         var reviewable = ['completed', 'paid', 'needs_delivery'].indexOf(o.status) >= 0;
         var itemsHtml = (o.items || []).map(function (i) {
           var rv = (reviewable && i.product_id) ? '<button type="button" class="order-review" data-pid="' + i.product_id + '">★ Review</button>' : '';
-          return '<div class="order-item"><span>' + i.quantity + '× ' + esc(i.name) + '</span>' + rv + '</div>';
+          var st = { delivered: '✅', granted: '⚡', pending: '⏳', failed: '⚠️' }[i.fulfillment_status] || '';
+          return '<div class="order-item"><span>' + (st ? st + ' ' : '') + i.quantity + '× ' + esc(i.name) + '</span>' + rv + '</div>';
         }).join('');
         var date = o.created_at ? esc(new Date(String(o.created_at).replace(' ', 'T') + 'Z').toLocaleDateString()) : '';
         html += '<li class="order-row"><div class="order-top"><b>#' + o.id + '</b><span>' + (STAT[o.status] || o.status) + '</span><b>' + total + '</b></div>' +

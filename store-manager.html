@@ -244,6 +244,15 @@
 
       .empty.sm { padding: 26px 16px; } .empty.sm .e-ic { width: 40px; height: 40px; } .empty.sm h3 { font-size: 15px; }
 
+      /* Variant / tier manager (inside product editor) */
+      .var-mgr { display: flex; flex-direction: column; gap: 8px; }
+      .var-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elev); }
+      .var-row .t { font-weight: 700; font-size: 13.5px; } .var-row .d { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+      .var-add { margin-top: 4px; padding: 11px; border: 1px dashed var(--border-strong); border-radius: 10px; display: flex; flex-direction: column; gap: 8px; }
+      .var-add-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; }
+      .var-add .inp { padding: 8px 10px; font-size: 13px; }
+      @media (max-width: 560px) { .var-add-row { grid-template-columns: 1fr 1fr; } }
+
       /* guided setup steps (payment provider drawers) */
       .steps { margin: 0 0 20px; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 12px; }
       .steps li { counter-increment: step; position: relative; padding-left: 38px; font-size: 13.5px; line-height: 1.5; color: var(--text-muted); }
@@ -258,6 +267,6 @@
       <div class="state-full"><div class="sk" style="width:min(900px,90vw);height:60vh"></div></div>
     </div>
     <script src="config.js"></script>
-    <script src="store-manager.js?v=4"></script>
+    <script src="store-manager.js?v=7"></script>
   </body>
 </html>
