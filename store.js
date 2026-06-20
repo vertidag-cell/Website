@@ -640,6 +640,16 @@
     if (s.acceptMoney) pays.push('💳 Card / PayPal');
     if (s.acceptCredits) pays.push('🪙 Server credits');
 
+    // Live trust signals from the catalogue.
+    var pc = S.products.length, totalReviews = 0, ratingSum = 0;
+    S.products.forEach(function (pp) { if (pp.reviewCount) { totalReviews += pp.reviewCount; ratingSum += pp.rating * pp.reviewCount; } });
+    var avgRating = totalReviews ? ratingSum / totalReviews : 0;
+    var trust = [];
+    if (pc) trust.push('<span class="store-trust-pill">' + pc + ' product' + (pc === 1 ? '' : 's') + '</span>');
+    if (totalReviews) trust.push('<span class="store-trust-pill">' + starDisplay(avgRating) + '<b>' + avgRating.toFixed(1) + '</b> · ' + totalReviews + ' review' + (totalReviews === 1 ? '' : 's') + '</span>');
+    if (S.products.some(function (pp) { return pp.fulfillment_type === 'role'; })) trust.push('<span class="store-trust-pill">⚡ Instant delivery</span>');
+    trust.push('<span class="store-trust-pill">🔒 Secure checkout</span>');
+
     var html = '<div class="store-hero">';
     if (s.banner) html += '<img class="store-hero-banner" src="' + esc(s.banner) + '" alt="">';
     html += '<div class="store-hero-inner">';
@@ -647,7 +657,9 @@
     html += '<div class="store-htext"><h1 class="store-title">' + esc(name) + '</h1>' +
       (s.description ? '<p class="store-desc">' + esc(s.description) + '</p>' : '') +
       (pays.length ? '<div class="store-pays">' + pays.map(function (p) { return '<span class="store-pay">' + p + '</span>'; }).join('') + '</div>' : '') +
-      '</div></div></div>';
+      '</div></div>' +
+      (pc ? '<div class="store-trust">' + trust.join('') + '</div>' : '') +
+      '</div>';
 
     if (!S.products.length) {
       html += '<div class="store-state"><div class="store-state-ico">' + ICON.bag + '</div><h2>No products yet</h2><p>This store hasn\'t added any products yet. Check back soon!</p></div>';

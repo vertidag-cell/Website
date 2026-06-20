@@ -34,6 +34,11 @@
       .store-desc { color: var(--text-muted, #a1a1aa); font-size: 14.5px; margin: 0; }
       .store-pays { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
       .store-pay { font-size: 12px; font-weight: 600; color: var(--text-muted, #a1a1aa); border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px; }
+      .store-trust { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 26px 20px; }
+      .store-trust-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text-muted, #a1a1aa);
+        border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; background: color-mix(in srgb, var(--accent) 5%, transparent); }
+      .store-trust-pill b { color: var(--text); font-weight: 800; }
+      .store-trust-pill .stars { font-size: 12px; }
 
       /* Browse toolbar: search + sort + category chips */
       .store-tools { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -207,6 +212,22 @@
         padding: 11px 18px; font-weight: 700; font-size: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.5); transition: opacity .22s, transform .22s; }
       .store-toast.in { opacity: 1; transform: translate(-50%, 0); }
       .store-toast.err { border-color: rgba(239,68,68,0.5); }
+
+      @media (max-width: 560px) {
+        .store-wrap { padding: 16px 13px 76px; }
+        .store-hero-inner { padding: 16px 18px; gap: 13px; }
+        .store-logo { width: 50px; height: 50px; }
+        .store-trust { padding: 0 18px 16px; }
+        .store-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        .prod-body { padding: 12px 12px 13px; }
+        .prod-name { font-size: 14.5px; }
+        .cart-fab { right: 14px; bottom: 14px; }
+        .pm-overlay { padding: 0; }
+        .pm-panel { width: 100%; min-height: 100vh; border-radius: 0; border: none; }
+        .pm-buy { flex-direction: column; align-items: stretch; }
+        .pm-actions { justify-content: space-between; }
+      }
+      @media (prefers-reduced-motion: reduce) { .prod, .cart-panel, .pm-panel, .store-toast { transition: none !important; animation: none !important; } }
     </style>
   </head>
   <body>
@@ -238,6 +259,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=7"></script>
+    <script src="store.js?v=8"></script>
   </body>
 </html>
