@@ -149,6 +149,10 @@
       .pcard .pr .alt { color: var(--text-muted); font-weight: 600; font-size: 12.5px; }
       .pcard .foot { margin-top: auto; display: flex; gap: 6px; padding-top: 8px; }
       .pcard .foot .btn { flex: 1; justify-content: center; padding: 7px; font-size: 13px; }
+      .reorder { display: inline-flex; flex-direction: column; gap: 2px; flex: none; }
+      .ro-btn { width: 26px; height: 17px; border: 1px solid var(--border); background: var(--card); color: var(--text-muted); border-radius: 5px; font-size: 9px; line-height: 1; cursor: pointer; padding: 0; }
+      .ro-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+      .ro-btn:disabled { opacity: .35; cursor: not-allowed; }
 
       /* Slide-over drawer (used instead of centered modals) */
       .scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); opacity: 0; transition: opacity .2s; }
@@ -292,6 +296,6 @@
       <div class="state-full"><div class="sk" style="width:min(900px,90vw);height:60vh"></div></div>
     </div>
     <script src="config.js"></script>
-    <script src="store-manager.js?v=15"></script>
+    <script src="store-manager.js?v=16"></script>
   </body>
 </html>

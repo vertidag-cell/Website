@@ -459,7 +459,7 @@
   }
 
   // ── PRODUCTS ───────────────────────────────────────────────────────────────
-  function productCard(p, sel) {
+  function productCard(p, sel, move) {
     var price = el("div", { class: "pr" });
     if (p.price_money != null) price.append(money(p.price_money, S.cfg.currency));
     if (p.price_money != null && p.price_credits != null) price.append(el("span", { class: "alt" }, "  or  "));
@@ -488,8 +488,16 @@
           p.enabled ? null : badge("Hidden", "dim")),
         price,
         el("div", { class: "foot" },
+          reorderControls(p, move),
           btn("Edit", { variant: "btn-outline", onClick: function () { productDrawer(p); } }),
           btn("Delete", { variant: "btn-ghost", onClick: function () { delProduct(p); } }))));
+  }
+  function reorderControls(p, move) {
+    if (!move) return null;
+    var idx = -1; for (var k = 0; k < S.products.length; k++) { if (S.products[k].id === p.id) { idx = k; break; } }
+    return el("div", { class: "reorder" },
+      el("button", { class: "ro-btn", type: "button", title: "Move up", disabled: idx <= 0, onclick: function () { move(p, -1); } }, "▲"),
+      el("button", { class: "ro-btn", type: "button", title: "Move down", disabled: idx < 0 || idx >= S.products.length - 1, onclick: function () { move(p, 1); } }, "▼"));
   }
   function renderProducts(c) {
     c.append(panel(panelHead("Products (" + S.products.length + ")", btn("Add product", { icon: "plus", onClick: function () { productDrawer(null); } })),
@@ -514,13 +522,22 @@
         .then(function () { clearSel(); toast(enabled ? "Products shown" : "Products hidden"); refreshProducts().then(function () { render(); }); });
     }
     var sel = { set: selected, onChange: refreshBar };
+    // Reorder: swap with the neighbour in S.products and persist the new order.
+    function move(p, dir) {
+      var idx = -1; for (var k = 0; k < S.products.length; k++) { if (S.products[k].id === p.id) { idx = k; break; } }
+      var j = idx + dir;
+      if (idx < 0 || j < 0 || j >= S.products.length) return;
+      var t = S.products[idx]; S.products[idx] = S.products[j]; S.products[j] = t;
+      api(A("/store/products/reorder"), { method: "POST", body: { order: S.products.map(function (x) { return x.id; }) } }).then(function (r) { if (!r.ok) toast("Couldn't save order", "err"); });
+      renderGrid(searchEl ? searchEl.value : "");
+    }
     var grid = el("div", { class: "pgrid" });
     function renderGrid(q) {
       clear(grid);
       q = (q || "").trim().toLowerCase();
       var list = S.products.filter(function (p) { return !q || ((p.name || "") + " " + (p.category || "")).toLowerCase().indexOf(q) >= 0; });
       if (!list.length) { grid.append(emptyState("products", "No matches", "No products match your search — try a different term.", null, true)); return; }
-      list.forEach(function (p) { grid.append(productCard(p, sel)); });
+      list.forEach(function (p) { grid.append(productCard(p, sel, q ? null : move)); });
     }
     var searchEl = null;
     if (S.products.length > 3) {
