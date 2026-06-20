@@ -764,6 +764,8 @@
       (pc ? '<div class="store-trust">' + trust.join('') + '</div>' : '') +
       '</div>';
 
+    if (s.announcement) html += '<div class="store-announce">📣 ' + esc(s.announcement) + '</div>';
+
     if (!S.products.length) {
       html += '<div class="store-state"><div class="store-state-ico">' + ICON.bag + '</div><h2>No products yet</h2><p>This store hasn\'t added any products yet. Check back soon!</p></div>';
       root.innerHTML = html;
