@@ -397,7 +397,10 @@
     if (p.price_credits != null) price += '<span class="prod-credits">🪙 ' + fmt(p.price_credits) + '</span>';
     return price;
   }
-  function productCardHtml(p) {
+  function productCardHtml(p, idx) {
+    // Stagger a fade-up on the FIRST paint only (not on every filter re-render).
+    var rev = S._revealed ? '' : ' reveal';
+    var delay = S._revealed ? '' : ' style="animation-delay:' + Math.min((idx || 0) * 30, 240) + 'ms"';
     var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + initial(p.name) + '</div>';
     var badges = '';
     if (p.featured) badges += '<span class="prod-badge feat">★ Featured</span>';
@@ -407,7 +410,7 @@
     var rating = p.reviewCount ? '<div class="prod-rating">' + starDisplay(p.rating) + '<span class="prod-rating-n">' + Number(p.rating).toFixed(1) + ' (' + p.reviewCount + ')</span></div>' : '';
     var varianty = hasVariants(p);
     var disabled = !varianty && !p.inStock;
-    return '<div class="prod' + (p.featured ? ' is-feat' : '') + '" data-pid="' + p.id + '" tabindex="0" role="button">' + img + '<div class="prod-body">' +
+    return '<div class="prod' + (p.featured ? ' is-feat' : '') + rev + '" data-pid="' + p.id + '" tabindex="0" role="button"' + delay + '>' + img + '<div class="prod-body">' +
       (p.category ? '<div class="prod-cat">' + esc(p.category) + '</div>' : '') +
       '<h3 class="prod-name">' + esc(p.name) + '</h3>' +
       rating +
@@ -451,6 +454,7 @@
     }
     box.innerHTML = '<div class="store-count">' + list.length + ' ' + (list.length === 1 ? 'product' : 'products') + '</div>' +
       '<div class="store-grid">' + list.map(productCardHtml).join('') + '</div>';
+    S._revealed = true; // animate only the first paint
     wireImgFallbacks(box);
     box.querySelectorAll('.prod-btn').forEach(function (btn) {
       btn.addEventListener('click', function (e) {

@@ -71,6 +71,8 @@
       .prod-badge.oos { color: #f59e0b; border-color: rgba(245,158,11,.4); }
       .prod-badge.low { color: #fb923c; border-color: rgba(251,146,60,.45); background: rgba(251,146,60,.08); }
       .prod.is-feat { border-color: color-mix(in srgb, var(--accent) 45%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 12px 32px color-mix(in srgb, var(--accent) 14%, transparent); }
+      @keyframes prodUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+      .prod.reveal { animation: prodUp .45s cubic-bezier(.22,.61,.36,1) both; }
       .prod-foot { margin-top: auto; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
       .prod-price { display: flex; flex-direction: column; line-height: 1.2; }
       .prod-money { font-weight: 900; font-size: 18px; }

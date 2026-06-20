@@ -90,7 +90,7 @@
   var DEMO_ROLES = [{ id: "1", name: "VIP" }, { id: "2", name: "Supporter" }, { id: "3", name: "MVP" }, { id: "4", name: "Founder" }];
   var DEMO_CHANNELS = [{ id: "10", name: "orders" }, { id: "11", name: "staff-fulfilment" }, { id: "12", name: "general" }];
   var DEMO_PRODUCTS = [
-    { id: 1, name: "VIP Rank", description: "Coloured name, /kit vip, 2 homes and queue priority.", image_url: null, category: "Ranks", price_money: 9.99, price_credits: 5000, fulfillment_type: "role", role_id: "1", stock: null, per_user_limit: 1, enabled: true, featured: true },
+    { id: 1, name: "VIP Rank", description: "Coloured name, /kit vip, 2 homes and queue priority.", image_url: null, category: "Ranks", price_money: 9.99, price_credits: 5000, fulfillment_type: "role", role_id: "1", stock: null, per_user_limit: 1, enabled: true, featured: true, variants: [{ id: 11, name: "1 month", enabled: true }, { id: 12, name: "3 months", enabled: true }, { id: 13, name: "Lifetime", enabled: true }] },
     { id: 2, name: "MVP Rank", description: "Everything in VIP plus a custom tag and monthly crate.", image_url: null, category: "Ranks", price_money: 19.99, price_credits: 12000, fulfillment_type: "role", role_id: "3", stock: null, per_user_limit: 1, enabled: true, featured: true },
     { id: 3, name: "Giga lvl 150 (imprinted)", description: "Bred, imprinted Giga delivered to your tribe.", image_url: null, category: "Dinos", price_money: null, price_credits: 8000, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", stock: 5, per_user_limit: null, enabled: true },
     { id: 4, name: "Starter Kit", description: "Metal tools, 200 element, full flak.", image_url: null, category: "Kits", price_money: 4.99, price_credits: 2500, fulfillment_type: "manual", delivery_instructions: "Hand over starter kit", stock: 0, per_user_limit: null, enabled: true },
@@ -426,31 +426,46 @@
   }
 
   // ── PRODUCTS ───────────────────────────────────────────────────────────────
+  function productCard(p) {
+    var price = el("div", { class: "pr" });
+    if (p.price_money != null) price.append(money(p.price_money, S.cfg.currency));
+    if (p.price_money != null && p.price_credits != null) price.append(el("span", { class: "alt" }, "  or  "));
+    if (p.price_credits != null) price.append(el("span", { class: p.price_money != null ? "alt" : "" }, "🪙 " + fmt(p.price_credits)));
+    var tierCount = (p.variants || []).filter(function (v) { return v.enabled !== false; }).length;
+    var img = p.image_url ? el("img", { class: "img", src: p.image_url, alt: "", loading: "lazy" }) : el("div", { class: "img fb" }, initial(p.name));
+    return el("div", { class: "pcard" + (p.enabled ? "" : " off") }, img,
+      el("div", { class: "body" },
+        el("div", { class: "nm" }, p.name),
+        el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
+          p.featured ? badge("★ Featured", "ok") : null,
+          badge(p.fulfillment_type === "role" ? "⚡ Instant role" : "📦 In-game", p.fulfillment_type === "role" ? "ok" : ""),
+          tierCount ? badge(tierCount + " tier" + (tierCount === 1 ? "" : "s"), "info") : null,
+          p.stock != null ? badge(p.stock > 0 ? p.stock + " left" : "Out of stock", p.stock > 0 ? "dim" : "warn") : null,
+          p.enabled ? null : badge("Hidden", "dim")),
+        price,
+        el("div", { class: "foot" },
+          btn("Edit", { variant: "btn-outline", onClick: function () { productDrawer(p); } }),
+          btn("Delete", { variant: "btn-ghost", onClick: function () { delProduct(p); } }))));
+  }
   function renderProducts(c) {
     c.append(panel(panelHead("Products (" + S.products.length + ")", btn("Add product", { icon: "plus", onClick: function () { productDrawer(null); } })),
       el("p", { class: "panel-sub" }, "Each product is sold on your public store. Price in money, credits, or both; deliver an instant Discord role or a manual in-game handover.")));
     if (!S.products.length) { c.append(emptyState("products", "No products yet", "Add your first product to start selling. You can price it in real money, server credits, or both.", btn("Add your first product", { icon: "plus", onClick: function () { productDrawer(null); } }))); return; }
     var grid = el("div", { class: "pgrid" });
-    S.products.forEach(function (p) {
-      var price = el("div", { class: "pr" });
-      if (p.price_money != null) price.append(money(p.price_money, S.cfg.currency));
-      if (p.price_money != null && p.price_credits != null) price.append(el("span", { class: "alt" }, "  or  "));
-      if (p.price_credits != null) price.append(el("span", { class: p.price_money != null ? "alt" : "" }, "🪙 " + fmt(p.price_credits)));
-      var img = p.image_url ? el("img", { class: "img", src: p.image_url, alt: "", loading: "lazy" }) : el("div", { class: "img fb" }, initial(p.name));
-      grid.append(el("div", { class: "pcard" + (p.enabled ? "" : " off") }, img,
-        el("div", { class: "body" },
-          el("div", { class: "nm" }, p.name),
-          el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
-            p.featured ? badge("★ Featured", "ok") : null,
-            badge(p.fulfillment_type === "role" ? "⚡ Instant role" : "📦 In-game", p.fulfillment_type === "role" ? "ok" : ""),
-            p.stock != null ? badge(p.stock > 0 ? p.stock + " left" : "Out of stock", p.stock > 0 ? "dim" : "warn") : null,
-            p.enabled ? null : badge("Hidden", "dim")),
-          price,
-          el("div", { class: "foot" },
-            btn("Edit", { variant: "btn-outline", onClick: function () { productDrawer(p); } }),
-            btn("Delete", { variant: "btn-ghost", onClick: function () { delProduct(p); } })))));
-    });
+    function renderGrid(q) {
+      clear(grid);
+      q = (q || "").trim().toLowerCase();
+      var list = S.products.filter(function (p) { return !q || ((p.name || "") + " " + (p.category || "")).toLowerCase().indexOf(q) >= 0; });
+      if (!list.length) { grid.append(emptyState("products", "No matches", "No products match your search — try a different term.", null, true)); return; }
+      list.forEach(function (p) { grid.append(productCard(p)); });
+    }
+    if (S.products.length > 3) {
+      var search = inp({ type: "search", placeholder: "Search products by name or category…", style: { marginBottom: "14px" } });
+      search.addEventListener("input", function () { renderGrid(search.value); });
+      c.append(search);
+    }
     c.append(grid);
+    renderGrid("");
   }
   function delProduct(p) {
     if (!confirm('Delete "' + p.name + '"? This hides it from the store.')) return;
