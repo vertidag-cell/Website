@@ -95,6 +95,7 @@
     { id: 3, name: "Giga lvl 150 (imprinted)", description: "Bred, imprinted Giga delivered to your tribe.", image_url: null, category: "Dinos", price_money: null, price_credits: 8000, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", stock: 5, per_user_limit: null, enabled: true, rating: 5, reviewCount: 3, soldCount: 21 },
     { id: 4, name: "Starter Kit", description: "Metal tools, 200 element, full flak.", image_url: null, category: "Kits", price_money: 4.99, price_credits: 2500, fulfillment_type: "manual", delivery_instructions: "Hand over starter kit", stock: 0, per_user_limit: null, enabled: true },
     { id: 5, name: "Tribe Logo", description: "Custom in-server tribe banner (hidden while in design).", image_url: null, category: "Cosmetic", price_money: 6, price_credits: null, fulfillment_type: "manual", delivery_instructions: "Design + deliver banner", stock: null, per_user_limit: null, enabled: false },
+    { id: 6, name: "New Player Bundle", description: "VIP rank + a starter kit, sold together at a saving.", image_url: null, category: "Bundles", price_money: 12.99, price_credits: 6500, fulfillment_type: "manual", stock: null, per_user_limit: null, enabled: true, soldCount: 14, bundle_items: [{ product_id: 1, quantity: 1 }, { product_id: 4, quantity: 1 }] },
   ];
   var DEMO_ORDERS = [
     { id: 312, buyer_user_id: "111", buyer_username: "ApexHunter", rail: "money", total_money: 9.99, currency: "GBP", total_credits: null, status: "completed", coupon_code: null, created_at: "2026-06-19 14:02:00", items: [{ id: 1, name: "VIP Rank", quantity: 1, fulfillment_type: "role", fulfillment_status: "granted" }] },
@@ -508,6 +509,7 @@
         el("div", { class: "nm" }, p.name),
         el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
           p.featured ? badge("★ Featured", "ok") : null,
+          (p.bundle_items && p.bundle_items.length) ? badge("🎁 Bundle", "info") : null,
           p.sale_price_money != null ? badge("Sale", "warn") : null,
           p.reviewCount ? badge("★ " + Number(p.rating).toFixed(1) + " (" + p.reviewCount + ")", "") : null,
           p.soldCount ? badge("🔥 " + fmt(p.soldCount) + " sold", "info") : null,
@@ -677,6 +679,36 @@
     var manWrap = field("Delivery instructions (shown to staff)", instr);
     var ft = segmented([{ value: "role", label: "⚡ Discord role" }, { value: "manual", label: "📦 Manual / in-game" }], p.fulfillment_type === "role" ? "role" : "manual", function (v) { roleWrap.style.display = v === "role" ? "block" : "none"; manWrap.style.display = v === "manual" ? "block" : "none"; });
 
+    // Bundle editor — package other products. Any components → this is a bundle,
+    // delivered by handing over each component (the Delivery setting is ignored).
+    var bundleRows = (p.bundle_items || []).map(function (bi) { return { product_id: bi.product_id, quantity: bi.quantity || 1 }; });
+    var bundleList = el("div", { class: "bundle-editor" });
+    function compChoices() {
+      return S.products.filter(function (x) { return (!existing || x.id !== existing.id) && !(x.bundle_items && x.bundle_items.length); });
+    }
+    function syncBundleNote() { bundleNote.style.display = bundleRows.length ? "block" : "none"; }
+    function renderBundleRows() {
+      clear(bundleList);
+      if (!bundleRows.length) bundleList.append(el("p", { class: "hint", style: { margin: "2px 0 10px" } }, "No components — leave empty for a normal product, or add products to sell them together as a bundle."));
+      var opts = [["", "— pick a product —"]].concat(compChoices().map(function (x) { return [String(x.id), x.name]; }));
+      bundleRows.forEach(function (bi, idx) {
+        var psel = sel(opts, String(bi.product_id || ""));
+        psel.addEventListener("change", function () { bundleRows[idx].product_id = parseInt(psel.value, 10) || null; });
+        var qty = inp({ type: "number", min: "1", max: "99", value: bi.quantity || 1, style: { maxWidth: "84px" } });
+        qty.addEventListener("input", function () { bundleRows[idx].quantity = Math.max(1, Math.min(99, parseInt(qty.value, 10) || 1)); });
+        var del = el("button", { class: "cf-del", type: "button", title: "Remove" }, "✕");
+        del.addEventListener("click", function () { bundleRows.splice(idx, 1); renderBundleRows(); syncBundleNote(); });
+        bundleList.append(el("div", { class: "bundle-row" }, psel, el("span", { class: "bundle-x" }, "×"), qty, del));
+      });
+    }
+    var addComp = btn("+ Add component", { variant: "btn-outline", style: { padding: "6px 13px", fontSize: "13px" }, onClick: function () {
+      if (bundleRows.length >= 10) { toast("Up to 10 components", "err"); return; }
+      if (!compChoices().length) { toast("Add some normal products first", "err"); return; }
+      bundleRows.push({ product_id: null, quantity: 1 }); renderBundleRows(); syncBundleNote();
+    } });
+    var bundleNote = el("p", { class: "hint", style: { margin: "8px 0 0", color: "#c4b5fd" } }, "🎁 This is a bundle — delivered by handing over each component. The Delivery setting below is ignored.");
+    renderBundleRows(); syncBundleNote();
+
     var errEl = el("div", { class: "err" });
     var save = btn(existing ? "Save product" : "Add product", { onClick: function () {
       errEl.textContent = ""; save.disabled = true;
@@ -686,7 +718,8 @@
         sale_ends_at: saleEnds.value ? new Date(saleEnds.value).toISOString() : null,
         fulfillment_type: ft.value(), role_id: ft.value() === "role" ? (roleSel.value || null) : null,
         delivery_instructions: ft.value() === "manual" ? (instr.value.trim() || null) : null,
-        stock: stock.value === "" ? null : Number(stock.value), per_user_limit: lim.value === "" ? null : Number(lim.value), enabled: enabled.input.checked, featured: featured.input.checked };
+        stock: stock.value === "" ? null : Number(stock.value), per_user_limit: lim.value === "" ? null : Number(lim.value), enabled: enabled.input.checked, featured: featured.input.checked,
+        bundle_items: bundleRows.filter(function (bi) { return bi.product_id; }).map(function (bi) { return { product_id: bi.product_id, quantity: bi.quantity || 1 }; }) };
       var req = existing ? api(A("/store/products/" + existing.id), { method: "PATCH", body: b }) : api(A("/store/products"), { method: "POST", body: b });
       req.then(function (r) { if (!r.ok) { errEl.textContent = (r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save"; save.disabled = false; return; } closeDrawer(); refreshProducts().then(function () { toast(existing ? "Product saved" : "Product added"); render(); }); });
     } });
@@ -703,6 +736,9 @@
         field("Sale ends (optional)", saleEnds, { hint: "Blank = no end. Markdown drops automatically after this time." })),
       el("div", { class: "field" }, el("span", { class: "lab" }, "Tiers / variants (optional)"),
         existing ? variantManager(existing) : el("p", { class: "hint", style: { margin: 0 } }, "Save this product first, then reopen it to add tiers like 1 month / 3 months / lifetime.")),
+      el("div", { class: "field" }, el("span", { class: "lab" }, "Bundle components (optional)"),
+        el("p", { class: "hint", style: { margin: "0 0 8px" } }, "Package other products and sell them together at the price above."),
+        bundleList, addComp, bundleNote),
       el("div", { class: "field" }, el("span", { class: "lab" }, "Delivery"), ft.node), roleWrap, manWrap,
       el("div", { class: "grid2" }, field("Stock", stock, { hint: "Blank = unlimited" }), field("Per-user limit", lim, { hint: "Blank = no limit" })),
       enabled.node, featured.node, errEl);

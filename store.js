@@ -472,6 +472,11 @@
     var cd = (p.sale_price_money != null && p.sale_ends_at) ? saleCountdown(p.sale_ends_at) : '';
     return cd ? '<div class="prod-sale-ends">⏳ Sale ends in ' + cd + '</div>' : '';
   }
+  function bundleHtml(p) {
+    if (!p.bundle || !p.bundle.length) return '';
+    return '<div class="prod-bundle"><span class="prod-bundle-h">🎁 Includes</span>' +
+      p.bundle.map(function (c) { return '<span class="prod-bundle-item">' + c.quantity + '× ' + esc(c.name) + '</span>'; }).join('') + '</div>';
+  }
   function productCardHtml(p, idx) {
     // Stagger a fade-up on the FIRST paint only (not on every filter re-render).
     var rev = S._revealed ? '' : ' reveal';
@@ -482,7 +487,8 @@
     if (p.sale_price_money != null) badges += '<span class="prod-badge sale">Sale</span>';
     if (p.bestseller) badges += '<span class="prod-badge best">🔥 Bestseller</span>';
     if (p.featured) badges += '<span class="prod-badge feat">★ Featured</span>';
-    badges += p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
+    if (p.isBundle) badges += '<span class="prod-badge bundle">🎁 Bundle</span>';
+    else badges += p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
     if (!p.inStock && !hasVariants(p)) badges += '<span class="prod-badge oos">Out of stock</span>';
     else if (p.lowStock && !hasVariants(p)) badges += '<span class="prod-badge low">Only ' + p.lowStock + ' left</span>';
     var ratingInner = p.reviewCount ? '<div class="prod-rating">' + starDisplay(p.rating) + '<span class="prod-rating-n">' + Number(p.rating).toFixed(1) + ' (' + p.reviewCount + ')</span></div>' : '';
@@ -496,6 +502,7 @@
       rating +
       (p.description ? '<p class="prod-desc">' + esc(p.description) + '</p>' : '') +
       '<div class="prod-badges">' + badges + '</div>' +
+      bundleHtml(p) +
       saleEndsHtml(p) +
       '<div class="prod-foot"><div class="prod-price">' + cardPriceHtml(p) + '</div>' +
       '<button class="btn btn-primary prod-btn" type="button" data-pid="' + p.id + '"' + (disabled ? ' disabled' : '') + '>' + (varianty ? 'Choose options' : 'Add to cart') + '</button>' +
@@ -594,7 +601,7 @@
     var s = S.store, ccy = s.currency;
     var varianty = hasVariants(p);
     var img = p.image_url ? '<img class="pm-img" src="' + esc(p.image_url) + '" alt="">' : '';
-    var badge = p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
+    var badge = p.isBundle ? '<span class="prod-badge bundle">🎁 Bundle</span>' : (p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>');
     var soldOut = !varianty && p.inStock === false;
     // Prev/next neighbours in the catalogue order (lightbox-style browsing).
     var pIdx = -1; for (var pi = 0; pi < S.products.length; pi++) { if (S.products[pi].id === p.id) { pIdx = pi; break; } }
@@ -613,6 +620,7 @@
         ((p.soldCount && p.soldCount >= 1) ? '<div class="pm-sold">🔥 ' + fmt(p.soldCount) + ' sold</div>' : '') +
         (p.description ? '<p class="pm-desc">' + esc(p.description) + '</p>' : '') +
         '<div class="prod-badges">' + (p.sale_price_money != null ? '<span class="prod-badge sale">Sale</span>' : '') + (p.bestseller ? '<span class="prod-badge best">🔥 Bestseller</span>' : '') + badge + (soldOut ? '<span class="prod-badge oos">Out of stock</span>' : '') + '</div>' +
+        bundleHtml(p) +
         saleEndsHtml(p) +
         (varianty ? '<div class="pm-variants" id="pm-variants"></div>' : '') +
         '<div class="pm-stock" id="pm-stock"></div>' +

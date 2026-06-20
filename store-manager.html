@@ -187,6 +187,12 @@
       .inv-chip.low { color: #fb923c; border-color: rgba(251,146,60,.4); background: rgba(251,146,60,.08); }
       .inv-chip.low:hover { background: rgba(251,146,60,.16); }
 
+      /* Bundle component editor */
+      .bundle-editor { display: flex; flex-direction: column; gap: 9px; }
+      .bundle-row { display: flex; align-items: center; gap: 9px; }
+      .bundle-row .inp:first-child { flex: 1 1 auto; min-width: 0; }
+      .bundle-x { color: var(--text-muted); font-size: 13px; }
+
       /* Checkout-questions editor */
       .cf-editor { display: flex; flex-direction: column; gap: 9px; }
       .cf-row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
@@ -325,6 +331,6 @@
       <div class="state-full"><div class="sk" style="width:min(900px,90vw);height:60vh"></div></div>
     </div>
     <script src="config.js"></script>
-    <script src="store-manager.js?v=28"></script>
+    <script src="store-manager.js?v=29"></script>
   </body>
 </html>
