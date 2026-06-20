@@ -25,6 +25,11 @@
       .sm-nav button { background: none; border: none; color: var(--text-muted, #a1a1aa); font-weight: 700; font-size: 14px; padding: 11px 16px; cursor: pointer; border-bottom: 2px solid transparent; }
       .sm-nav button.active { color: var(--text); border-bottom-color: var(--accent); }
 
+      .sm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+      .sm-stat { border: 1px solid var(--border); border-radius: 14px; background: var(--card, rgba(255,255,255,0.05)); padding: 16px 18px; }
+      .sm-stat.accent { border-color: color-mix(in srgb, #f59e0b 50%, transparent); background: color-mix(in srgb, #f59e0b 8%, var(--card, rgba(255,255,255,0.05))); }
+      .sm-stat-v { font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+      .sm-stat-l { font-size: 12.5px; color: var(--text-muted, #a1a1aa); margin-top: 2px; }
       .sm-card { border: 1px solid var(--border); border-radius: 16px; background: var(--card, rgba(255,255,255,0.05)); padding: 20px 22px; margin-bottom: 16px; }
       .sm-card h2 { margin: 0 0 14px; font-size: 17px; font-weight: 800; }
       .sm-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

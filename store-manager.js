@@ -71,7 +71,7 @@
   }
 
   // ---- state ----
-  var S = { cfg: null, products: [], roles: [], channels: [], section: "products" };
+  var S = { cfg: null, products: [], roles: [], channels: [], section: "overview" };
 
   // ================= BOOT =================
   if (!gid || !/^\d{5,25}$/.test(gid)) { stateMsg("No server", "Open the Store Manager from your dashboard.", el("a", { class: "btn btn-primary", href: "dashboard.html" }, "Go to dashboard")); return; }
@@ -111,14 +111,15 @@
         el("a", { class: "btn btn-outline", href: storeUrl, target: "_blank", rel: "noopener" }, "View public store ↗"))));
 
     var nav = el("div", { class: "sm-nav" });
-    [["products", "Products"], ["orders", "Orders"], ["coupons", "Coupons"], ["settings", "Settings"], ["payments", "Payments"]].forEach(function (t) {
+    [["overview", "Overview"], ["products", "Products"], ["orders", "Orders"], ["coupons", "Coupons"], ["settings", "Settings"], ["payments", "Payments"]].forEach(function (t) {
       nav.append(el("button", { type: "button", class: S.section === t[0] ? "active" : "", onclick: function () { S.section = t[0]; render(); } }, t[1]));
     });
     root.append(nav);
 
     var body = el("div");
     root.append(body);
-    if (S.section === "settings") renderSettings(body);
+    if (S.section === "overview") renderOverview(body);
+    else if (S.section === "settings") renderSettings(body);
     else if (S.section === "products") renderProducts(body);
     else if (S.section === "orders") renderOrders(body);
     else if (S.section === "coupons") renderCoupons(body);
@@ -130,6 +131,50 @@
   }
   function input(attrs) { return el("input", Object.assign({ class: "sm-input" }, attrs)); }
   function checkbox(label, checked) { var c = el("input", { type: "checkbox" }); c.checked = !!checked; return { node: el("label", null, c, " " + label), input: c }; }
+
+  // ---- OVERVIEW ----
+  function renderOverview(body) {
+    var loading = el("div", { class: "skel", style: { height: "120px" } });
+    body.append(loading);
+    api("/api/dashboard/guilds/" + gid + "/store/overview").then(function (r) {
+      clear(body);
+      if (!r.ok) { body.append(el("p", { class: "sm-muted" }, "Couldn't load stats.")); return; }
+      var s = r.body.stats || {}, ccy = (r.body.config && r.body.config.currency) || "GBP";
+      function stat(label, value, accent) {
+        return el("div", { class: "sm-stat" + (accent ? " accent" : "") }, el("div", { class: "sm-stat-v" }, value), el("div", { class: "sm-stat-l" }, label));
+      }
+      var grid = el("div", { class: "sm-stats" },
+        stat("Revenue (money)", money(s.revenueMoney, ccy)),
+        stat("Revenue (credits)", "🪙 " + fmt(s.revenueCredits)),
+        stat("Paid orders", fmt(s.paidOrders)),
+        stat("Awaiting delivery", fmt(s.needsDelivery), s.needsDelivery > 0),
+        stat("Products live", fmt(s.enabledProducts) + " / " + fmt(s.products)),
+        stat("Active coupons", fmt(s.activeCoupons)));
+      body.append(grid);
+
+      // Quick actions.
+      body.append(el("div", { class: "sm-card", style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+        el("button", { class: "btn btn-primary", onclick: function () { S.section = "products"; render(); openProductModal(null); } }, "+ Add product"),
+        el("button", { class: "btn btn-outline", onclick: function () { S.section = "orders"; render(); } }, "View orders" + (s.needsDelivery > 0 ? " (" + s.needsDelivery + " to deliver)" : "")),
+        el("button", { class: "btn btn-outline", onclick: function () { S.section = "coupons"; render(); } }, "Coupons"),
+        el("a", { class: "btn btn-ghost", href: location.origin + "/store.html?guild=" + gid, target: "_blank", rel: "noopener" }, "Open public store ↗")));
+
+      // Recent orders.
+      var recent = (r.body.recentOrders || []);
+      var card = el("div", { class: "sm-card" }, el("h2", null, "Recent orders"));
+      if (!recent.length) card.append(el("p", { class: "sm-muted" }, "No orders yet."));
+      else {
+        var STAT = { completed: "✅ completed", needs_delivery: "⏳ needs delivery", paid: "✅ paid", pending: "… pending", cancelled: "⚪ cancelled", refunded: "↩️ refunded", failed: "❌ failed" };
+        recent.forEach(function (o) {
+          var total = o.rail === "credits" ? "🪙 " + fmt(o.total_credits) : money(o.total_money, o.currency);
+          card.append(el("div", { class: "sm-order-line", style: { justifyContent: "space-between" } },
+            el("span", null, "#" + o.id + " · @" + (o.buyer_username || o.buyer_user_id) + (o.coupon_code ? " · 🎟️" + o.coupon_code : "")),
+            el("span", { class: "sm-muted" }, STAT[o.status] || o.status), el("b", null, total)));
+        });
+      }
+      body.append(card);
+    });
+  }
 
   // ---- SETTINGS ----
   function renderSettings(body) {
