@@ -129,7 +129,10 @@
   function demoResp(path, opts) {
     if (opts && opts.method && opts.method !== "GET") return { ok: true };
     if (/\/me$/.test(path)) return { user: { id: "0", username: "previewowner", globalName: "Preview Owner" } };
-    if (/\/store\/overview/.test(path)) return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: DEMO_SERIES, topProducts: DEMO_TOP, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 } };
+    if (/\/store\/overview/.test(path)) {
+      if (params.get("new") === "1") return { config: Object.assign({}, DEMO_CFG, { title: "My New Store", enabled: false }), recentOrders: [], series: [], topProducts: [], stats: { revenueMoney: 0, revenueCredits: 0, paidOrders: 0, needsDelivery: 0, products: 0, enabledProducts: 0, activeCoupons: 0 } };
+      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: DEMO_SERIES, topProducts: DEMO_TOP, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 } };
+    }
     if (/\/variants/.test(path)) return { variants: DEMO_VARIANTS };
     if (/\/store\/products/.test(path)) return { products: DEMO_PRODUCTS };
     if (/\/store\/coupons/.test(path)) return { coupons: DEMO_COUPONS };
@@ -342,6 +345,27 @@
     var s = S.stats, ccy = S.cfg.currency || "GBP", series = S.series || [];
     var d = 0; // stagger delay
     function reveal(node) { node.classList.add("reveal"); node.style.animationDelay = (d += 70) + "ms"; return node; }
+
+    // Brand-new store → onboarding checklist instead of empty stats.
+    if (!s.products) {
+      var steps = [
+        { done: !!S.cfg.title, label: "Name your store", desc: "Give it a title and description buyers will see.", go: function () { S.section = "settings"; render(); } },
+        { done: false, label: "Add your first product", desc: "Price it in money, server credits, or both.", go: function () { S.section = "products"; render(); productDrawer(null); } },
+        { done: false, label: "Connect a payment provider", desc: "Take card & PayPal payments (skip if you sell for credits only).", go: function () { S.section = "payments"; render(); } },
+        { done: !!S.cfg.enabled, label: "Open your store", desc: "Flip it live so customers can buy.", go: function () { S.section = "settings"; render(); } },
+      ];
+      var ol = el("div", { class: "onb-list" });
+      steps.forEach(function (st, i) {
+        ol.append(el("div", { class: "onb-step" + (st.done ? " done" : "") },
+          el("div", { class: "onb-num" }, st.done ? "✓" : String(i + 1)),
+          el("div", { class: "grow" }, el("div", { class: "onb-t" }, st.label), el("div", { class: "onb-d" }, st.desc)),
+          st.done ? badge("Done", "ok") : btn("Do it", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: st.go })));
+      });
+      c.append(reveal(panel(panelHead("Get your store live"),
+        el("p", { class: "panel-sub" }, "A few quick steps and you're selling. Your stats and revenue will appear here once orders start coming in."),
+        ol)));
+      return;
+    }
 
     // needs-delivery call to action
     if (s.needsDelivery > 0) {
