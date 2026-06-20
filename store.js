@@ -106,8 +106,8 @@
   // ── cart mutations ─────────────────────────────────────────────────────────
   // Changing the cart invalidates any previewed coupon discount (it was priced
   // against the old subtotal) — drop it so the buyer re-applies against the new total.
-  function addToCart(productId, variantId) {
-    var body = { productId: productId, quantity: 1 };
+  function addToCart(productId, variantId, qty) {
+    var body = { productId: productId, quantity: (qty && qty > 0) ? qty : 1 };
     if (variantId) body.variantId = variantId;
     api('/api/dashboard/store/cart/items?guild=' + encodeURIComponent(guildId), { method: 'POST', body: body })
       .then(function (r) {
@@ -387,6 +387,7 @@
     if (p.featured) badges += '<span class="prod-badge feat">★ Featured</span>';
     badges += p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
     if (!p.inStock && !hasVariants(p)) badges += '<span class="prod-badge oos">Out of stock</span>';
+    else if (p.lowStock && !hasVariants(p)) badges += '<span class="prod-badge low">Only ' + p.lowStock + ' left</span>';
     var rating = p.reviewCount ? '<div class="prod-rating">' + starDisplay(p.rating) + '<span class="prod-rating-n">' + Number(p.rating).toFixed(1) + ' (' + p.reviewCount + ')</span></div>' : '';
     var varianty = hasVariants(p);
     var disabled = !varianty && !p.inStock;
@@ -469,14 +470,17 @@
         (p.description ? '<p class="pm-desc">' + esc(p.description) + '</p>' : '') +
         '<div class="prod-badges">' + badge + (soldOut ? '<span class="prod-badge oos">Out of stock</span>' : '') + '</div>' +
         (varianty ? '<div class="pm-variants" id="pm-variants"></div>' : '') +
-        '<div class="pm-buy"><div class="prod-price" id="pm-price"></div><button class="btn btn-primary" id="pm-add">Add to cart</button></div>' +
+        '<div class="pm-stock" id="pm-stock"></div>' +
+        '<div class="pm-buy"><div class="prod-price" id="pm-price"></div>' +
+          '<div class="pm-actions"><div class="pm-qty"><button type="button" class="pm-qd" data-d="-1" aria-label="Less">−</button><span id="pm-qn">1</span><button type="button" class="pm-qd" data-d="1" aria-label="More">+</button></div>' +
+          '<button class="btn btn-primary" id="pm-add">Add to cart</button></div></div>' +
         '<div class="pm-reviews" id="pm-reviews"><div class="pm-rev-load">Loading reviews…</div></div>' +
       '</div></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', function (e) { if (e.target === ov) closeProductModal(); });
     ov.querySelector('.pm-x').addEventListener('click', closeProductModal);
 
-    var selected = null;
+    var selected = null, qty = 1;
     function priceForVariant(v) {
       var m = v && v.price_money != null ? v.price_money : p.price_money;
       var c = v && v.price_credits != null ? v.price_credits : p.price_credits;
@@ -486,8 +490,18 @@
       if (c != null) out += '<span class="prod-credits">🪙 ' + fmt(c) + '</span>';
       return out;
     }
+    function maxQty() {
+      var low = varianty ? (selected && selected.lowStock) : p.lowStock;
+      return low && low > 0 ? low : 99;
+    }
     function refreshBuy() {
       var priceEl = document.getElementById('pm-price'), addEl = document.getElementById('pm-add');
+      var stockEl = document.getElementById('pm-stock'), qn = document.getElementById('pm-qn');
+      var low = varianty ? (selected && selected.lowStock) : p.lowStock;
+      stockEl.innerHTML = low ? '🔥 Only <b>' + low + '</b> left in stock' : '';
+      var max = maxQty();
+      if (qty > max) qty = max; if (qty < 1) qty = 1;
+      if (qn) qn.textContent = qty;
       if (varianty) {
         priceEl.innerHTML = selected ? priceForVariant(selected) : '<span class="pm-norate">Choose an option</span>';
         var oos = selected && selected.inStock === false;
@@ -498,6 +512,9 @@
         addEl.disabled = soldOut; addEl.textContent = soldOut ? 'Out of stock' : 'Add to cart';
       }
     }
+    ov.querySelectorAll('.pm-qd').forEach(function (b) {
+      b.addEventListener('click', function () { qty += parseInt(b.getAttribute('data-d'), 10); refreshBuy(); });
+    });
     if (varianty) {
       var vc = document.getElementById('pm-variants');
       vc.innerHTML = '<div class="pm-var-label">Choose an option</div><div class="pm-var-opts">' +
@@ -517,8 +534,8 @@
     }
     refreshBuy();
     document.getElementById('pm-add').addEventListener('click', function () {
-      if (varianty) { if (selected) { addToCart(p.id, selected.id); closeProductModal(); } }
-      else { addToCart(p.id); closeProductModal(); }
+      if (varianty) { if (selected) { addToCart(p.id, selected.id, qty); closeProductModal(); } }
+      else { addToCart(p.id, null, qty); closeProductModal(); }
     });
     wireImgFallbacks(ov);
     loadProductReviews(p);
