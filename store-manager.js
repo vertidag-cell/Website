@@ -131,7 +131,9 @@
     if (/\/me$/.test(path)) return { user: { id: "0", username: "previewowner", globalName: "Preview Owner" } };
     if (/\/store\/overview/.test(path)) {
       if (params.get("new") === "1") return { config: Object.assign({}, DEMO_CFG, { title: "My New Store", enabled: false }), recentOrders: [], series: [], topProducts: [], stats: { revenueMoney: 0, revenueCredits: 0, paidOrders: 0, needsDelivery: 0, products: 0, enabledProducts: 0, activeCoupons: 0 } };
-      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: DEMO_SERIES, topProducts: DEMO_TOP, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 } };
+      var ser = DEMO_SERIES;
+      if (/days=30/.test(path)) { ser = []; for (var di = 0; di < 30; di++) { var b = DEMO_SERIES[di % DEMO_SERIES.length]; ser.push({ date: "d" + di, money: b.money, credits: b.credits, orders: b.orders }); } }
+      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: ser, topProducts: DEMO_TOP, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 } };
     }
     if (/\/variants/.test(path)) return { variants: DEMO_VARIANTS };
     if (/\/store\/products/.test(path)) return { products: DEMO_PRODUCTS };
@@ -232,7 +234,7 @@
   }
 
   // ── state ───────────────────────────────────────────────────────────────────
-  var S = { cfg: null, products: [], roles: [], channels: [], stats: {}, recent: [], series: [], top: [], section: "overview" };
+  var S = { cfg: null, products: [], roles: [], channels: [], stats: {}, recent: [], series: [], top: [], section: "overview", range: 14 };
 
   // ── boot ──────────────────────────────────────────────────────────────────
   if (!gid || !/^\d{5,25}$/.test(gid)) { fullState("store", "No server selected", "Open the Store Manager from your dashboard.", btn("Go to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); return; }
@@ -253,7 +255,7 @@
     render();
   }).catch(function (e) { if (e !== "redirect") fullState("store", "Couldn't reach the backend", "Please try again shortly.", btn("Retry", { onClick: function () { location.reload(); } })); });
 
-  function refreshOverview() { return api(A("/store/overview")).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; } }); }
+  function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; } }); }
   function refreshProducts() { return api(A("/store/products")).then(function (r) { S.products = (r.body && r.body.products) || []; }); }
 
   // ── shell render ──────────────────────────────────────────────────────────
@@ -386,18 +388,25 @@
     var heroBig = useCredits ? ("🪙 " + fmt(cSum)) : money(mSum, ccy);
     var tp = trendPct(series, useCredits ? "credits" : "money");
     var trendCls = tp == null ? "flat" : tp >= 0 ? "up" : "down";
-    var trendTxt = tp == null ? "No change yet" : (tp >= 0 ? "▲ " : "▼ ") + Math.abs(tp) + "% vs prior week";
+    var trendTxt = tp == null ? "No change yet" : (tp >= 0 ? "▲ " : "▼ ") + Math.abs(tp) + "% vs prior period";
     var ordSum = sum(series.map(function (x) { return x.orders; }));
+    var range = S.range || 14;
+    var rangeToggle = el("div", { class: "range-toggle" });
+    [14, 30].forEach(function (n) {
+      rangeToggle.append(el("button", { class: "range-btn" + (range === n ? " on" : ""), onclick: function () { if (range === n) return; S.range = n; refreshOverview().then(function () { render(); }); } }, n + "d"));
+    });
 
     var hero = el("div", { class: "hero-rev" },
-      el("div", { class: "cap" }, (useCredits ? "Credits taken" : "Revenue") + " · last 14 days"),
+      el("div", { class: "hero-head" },
+        el("div", { class: "cap" }, (useCredits ? "Credits taken" : "Revenue") + " · last " + range + " days"),
+        rangeToggle),
       el("div", { class: "big" }, heroBig),
       el("span", { class: "trend " + trendCls }, trendTxt),
       areaChart(vals, { color: "var(--accent)" }),
       el("div", { class: "hero-sub" },
         el("div", null, el("div", { class: "v" }, money(s.revenueMoney, ccy)), el("div", { class: "l" }, "All-time money")),
         el("div", null, el("div", { class: "v" }, "🪙 " + fmt(s.revenueCredits)), el("div", { class: "l" }, "All-time credits")),
-        el("div", null, el("div", { class: "v" }, fmt(ordSum)), el("div", { class: "l" }, "Orders this fortnight"))));
+        el("div", null, el("div", { class: "v" }, fmt(ordSum)), el("div", { class: "l" }, "Orders · last " + range + "d"))));
 
     function gstat(label, value, ic, flag) {
       return el("div", { class: "gstat" + (flag ? " flag" : "") },
