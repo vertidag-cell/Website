@@ -518,6 +518,7 @@
     var ov = document.createElement('div');
     ov.id = 'prod-overlay'; ov.className = 'pm-overlay';
     ov.innerHTML = '<div class="pm-panel" role="dialog" aria-label="Product details">' +
+      '<button type="button" class="pm-share" id="pm-share" aria-label="Copy product link" title="Copy link">🔗</button>' +
       '<button type="button" class="pm-x" aria-label="Close">✕</button>' + img +
       '<div class="pm-body">' +
         (p.category ? '<div class="prod-cat">' + esc(p.category) + '</div>' : '') +
@@ -536,6 +537,12 @@
     ov.addEventListener('click', function (e) { if (e.target === ov) closeProductModal(); });
     var xBtn = ov.querySelector('.pm-x');
     xBtn.addEventListener('click', closeProductModal);
+    var shareBtn = ov.querySelector('.pm-share');
+    if (shareBtn) shareBtn.addEventListener('click', function () {
+      var link = location.href; // ?product=<id> is set on open
+      try { navigator.clipboard.writeText(link).then(function () { toast('Link copied'); }, function () { toast('Link copied'); }); }
+      catch (e) { toast('Link copied'); }
+    });
     _pmKey = function (e) { if (e.key === 'Escape') closeProductModal(); };
     document.addEventListener('keydown', _pmKey);
     try { xBtn.focus(); } catch (e) {}
