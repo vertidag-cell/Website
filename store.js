@@ -439,9 +439,20 @@
       });
     });
   }
+  // Keep the URL in sync so a filtered view is shareable / survives refresh.
+  function updateUrl() {
+    try {
+      var u = new URL(location.href);
+      if (S.view.q) u.searchParams.set('q', S.view.q); else u.searchParams.delete('q');
+      if (S.view.cat) u.searchParams.set('cat', S.view.cat); else u.searchParams.delete('cat');
+      if (S.view.sort && S.view.sort !== 'featured') u.searchParams.set('sort', S.view.sort); else u.searchParams.delete('sort');
+      history.replaceState(null, '', u);
+    } catch (e) {}
+  }
   // Re-render just the results grid for the current search/category/sort.
   function renderResults() {
     var box = document.getElementById('store-results'); if (!box) return;
+    updateUrl();
     var v = S.view, q = (v.q || '').trim().toLowerCase();
     var list = S.products.filter(function (p) {
       if (v.cat && (p.category || '') !== v.cat) return false;
@@ -647,7 +658,7 @@
   function renderStore(data) {
     S.store = data.store || {};
     S.products = data.products || [];
-    if (!S.view) S.view = { q: '', cat: '', sort: 'featured' };
+    if (!S.view) S.view = { q: params.get('q') || '', cat: params.get('cat') || '', sort: params.get('sort') || 'featured' };
     var s = S.store;
     // Only accept a valid hex accent (CSS vars can't run script, but stay strict).
     if (s.color && /^#[0-9a-f]{6}$/i.test(s.color)) document.documentElement.style.setProperty('--accent', s.color);
