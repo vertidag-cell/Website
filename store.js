@@ -134,6 +134,11 @@
     api('/api/dashboard/store/cart/items/' + productId + '?guild=' + encodeURIComponent(guildId), { method: 'DELETE' })
       .then(function (r) { if (r.ok) { S.cart = r.body; S.coupon = null; renderCartButton(); renderCartPanel(); } });
   }
+  function clearCartAll() {
+    if (!confirm('Remove all items from your cart?')) return;
+    api('/api/dashboard/store/cart?guild=' + encodeURIComponent(guildId), { method: 'DELETE' })
+      .then(function (r) { if (r.status === 401) return loginBounce(); if (r.ok) { S.cart = r.body; S.coupon = null; renderCartButton(); renderCartPanel(); } });
+  }
   function couponErr(e) {
     var map = { coupon_invalid_code: "That code isn't valid.", coupon_expired: "That code has expired.", coupon_not_started: "That code isn't active yet.", coupon_exhausted: "That code has been fully used.", coupon_user_limit: "You've already used that code.", coupon_min_not_met: "Your cart doesn't meet this code's minimum.", coupon_not_applicable: "That code doesn't apply to this payment method.", coupon_no_discount: "That code gives no discount here." };
     return map[e] || "Couldn't apply that code.";
@@ -276,6 +281,7 @@
         '<span class="cart-line-price">' + line + '</span></li>';
     });
     html += '</ul>';
+    html += '<div class="cart-clear-wrap"><button type="button" class="cart-link cart-clear">Clear cart</button></div>';
 
     var r = c.rails || {};
     html += '<div class="cart-totals">';
@@ -315,6 +321,7 @@
     html += '</div>';
     body.innerHTML = html;
     wireImgFallbacks(body);
+    var clearBtn = body.querySelector('.cart-clear'); if (clearBtn) clearBtn.addEventListener('click', clearCartAll);
 
     var promoApply = body.querySelector('.cart-promo-apply'), promoInput = body.querySelector('.cart-promo-input'), promoX = body.querySelector('.cart-promo-x');
     if (promoApply) promoApply.addEventListener('click', function () { applyCoupon(promoInput.value); });
