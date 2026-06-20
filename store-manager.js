@@ -600,7 +600,7 @@
 
   // ── ORDERS ─────────────────────────────────────────────────────────────────
   function renderOrders(c) {
-    var wrap = panel(panelHead("Orders"));
+    var wrap = panel(panelHead("Orders", btn("Export CSV", { variant: "btn-outline", style: { padding: "6px 13px", fontSize: "13px" }, onClick: function () { exportCsv(); } })));
     c.append(wrap);
     var chips = el("div", { class: "chips" });
     var search = inp({ type: "search", placeholder: "Search by order # or buyer…", style: { margin: "12px 0 4px" } });
@@ -608,6 +608,23 @@
     wrap.append(chips, search, listBox);
     var current = "all", loaded = [];
     search.addEventListener("input", renderRows);
+    // Export the currently-loaded orders (respects the status filter) to CSV.
+    function exportCsv() {
+      if (!loaded.length) { toast("No orders to export", "err"); return; }
+      function cell(v) { v = v == null ? "" : String(v); return '"' + v.replace(/"/g, '""') + '"'; }
+      var rows = [["Order", "Date", "Buyer", "Status", "Rail", "Total money", "Currency", "Total credits", "Coupon", "Items"].map(cell).join(",")];
+      loaded.forEach(function (o) {
+        var items = (o.items || []).map(function (i) { return i.quantity + "x " + i.name; }).join("; ");
+        rows.push([o.id, (o.created_at || "").replace("T", " ").slice(0, 19), "@" + (o.buyer_username || o.buyer_user_id), o.status, o.rail,
+          o.total_money != null ? o.total_money : "", o.currency || "", o.total_credits != null ? o.total_credits : "", o.coupon_code || "", items].map(cell).join(","));
+      });
+      var blob = new Blob([rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = el("a", { href: url, download: "orders-" + current + ".csv" });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      toast("CSV exported");
+    }
     function orderRow(o) {
       var total = o.rail === "credits" ? "🪙 " + fmt(o.total_credits) : money(o.total_money, o.currency);
       var rowTop = el("div", { class: "row", style: { flexDirection: "column", alignItems: "stretch", gap: "8px" } });
