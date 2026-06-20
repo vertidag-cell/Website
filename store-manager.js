@@ -98,7 +98,7 @@
   ];
   var DEMO_ORDERS = [
     { id: 312, buyer_user_id: "111", buyer_username: "ApexHunter", rail: "money", total_money: 9.99, currency: "GBP", total_credits: null, status: "completed", coupon_code: null, created_at: "2026-06-19 14:02:00", items: [{ id: 1, name: "VIP Rank", quantity: 1, fulfillment_type: "role", fulfillment_status: "granted" }] },
-    { id: 311, buyer_user_id: "112", buyer_username: "RexQueen", rail: "credits", total_credits: 8000, status: "needs_delivery", coupon_code: "SUMMER20", created_at: "2026-06-19 12:40:00", items: [{ id: 2, name: "Giga lvl 150 (imprinted)", quantity: 1, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", fulfillment_status: "pending" }] },
+    { id: 311, buyer_user_id: "112", buyer_username: "RexQueen", rail: "credits", total_credits: 8000, status: "needs_delivery", coupon_code: "SUMMER20", created_at: "2026-06-19 12:40:00", customFields: [{ id: "ign", label: "In-game character name", value: "RexQueen" }, { id: "tribe", label: "Tribe name", value: "Apex Predators" }], items: [{ id: 2, name: "Giga lvl 150 (imprinted)", quantity: 1, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", fulfillment_status: "pending" }] },
     { id: 310, buyer_user_id: "113", buyer_username: "MeshGod", rail: "money", total_money: 19.99, currency: "GBP", status: "paid", coupon_code: null, created_at: "2026-06-18 22:10:00", items: [{ id: 3, name: "MVP Rank", quantity: 1, fulfillment_type: "role", fulfillment_status: "granted" }] },
   ];
   var DEMO_COUPONS = [
@@ -115,7 +115,7 @@
     { id: 2, product_id: 3, product_name: "Giga lvl 150 (imprinted)", user_id: "112", username: "RexQueen", rating: 4, comment: "Delivered in-game within the hour.", status: "published", created_at: "2026-06-17 14:00:00" },
     { id: 3, product_id: 4, product_name: "Starter Kit", user_id: "113", username: "MeshGod", rating: 2, comment: "Wanted more element in the kit.", status: "hidden", created_at: "2026-06-16 09:00:00" },
   ];
-  var DEMO_CFG = { guild_id: gid, enabled: true, title: "Velated PVP Store", description: "Donor ranks, kits and in-game items for the cluster.", announcement: "🔥 Summer sale — 25% off all ranks this weekend!", currency: "GBP", accept_money: true, accept_credits: true, orders_channel_id: "10", staff_role_ids: ["4"], banner_url: null };
+  var DEMO_CFG = { guild_id: gid, enabled: true, title: "Velated PVP Store", description: "Donor ranks, kits and in-game items for the cluster.", announcement: "🔥 Summer sale — 25% off all ranks this weekend!", currency: "GBP", accept_money: true, accept_credits: true, orders_channel_id: "10", staff_role_ids: ["4"], banner_url: null, checkout_fields: [{ id: "ign", label: "In-game character name", required: true, placeholder: "e.g. RexQueen" }, { id: "tribe", label: "Tribe name", required: false, placeholder: "" }] };
   var DEMO_SERIES = (function () {
     var m = [18, 24, 12, 30, 22, 9.99, 40, 35, 28, 52, 44, 60, 38, 74], cr = [0, 5000, 0, 8000, 2500, 0, 5000, 12000, 0, 8000, 5000, 0, 2500, 12000];
     return m.map(function (v, i) { return { date: "d" + i, money: v, credits: cr[i], orders: Math.round(v / 9) + (cr[i] ? 1 : 0) }; });
@@ -693,11 +693,12 @@
     function exportCsv() {
       if (!loaded.length) { toast("No orders to export", "err"); return; }
       function cell(v) { v = v == null ? "" : String(v); return '"' + v.replace(/"/g, '""') + '"'; }
-      var rows = [["Order", "Date", "Buyer", "Status", "Rail", "Total money", "Currency", "Total credits", "Coupon", "Items"].map(cell).join(",")];
+      var rows = [["Order", "Date", "Buyer", "Status", "Rail", "Total money", "Currency", "Total credits", "Coupon", "Items", "Delivery details"].map(cell).join(",")];
       loaded.forEach(function (o) {
         var items = (o.items || []).map(function (i) { return i.quantity + "x " + i.name; }).join("; ");
+        var details = (o.customFields || []).map(function (f) { return f.label + ": " + f.value; }).join("; ");
         rows.push([o.id, (o.created_at || "").replace("T", " ").slice(0, 19), "@" + (o.buyer_username || o.buyer_user_id), o.status, o.rail,
-          o.total_money != null ? o.total_money : "", o.currency || "", o.total_credits != null ? o.total_credits : "", o.coupon_code || "", items].map(cell).join(","));
+          o.total_money != null ? o.total_money : "", o.currency || "", o.total_credits != null ? o.total_credits : "", o.coupon_code || "", items, details].map(cell).join(","));
       });
       var blob = new Blob([rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
       var url = URL.createObjectURL(blob);
@@ -723,6 +724,16 @@
         }
         rowTop.append(ln);
       });
+      // Buyer-supplied delivery details (in-game name etc) — what staff need to
+      // fulfil the order in-game. Highlighted so it's not missed.
+      var cf = o.customFields || [];
+      if (cf.length) {
+        var box = el("div", { class: "order-cf-box" });
+        cf.forEach(function (f) {
+          box.append(el("div", { class: "order-cf-line" }, el("span", { class: "order-cf-k" }, f.label), el("span", { class: "order-cf-v" }, String(f.value))));
+        });
+        rowTop.append(box);
+      }
       if (o.status !== "refunded" && o.status !== "cancelled") {
         rowTop.append(el("div", null, btn("Refund", { variant: "btn-ghost", style: { padding: "4px 12px", fontSize: "12px" }, onClick: function () { if (!confirm("Refund order #" + o.id + "? Granted roles are revoked; credits are re-credited. Money refunds happen in your PayPal/Stripe dashboard.")) return; api(A("/store/orders/" + o.id + "/refund"), { method: "POST" }).then(function (rr) { toast(rr.ok ? ((rr.body && rr.body.moneyRefundNote) || "Refunded") : "Failed", rr.ok ? "" : "err"); refreshOverview().then(function () { load(current); }); }); } })));
       }
@@ -905,12 +916,38 @@
     var banner = inp({ type: "url", value: cfg.banner_url || "", placeholder: "https://…/banner.png" });
     var ordersCh = sel([["", "— none —"]].concat(S.channels.map(function (ch) { return [ch.id, "#" + (ch.name || ch.id)]; })), cfg.orders_channel_id || "");
     var staff = el("select", { class: "inp", multiple: true, style: { minHeight: "120px" } }, S.roles.map(function (r) { return el("option", { value: r.id, selected: (cfg.staff_role_ids || []).indexOf(r.id) >= 0 }, r.name); }));
+
+    // Checkout questions — buyer-supplied delivery details (in-game name etc).
+    var cfRows = (cfg.checkout_fields || []).map(function (f) { return { label: f.label || "", required: !!f.required, placeholder: f.placeholder || "" }; });
+    var cfList = el("div", { class: "cf-editor" });
+    function renderCfRows() {
+      clear(cfList);
+      if (!cfRows.length) cfList.append(el("p", { class: "hint", style: { margin: "2px 0 12px" } }, "No questions yet — buyers check out without any extra prompts."));
+      cfRows.forEach(function (f, idx) {
+        var label = inp({ type: "text", value: f.label, maxlength: 40, placeholder: "In-game character name" });
+        var ph = inp({ type: "text", value: f.placeholder, maxlength: 60, placeholder: "Hint (optional)" });
+        var req = el("input", { type: "checkbox", class: "cf-check" }); req.checked = f.required;
+        label.addEventListener("input", function () { cfRows[idx].label = label.value; });
+        ph.addEventListener("input", function () { cfRows[idx].placeholder = ph.value; });
+        req.addEventListener("change", function () { cfRows[idx].required = req.checked; });
+        var del = el("button", { class: "cf-del", title: "Remove", type: "button" }, "✕");
+        del.addEventListener("click", function () { cfRows.splice(idx, 1); renderCfRows(); });
+        cfList.append(el("div", { class: "cf-row" }, label, ph, el("label", { class: "cf-req" }, req, "Required"), del));
+      });
+    }
+    var addCf = btn("+ Add question", { variant: "btn-outline", style: { padding: "6px 13px", fontSize: "13px" }, onClick: function () {
+      if (cfRows.length >= 6) { toast("Up to 6 questions", "err"); return; }
+      cfRows.push({ label: "", required: false, placeholder: "" }); renderCfRows();
+    } });
+    renderCfRows();
+
     var save = btn("Save settings", { onClick: function () {
       save.disabled = true;
       api(A("/store/config"), { method: "POST", body: {
         enabled: open.input.checked, accept_money: accM.input.checked, accept_credits: accC.input.checked, currency: currency.value,
         title: title.value.trim() || null, description: desc.value.trim() || null, announcement: announce.value.trim() || null, banner_url: banner.value.trim() || null,
         orders_channel_id: ordersCh.value || null, staff_role_ids: Array.prototype.map.call(staff.selectedOptions, function (o) { return o.value; }),
+        checkout_fields: cfRows.filter(function (f) { return (f.label || "").trim(); }).map(function (f) { return { label: f.label.trim(), required: !!f.required, placeholder: (f.placeholder || "").trim() }; }),
       } }).then(function (r) { save.disabled = false; if (!r.ok) { toast((r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save", "err"); return; } S.cfg = r.body.config; toast("Settings saved"); render(); });
     } });
 
@@ -930,6 +967,9 @@
       el("p", { class: "panel-sub" }, "Where manual orders go and who can fulfil them."),
       field("Orders channel", ordersCh, { hint: "Manual delivery orders are posted here for staff" }),
       field("Staff roles", staff, { hint: "These roles can claim, deliver and refund (Ctrl/Cmd-click to select several)" })));
+    c.append(panel(panelHead("Checkout questions", addCf),
+      el("p", { class: "panel-sub" }, "Ask buyers for the details you need to deliver in-game — character name, tribe, platform. Answers appear on every order and in the staff notification."),
+      cfList));
     c.append(el("div", { style: { display: "flex", justifyContent: "flex-end" } }, save));
   }
 

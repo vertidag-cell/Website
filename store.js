@@ -163,10 +163,49 @@
       S.coupon = coupon; renderCartPanel();
     });
   }
+  // If the store collects delivery details (e.g. in-game name), gather them in a
+  // dialog before placing the order; otherwise go straight to checkout.
   function checkout(rail) {
+    var fields = (S.store && S.store.checkoutFields) || [];
+    if (fields.length) return openCheckoutDetails(rail, fields);
+    submitCheckout(rail, {});
+  }
+  function openCheckoutDetails(rail, fields) {
+    var ov = document.createElement('div');
+    ov.className = 'cart-overlay checkout-overlay';
+    var rows = fields.map(function (f, i) {
+      return '<label class="co-field"><span class="co-label">' + esc(f.label) + (f.required ? ' <em class="co-req">*</em>' : '') + '</span>' +
+        '<input type="text" class="co-input" data-fid="' + esc(f.id) + '" data-req="' + (f.required ? 1 : 0) + '" data-label="' + esc(f.label) + '" placeholder="' + esc(f.placeholder || '') + '" maxlength="200"' + (i === 0 ? ' autofocus' : '') + '></label>';
+    }).join('');
+    ov.innerHTML = '<div class="checkout-panel" role="dialog" aria-label="Delivery details">' +
+      '<div class="cart-head"><h2>Delivery details</h2><button type="button" class="cart-x co-close" aria-label="Close">✕</button></div>' +
+      '<p class="co-intro">The store team needs this to deliver your order in-game.</p>' +
+      '<div class="co-fields">' + rows + '</div>' +
+      '<div class="co-err" hidden></div>' +
+      '<button type="button" class="btn btn-primary co-submit">Place order</button></div>';
+    document.body.appendChild(ov);
+    function close() { ov.remove(); }
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+    ov.querySelector('.co-close').addEventListener('click', close);
+    var errBox = ov.querySelector('.co-err');
+    ov.querySelector('.co-submit').addEventListener('click', function () {
+      var answers = {}; var missing = [];
+      ov.querySelectorAll('.co-input').forEach(function (inp) {
+        var v = inp.value.trim();
+        if (v) answers[inp.getAttribute('data-fid')] = v;
+        else if (inp.getAttribute('data-req') === '1') missing.push(inp.getAttribute('data-label'));
+      });
+      if (missing.length) { errBox.hidden = false; errBox.textContent = 'Please fill in: ' + missing.join(', '); return; }
+      close();
+      submitCheckout(rail, answers);
+    });
+    var first = ov.querySelector('.co-input'); if (first) first.focus();
+  }
+  function submitCheckout(rail, customFields) {
     var btns = document.querySelectorAll('.cart-rail-btn');
     btns.forEach(function (b) { b.disabled = true; });
     var body = { rail: rail };
+    if (customFields && Object.keys(customFields).length) body.customFields = customFields;
     if (S.coupon && S.coupon.code) body.coupon = S.coupon.code;
     api('/api/dashboard/store/checkout?guild=' + encodeURIComponent(guildId), { method: 'POST', body: body })
       .then(function (r) {
@@ -200,6 +239,7 @@
       cart_not_money_payable: 'This cart can\'t be paid with money (some items are credits-only).',
       cart_not_credits_payable: 'This cart can\'t be paid with credits (some items are money-only).',
       per_user_limit: 'You\'ve hit the purchase limit on one of these items.',
+      missing_fields: 'Please fill in the required delivery details.',
     };
     return map[e] || 'Checkout failed — please try again.';
   }
@@ -366,8 +406,9 @@
           return '<div class="order-item"><span>' + (st ? st + ' ' : '') + i.quantity + '× ' + esc(i.name) + '</span>' + rv + '</div>';
         }).join('');
         var date = o.created_at ? esc(new Date(String(o.created_at).replace(' ', 'T') + 'Z').toLocaleDateString()) : '';
+        var cf = (o.customFields || []).map(function (f) { return '<span class="order-cf"><b>' + esc(f.label) + ':</b> ' + esc(f.value) + '</span>'; }).join('');
         html += '<li class="order-row"><div class="order-top"><b>#' + o.id + '</b><span>' + (STAT[o.status] || o.status) + '</span><b>' + total + '</b></div>' +
-          '<div class="order-items">' + itemsHtml + '</div>' + (date ? '<div class="order-date">' + date + '</div>' : '') + '</li>';
+          '<div class="order-items">' + itemsHtml + '</div>' + (cf ? '<div class="order-cf-row">' + cf + '</div>' : '') + (date ? '<div class="order-date">' + date + '</div>' : '') + '</li>';
       });
       html += '</ul>';
       body.innerHTML = html;
