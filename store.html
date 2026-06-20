@@ -108,6 +108,8 @@
         box-shadow: 0 12px 34px color-mix(in srgb, var(--accent) 40%, transparent); }
       .cart-fab svg { width: 18px; height: 18px; }
       .cart-fab .cart-count { background: #0b0f1a; color: #fff; border-radius: 999px; padding: 1px 8px; font-size: 12px; }
+      @keyframes cartBump { 0% { transform: scale(1); } 30% { transform: scale(1.12); } 100% { transform: scale(1); } }
+      .cart-fab.bump { animation: cartBump .35s ease; }
 
       /* Cart / orders modal */
       .cart-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px);
@@ -265,6 +267,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=10"></script>
+    <script src="store.js?v=11"></script>
   </body>
 </html>

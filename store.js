@@ -119,6 +119,7 @@
           return toast((r.body && m[r.body.error]) || (r.body && r.body.error) || 'Could not add to cart', 'err');
         }
         S.cart = r.body; S.coupon = null; renderCartButton(); toast('Added to cart'); if (cartOpen) renderCartPanel();
+        var fab = document.getElementById('cart-fab'); if (fab) { fab.classList.remove('bump'); void fab.offsetWidth; fab.classList.add('bump'); }
       });
   }
   function setQty(productId, qty) {
