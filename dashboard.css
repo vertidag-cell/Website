@@ -145,6 +145,10 @@
 .dash-app::after { display: none !important; }
 .dash-app .dash-shell { background: transparent; }
 .dash-app .page-hero { display: none; }
+/* A logged-in dashboard is an app, not a marketing page: drop the marketing
+   footer and let the workspace fill the viewport below the slim top bar. */
+.dash-app > footer { display: none; }
+.dash-app .dash-shell { padding-top: 18px; min-height: calc(100dvh - 66px); }
 
 /* The marketing navbar carries a green gradient underline (::after) and a green
    shadow once scrolled. Recolor both so the navbar matches the neutral preview. */

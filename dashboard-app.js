@@ -195,6 +195,7 @@
     tickets:      "ticket",
     payments:     "creditCard",
     staffPay:     "wallet",
+    store:        "store",
     hype:         "flame",
     events:       "calendar",
     branding:     "palette",
@@ -928,6 +929,8 @@
       logs: "logs",
       // Payments & Branding
       payments: "payments", branding: "payments",
+      // Store (its own section — opens the dedicated full-page manager)
+      store: "store",
       // System / admin tools
       serverTemplates: "system",
     };
@@ -941,6 +944,7 @@
       { label: "Discord Server",      items: inCat("discord") },
       { label: "Community",           items: inCat("community") },
       { label: "Tickets & Staff",     items: inCat("tickets") },
+      { label: "Store",               items: inCat("store") },
       { label: "ARK Integration",     items: inCat("ark") },
       { label: "Logs & Monitoring",   items: inCat("logs") },
       { label: "Payments & Branding", items: inCat("payments") },
@@ -952,6 +956,7 @@
       overview:    "Overview",
       analytics:   "Analytics",
       "embed-builder": "Embed Builder",
+      store:       "Store Manager",
       premium:     "Premium",
       audit:       "Audit Log",
       support:     "Support",
@@ -994,6 +999,13 @@
           role: "tab",
           "aria-selected": id === state.activeTab ? "true" : "false",
           onclick: () => {
+            // Store Manager is a dedicated full-page workspace — go straight there
+            // (no intermediate launcher) for premium guilds. Locked guilds fall
+            // through to the in-dashboard upsell.
+            if (id === "store" && !locked && state.selectedGuildId) {
+              window.location.href = `store-manager.html?guild=${state.selectedGuildId}`;
+              return;
+            }
             state._forceHub = false; // leaving via the nav re-arms auto-hide
             state.activeTab = id;
             // Close drawer on mobile after picking a tab
@@ -2546,7 +2558,7 @@
       ["welcome",   "hand",     "Welcome",    "Greet new members"],
       ["roleMenus", "masks",    "Role Menus", "Dropdown / button roles"],
       ["tickets",   "ticket",   "Tickets",    "Support tickets"],
-      ["store",     "store",    "Store",      "Sell products on the web"],
+      ["store",     "store",    "Store Manager", "Products, orders & payments"],
       ["staffPay",  "wallet",   "Staff Pay",  "Per-role pay amounts"],
       ["events",    "calendar", "Events",     "Dino / vault credit events"],
       ["branding",  "palette",  "Branding",   "Customize embed look"],
@@ -2556,7 +2568,10 @@
       const icowrap = h("span", { class: "dsx-action-ico" }); icowrap.append(iconSvg(ico));
       const arrow = h("span", { class: "dsx-enter", "aria-hidden": "true" }); arrow.append(iconSvg("arrowRight"));
       grid.append(h("button", { type: "button", class: "dsx-action",
-        onclick: () => { state.activeTab = tab; render(); }, "aria-label": "Configure " + name },
+        onclick: () => {
+          if (tab === "store" && state.selectedGuildId) { window.location.href = `store-manager.html?guild=${state.selectedGuildId}`; return; }
+          state.activeTab = tab; render();
+        }, "aria-label": "Configure " + name },
         icowrap,
         h("div", { class: "dsx-action-body" },
           h("div", { class: "dsx-action-name" }, name),
@@ -7463,6 +7478,7 @@
       { name: "staffPay", label: "Staff Pay", tier: "premium" }, { name: "ark", label: "ARK Management", tier: "premium" },
       { name: "logs", label: "Discord & Game Logs", tier: "free" }, { name: "payments", label: "Payments", tier: "premium" },
       { name: "branding", label: "Branding", tier: "premium" }, { name: "serverTemplates", label: "Server Templates", tier: "premium" },
+      { name: "store", label: "Store Manager", tier: "premium" },
     ];
     state.modules = MOCK_MODULES;
     data.modules = async () => ({ modules: MOCK_MODULES });
