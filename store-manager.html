@@ -114,7 +114,9 @@
 
       /* Stat tiles */
       .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 14px; margin-bottom: 18px; }
-      .stat { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elev); padding: 16px 18px; position: relative; overflow: hidden; }
+      .stat { border: 1px solid rgba(255,255,255,0.09); border-radius: var(--radius);
+        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012));
+        box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 16px 36px -30px rgba(0,0,0,0.9); padding: 16px 18px; position: relative; overflow: hidden; }
       .stat .v { font-size: 26px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; }
       .stat .l { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
       .stat .ic { position: absolute; top: 14px; right: 14px; color: var(--text-dim); opacity: .7; }
@@ -138,7 +140,11 @@
 
       /* Product cards */
       .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: 16px; }
-      .pcard { position: relative; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-elev); overflow: hidden; display: flex; flex-direction: column; transition: transform .15s, border-color .15s; }
+      .pcard { position: relative; border: 1px solid rgba(255,255,255,0.09); border-radius: var(--radius-lg);
+        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012));
+        box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 18px 40px -30px rgba(0,0,0,0.95);
+        overflow: hidden; display: flex; flex-direction: column; transition: transform .15s, border-color .15s, box-shadow .15s; }
+      .pcard:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 35%, transparent); box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 22px 46px -28px rgba(0,0,0,0.95); }
       .pcard.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
       .pcard-check { position: absolute; top: 10px; left: 10px; z-index: 2; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 7px; background: rgba(0,0,0,0.55); cursor: pointer; }
       .pcard-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
@@ -295,7 +301,9 @@
       .hero-sub .l { font-size: 11.5px; color: var(--text-muted); }
 
       /* glowing mini stat */
-      .gstat { position: relative; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elev); padding: 16px 17px; }
+      .gstat { position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.09); border-radius: var(--radius);
+        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012));
+        box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 16px 36px -30px rgba(0,0,0,0.9); padding: 16px 17px; }
       .gstat::before { content: ""; position: absolute; right: -34px; top: -34px; width: 94px; height: 94px; border-radius: 50%; background: radial-gradient(circle, var(--accent-tint), transparent 70%); pointer-events: none; }
       .gstat .gi { position: absolute; top: 14px; right: 15px; color: var(--accent); opacity: .8; }
       .gstat .gi svg { width: 17px; height: 17px; }
