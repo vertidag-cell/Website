@@ -142,7 +142,7 @@
       if (params.get("new") === "1") return { config: Object.assign({}, DEMO_CFG, { title: "My New Store", enabled: false }), recentOrders: [], series: [], topProducts: [], topCustomers: [], paymentsConnected: false, stats: { revenueMoney: 0, revenueCredits: 0, paidOrders: 0, needsDelivery: 0, products: 0, enabledProducts: 0, customers: 0, activeCoupons: 0 } };
       var ser = DEMO_SERIES;
       if (/days=30/.test(path)) { ser = []; for (var di = 0; di < 30; di++) { var b = DEMO_SERIES[di % DEMO_SERIES.length]; ser.push({ date: "d" + di, money: b.money, credits: b.credits, orders: b.orders }); } }
-      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: ser, topProducts: DEMO_TOP, topCustomers: DEMO_CUSTOMERS.slice(0, 5), paymentsConnected: true, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, customers: DEMO_CUSTOMERS.length, activeCoupons: 2 }, inventory: { outOfStock: [{ id: 4, name: "Starter Kit" }], lowStock: [{ id: 3, name: "Giga lvl 150 (imprinted)", stock: 5 }] } };
+      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: ser, topProducts: DEMO_TOP, topCustomers: DEMO_CUSTOMERS.slice(0, 5), paymentsConnected: true, kpis: { days: /days=30/.test(path) ? 30 : 14, revenueMoney: 486.99, revenueCredits: 21000, revenueDelta: 18, orders: 62, ordersDelta: 12, customers: 28, customersDelta: 9, refunds: 1, refundsDelta: -50 }, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, customers: DEMO_CUSTOMERS.length, activeCoupons: 2 }, inventory: { outOfStock: [{ id: 4, name: "Starter Kit" }], lowStock: [{ id: 3, name: "Giga lvl 150 (imprinted)", stock: 5 }] } };
     }
     if (/\/store\/customers/.test(path)) { var cq = decodeURIComponent((path.match(/[?&]q=([^&]*)/) || [])[1] || "").toLowerCase(); return { customers: cq ? DEMO_CUSTOMERS.filter(function (c) { return (c.username || "").toLowerCase().indexOf(cq) >= 0 || String(c.userId).indexOf(cq) >= 0; }) : DEMO_CUSTOMERS }; }
     if (/\/variants/.test(path)) return { variants: DEMO_VARIANTS };
@@ -258,14 +258,14 @@
     if (ov.status === 403 && ov.body && ov.body.error === "premium_required") { return fullState("lock", "Premium required", "The web store is a Premium feature. Unlock it with /subscribe in Discord.", btn("See Premium", { onClick: function () { location.href = "pricing.html"; } })); }
     if (ov.status === 401 || ov.status === 403) { return fullState("lock", "No access", "You don't manage this server, or your session expired.", btn("Back to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); }
     if (!ov.ok) { return fullState("store", "Couldn't load the store", "Please try again in a moment.", btn("Retry", { onClick: function () { location.reload(); } })); }
-    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || []; S.series = ov.body.series || []; S.top = ov.body.topProducts || []; S.topCustomers = ov.body.topCustomers || []; S.inventory = ov.body.inventory || { outOfStock: [], lowStock: [] }; S.paymentsConnected = !!ov.body.paymentsConnected;
+    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || []; S.series = ov.body.series || []; S.top = ov.body.topProducts || []; S.topCustomers = ov.body.topCustomers || []; S.inventory = ov.body.inventory || { outOfStock: [], lowStock: [] }; S.paymentsConnected = !!ov.body.paymentsConnected; S.kpis = ov.body.kpis || null;
     S.products = (res[1].body && res[1].body.products) || [];
     S.roles = (res[2].body && res[2].body.roles) || [];
     S.channels = (res[3].body && res[3].body.channels) || [];
     render();
   }).catch(function (e) { if (e !== "redirect") fullState("store", "Couldn't reach the backend", "Please try again shortly.", btn("Retry", { onClick: function () { location.reload(); } })); });
 
-  function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; S.topCustomers = r.body.topCustomers || []; S.inventory = r.body.inventory || { outOfStock: [], lowStock: [] }; S.paymentsConnected = !!r.body.paymentsConnected; } }); }
+  function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; S.topCustomers = r.body.topCustomers || []; S.inventory = r.body.inventory || { outOfStock: [], lowStock: [] }; S.paymentsConnected = !!r.body.paymentsConnected; S.kpis = r.body.kpis || null; } }); }
   function refreshProducts() { return api(A("/store/products")).then(function (r) { S.products = (r.body && r.body.products) || []; }); }
 
   // ── shell render ──────────────────────────────────────────────────────────
@@ -427,6 +427,29 @@
       c.append(reveal(panel(panelHead("Needs attention · inventory"),
         el("p", { class: "panel-sub" }, "Restock these so customers can keep buying — click one to jump to it."),
         invBox)));
+    }
+
+    // Period KPI strip — revenue / orders / customers / refunds with deltas vs
+    // the prior equal period (tracks trends over time, like a commercial dash).
+    if (S.kpis) {
+      var k = S.kpis;
+      var deltaChip = function (d, inverse) {
+        if (d == null) return null;
+        var good = inverse ? d <= 0 : d >= 0;
+        var cls = d === 0 ? "flat" : good ? "up" : "down";
+        var arr = d > 0 ? "▲ " : d < 0 ? "▼ " : "● ";
+        return el("span", { class: "kpi-delta " + cls }, arr + Math.abs(d) + "%");
+      };
+      var kpiTile = function (label, value, delta, inverse) {
+        return el("div", { class: "kpi" }, el("div", { class: "kpi-l" }, label), el("div", { class: "kpi-v" }, value), deltaChip(delta, inverse));
+      };
+      var kRev = k.revenueMoney > 0 ? money(k.revenueMoney, ccy) : k.revenueCredits > 0 ? "🪙 " + fmt(k.revenueCredits) : money(0, ccy);
+      var dlabel = " · " + k.days + "d";
+      c.append(reveal(el("div", { class: "kpi-row" },
+        kpiTile("Revenue" + dlabel, kRev, k.revenueDelta),
+        kpiTile("Orders" + dlabel, fmt(k.orders), k.ordersDelta),
+        kpiTile("Customers" + dlabel, fmt(k.customers), k.customersDelta),
+        kpiTile("Refunds" + dlabel, fmt(k.refunds), k.refundsDelta, true))));
     }
 
     // hero revenue + chart, alongside a 2×2 stat grid
