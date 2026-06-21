@@ -1019,7 +1019,7 @@
           item.append(el("div", { class: "row" },
             el("div", { class: "grow" },
               el("div", { class: "t" }, (rv.product_name || ("Product #" + rv.product_id)) + "   " + starStr(rv.rating)),
-              el("div", { class: "d" }, "@" + (rv.username || rv.user_id) + (rv.comment ? " — " + rv.comment : "") + (rv.created_at ? " · " + new Date((rv.created_at || "").replace(" ", "T") + "Z").toLocaleDateString() : ""))),
+              el("div", { class: "d", title: absDate(rv.created_at) }, "@" + (rv.username || rv.user_id) + (rv.comment ? " — " + rv.comment : "") + (rv.created_at ? " · " + relTime(rv.created_at) : ""))),
             hidden ? badge("Hidden", "dim") : badge("Published", "ok"),
             btn(rv.reply ? "Edit reply" : "Reply", { variant: "btn-ghost", style: tiny, onClick: toggleEditor }),
             btn(hidden ? "Show" : "Hide", { variant: "btn-outline", style: tiny, onClick: function (e) {
