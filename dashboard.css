@@ -145,10 +145,24 @@
 .dash-app::after { display: none !important; }
 .dash-app .dash-shell { background: transparent; }
 .dash-app .page-hero { display: none; }
-/* A logged-in dashboard is an app, not a marketing page: drop the marketing
-   footer and let the workspace fill the viewport below the slim top bar. */
+/* A logged-in dashboard is an app, not a marketing page. The in-app top bar
+   (.dsx-topbar — carries the server picker, plan, save state and LOG OUT) is a
+   complete header on its own, so drop the marketing navbar + footer and let the
+   workspace own the whole viewport. Every logged-out / error state renders its
+   own CTA inside #dashboard-root, so nothing is stranded. */
+.dash-app > .navbar { display: none; }
 .dash-app > footer { display: none; }
-.dash-app .dash-shell { padding-top: 18px; min-height: calc(100dvh - 66px); }
+.dash-app .dash-shell { padding-top: 16px; min-height: 100dvh; }
+/* On desktop the top bar becomes a floating, glassy, sticky header (premium app
+   feel). Left untouched on phones, where a separate .dash-mobile-bar leads. */
+@media (min-width: 768px) {
+  .dash-app .dsx-topbar {
+    position: sticky; top: 12px; z-index: 40;
+    background: color-mix(in srgb, var(--dsc-bg-raise) 90%, transparent);
+    backdrop-filter: blur(12px) saturate(1.1);
+    box-shadow: 0 10px 30px -16px rgba(0, 0, 0, 0.75);
+  }
+}
 
 /* The marketing navbar carries a green gradient underline (::after) and a green
    shadow once scrolled. Recolor both so the navbar matches the neutral preview. */
