@@ -69,6 +69,10 @@
     chart: "M3 3v18h18M7 14l3-3 3 3 5-6", lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
     star: "M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z",
     customers: "M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM22 19v-2a4 4 0 0 0-3-3.87M16 2.1a4 4 0 0 1 0 7.75",
+    categories: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
+    grip: "M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01",
+    edit: "M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z",
+    trash: "M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6",
   };
   function icon(name) {
     var ns = "http://www.w3.org/2000/svg";
@@ -107,12 +111,21 @@
   var DEMO_ROLES = [{ id: "1", name: "VIP" }, { id: "2", name: "Supporter" }, { id: "3", name: "MVP" }, { id: "4", name: "Founder" }];
   var DEMO_CHANNELS = [{ id: "10", name: "orders" }, { id: "11", name: "staff-fulfilment" }, { id: "12", name: "general" }];
   var DEMO_PRODUCTS = [
-    { id: 1, name: "VIP Rank", description: "Coloured name, /kit vip, 2 homes and queue priority.", image_url: null, category: "Ranks", price_money: 9.99, price_credits: 5000, fulfillment_type: "role", role_id: "1", stock: null, per_user_limit: 1, enabled: true, featured: true, rating: 4.7, reviewCount: 12, soldCount: 142, variants: [{ id: 11, name: "1 month", enabled: true }, { id: 12, name: "3 months", enabled: true }, { id: 13, name: "Lifetime", enabled: true }] },
-    { id: 2, name: "MVP Rank", description: "Everything in VIP plus a custom tag and monthly crate.", image_url: null, category: "Ranks", price_money: 19.99, price_credits: 12000, sale_price_money: 14.99, sale_ends_at: "2026-12-31T23:59:00.000Z", fulfillment_type: "role", role_id: "3", stock: null, per_user_limit: 1, enabled: true, featured: true, soldCount: 58 },
-    { id: 3, name: "Giga lvl 150 (imprinted)", description: "Bred, imprinted Giga delivered to your tribe.", image_url: null, category: "Dinos", price_money: null, price_credits: 8000, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", stock: 5, per_user_limit: null, enabled: true, rating: 5, reviewCount: 3, soldCount: 21 },
-    { id: 4, name: "Starter Kit", description: "Metal tools, 200 element, full flak.", image_url: null, category: "Kits", price_money: 4.99, price_credits: 2500, fulfillment_type: "manual", delivery_instructions: "Hand over starter kit", stock: 0, per_user_limit: null, enabled: true },
-    { id: 5, name: "Tribe Logo", description: "Custom in-server tribe banner (hidden while in design).", image_url: null, category: "Cosmetic", price_money: 6, price_credits: null, fulfillment_type: "manual", delivery_instructions: "Design + deliver banner", stock: null, per_user_limit: null, enabled: false },
-    { id: 6, name: "New Player Bundle", description: "VIP rank + a starter kit, sold together at a saving.", image_url: null, category: "Bundles", price_money: 12.99, price_credits: 6500, fulfillment_type: "manual", stock: null, per_user_limit: null, enabled: true, soldCount: 14, bundle_items: [{ product_id: 1, quantity: 1 }, { product_id: 4, quantity: 1 }] },
+    { id: 1, name: "VIP Rank", description: "Coloured name, /kit vip, 2 homes and queue priority.", image_url: null, category: "Ranks", category_id: 111, price_money: 9.99, price_credits: 5000, fulfillment_type: "role", role_id: "1", stock: null, per_user_limit: 1, enabled: true, featured: true, rating: 4.7, reviewCount: 12, soldCount: 142, variants: [{ id: 11, name: "1 month", enabled: true }, { id: 12, name: "3 months", enabled: true }, { id: 13, name: "Lifetime", enabled: true }] },
+    { id: 2, name: "MVP Rank", description: "Everything in VIP plus a custom tag and monthly crate.", image_url: null, category: "Ranks", category_id: 111, price_money: 19.99, price_credits: 12000, sale_price_money: 14.99, sale_ends_at: "2026-12-31T23:59:00.000Z", fulfillment_type: "role", role_id: "3", stock: null, per_user_limit: 1, enabled: true, featured: true, soldCount: 58 },
+    { id: 3, name: "Giga lvl 150 (imprinted)", description: "Bred, imprinted Giga delivered to your tribe.", image_url: null, category: "Dinos", category_id: 102, price_money: null, price_credits: 8000, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", stock: 5, per_user_limit: null, enabled: true, rating: 5, reviewCount: 3, soldCount: 21 },
+    { id: 4, name: "Starter Kit", description: "Metal tools, 200 element, full flak.", image_url: null, category: "Kits", category_id: 103, price_money: 4.99, price_credits: 2500, fulfillment_type: "manual", delivery_instructions: "Hand over starter kit", stock: 0, per_user_limit: null, enabled: true },
+    { id: 5, name: "Tribe Logo", description: "Custom in-server tribe banner (hidden while in design).", image_url: null, category: "Cosmetic", category_id: 104, price_money: 6, price_credits: null, fulfillment_type: "manual", delivery_instructions: "Design + deliver banner", stock: null, per_user_limit: null, enabled: false },
+    { id: 6, name: "New Player Bundle", description: "VIP rank + a starter kit, sold together at a saving.", image_url: null, category: "Bundles", category_id: 105, price_money: 12.99, price_credits: 6500, fulfillment_type: "manual", stock: null, per_user_limit: null, enabled: true, soldCount: 14, bundle_items: [{ product_id: 1, quantity: 1 }, { product_id: 4, quantity: 1 }] },
+  ];
+  var DEMO_CATEGORIES = [
+    { id: 101, guild_id: gid, parent_id: null, name: "Ranks", description: "Donor ranks and perks.", image_url: null, position: 0, enabled: true, productCount: 0, totalProductCount: 2, children: [
+      { id: 111, guild_id: gid, parent_id: 101, name: "VIP tiers", image_url: null, position: 0, enabled: true, productCount: 2 },
+    ] },
+    { id: 102, guild_id: gid, parent_id: null, name: "Dinos", description: "Bred, imprinted creatures.", image_url: null, position: 1, enabled: true, productCount: 1, totalProductCount: 1, children: [] },
+    { id: 103, guild_id: gid, parent_id: null, name: "Kits", description: null, image_url: null, position: 2, enabled: true, productCount: 1, totalProductCount: 1, children: [] },
+    { id: 104, guild_id: gid, parent_id: null, name: "Cosmetic", description: null, image_url: null, position: 3, enabled: false, productCount: 1, totalProductCount: 1, children: [] },
+    { id: 105, guild_id: gid, parent_id: null, name: "Bundles", description: "Save by buying together.", image_url: null, position: 4, enabled: true, productCount: 1, totalProductCount: 1, children: [] },
   ];
   var DEMO_ORDERS = [
     { id: 312, buyer_user_id: "111", buyer_username: "ApexHunter", rail: "money", total_money: 9.99, currency: "GBP", total_credits: null, status: "completed", coupon_code: null, created_at: "2026-06-19 14:02:00", items: [{ id: 1, name: "VIP Rank", quantity: 1, fulfillment_type: "role", fulfillment_status: "granted" }] },
@@ -162,6 +175,7 @@
     }
     if (/\/store\/customers/.test(path)) { var cq = decodeURIComponent((path.match(/[?&]q=([^&]*)/) || [])[1] || "").toLowerCase(); return { customers: cq ? DEMO_CUSTOMERS.filter(function (c) { return (c.username || "").toLowerCase().indexOf(cq) >= 0 || String(c.userId).indexOf(cq) >= 0; }) : DEMO_CUSTOMERS }; }
     if (/\/variants/.test(path)) return { variants: DEMO_VARIANTS };
+    if (/\/store\/categories/.test(path)) return { categories: DEMO_CATEGORIES };
     if (/\/store\/products/.test(path)) return { products: DEMO_PRODUCTS };
     if (/\/store\/coupons/.test(path)) return { coupons: DEMO_COUPONS };
     if (/\/store\/reviews/.test(path)) { var rst = (path.match(/status=(\w+)/) || [])[1]; return { reviews: rst ? DEMO_REVIEWS.filter(function (r) { return r.status === rst; }) : DEMO_REVIEWS }; }
@@ -260,14 +274,14 @@
   }
 
   // ── state ───────────────────────────────────────────────────────────────────
-  var S = { cfg: null, products: [], roles: [], channels: [], stats: {}, recent: [], series: [], top: [], section: "overview", range: 14 };
+  var S = { cfg: null, products: [], categories: [], roles: [], channels: [], stats: {}, recent: [], series: [], top: [], section: "overview", range: 14 };
 
   // ── boot ──────────────────────────────────────────────────────────────────
   if (!gid || !/^\d{5,25}$/.test(gid)) { fullState("store", "No server selected", "Open the Store Manager from your dashboard.", btn("Go to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); return; }
 
   api("/api/dashboard/me").then(function (me) {
     if (me.status === 401) { loginBounce(); return Promise.reject("redirect"); }
-    return Promise.all([api(A("/store/overview")), api(A("/store/products")), api(A("/discord/roles")), api(A("/discord/channels"))]);
+    return Promise.all([api(A("/store/overview")), api(A("/store/products")), api(A("/discord/roles")), api(A("/discord/channels")), api(A("/store/categories"))]);
   }).then(function (res) {
     if (!res) return;
     var ov = res[0];
@@ -278,16 +292,38 @@
     S.products = (res[1].body && res[1].body.products) || [];
     S.roles = (res[2].body && res[2].body.roles) || [];
     S.channels = (res[3].body && res[3].body.channels) || [];
+    S.categories = (res[4] && res[4].body && res[4].body.categories) || [];
     render();
   }).catch(function (e) { if (e !== "redirect") fullState("store", "Couldn't reach the backend", "Please try again shortly.", btn("Retry", { onClick: function () { location.reload(); } })); });
 
   function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; S.topCustomers = r.body.topCustomers || []; S.inventory = r.body.inventory || { outOfStock: [], lowStock: [] }; S.paymentsConnected = !!r.body.paymentsConnected; S.kpis = r.body.kpis || null; } }); }
   function refreshProducts() { return api(A("/store/products")).then(function (r) { S.products = (r.body && r.body.products) || []; }); }
+  function refreshCategories() { return api(A("/store/categories")).then(function (r) { S.categories = (r.body && r.body.categories) || []; }); }
+  // Flatten the category tree into <select> options (sub-categories indented).
+  function categoryOptions() {
+    var opts = [["", "— No category —"]];
+    (S.categories || []).forEach(function (t) {
+      opts.push([String(t.id), t.name]);
+      (t.children || []).forEach(function (ch) { opts.push([String(ch.id), "   ↳ " + ch.name]); });
+    });
+    return opts;
+  }
+  function categoryNameById(id) {
+    if (id == null) return null;
+    var out = null;
+    (S.categories || []).forEach(function (t) {
+      if (t.id === id) out = t.name;
+      (t.children || []).forEach(function (ch) { if (ch.id === id) out = t.name + " → " + ch.name; });
+    });
+    return out;
+  }
 
   // ── shell render ──────────────────────────────────────────────────────────
-  var NAV = [["overview", "Overview", "overview"], ["products", "Products", "products"], ["orders", "Orders", "orders"], ["customers", "Customers", "customers"], ["reviews", "Reviews", "star"], ["coupons", "Coupons", "coupons"], ["settings", "Settings", "settings"], ["payments", "Payments", "payments"]];
+  var NAV = [["overview", "Overview", "overview"], ["products", "Products", "products"], ["categories", "Categories", "categories"], ["orders", "Orders", "orders"], ["customers", "Customers", "customers"], ["reviews", "Reviews", "star"], ["coupons", "Coupons", "coupons"], ["settings", "Settings", "settings"], ["payments", "Payments", "payments"]];
   var SECTION_META = {
-    overview: ["Overview", "Your store at a glance"], products: ["Products", "What you sell"], orders: ["Orders", "Fulfil and refund purchases"],
+    overview: ["Overview", "Your store at a glance"], products: ["Products", "What you sell"],
+    categories: ["Categories", "Group products into sections and sub-sections"],
+    orders: ["Orders", "Fulfil and refund purchases"],
     customers: ["Customers", "Who buys from your store"],
     reviews: ["Reviews", "Customer ratings — hide anything unfair"],
     coupons: ["Coupons", "Discount codes for checkout"], settings: ["Settings", "Store name, currency, payment rails, staff"], payments: ["Payments", "Connect a provider to take real money"],
@@ -330,6 +366,7 @@
 
     if (S.section === "overview") renderOverview(content);
     else if (S.section === "products") renderProducts(content);
+    else if (S.section === "categories") renderCategories(content);
     else if (S.section === "orders") renderOrders(content);
     else if (S.section === "customers") renderCustomers(content);
     else if (S.section === "reviews") renderReviews(content);
@@ -593,6 +630,7 @@
       el("div", { class: "body" },
         el("div", { class: "nm" }, p.name),
         el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
+          (categoryNameById(p.category_id) || p.category) ? badge("🗂 " + (categoryNameById(p.category_id) || p.category), "") : null,
           p.featured ? badge("★ Featured", "ok") : null,
           (p.bundle_items && p.bundle_items.length) ? badge("🎁 Bundle", "info") : null,
           p.sale_price_money != null ? badge("Sale", "warn") : null,
@@ -634,9 +672,12 @@
         bb("Feature", { featured: true }, "Products featured"),
         bb("Unfeature", { featured: false }, "Products unfeatured"),
         btn("Set category", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () {
-          var v = prompt("Set category for " + ids.length + " product(s) — leave blank to clear:");
-          if (v === null) return; // cancelled
-          bulkPatch({ category: v.trim() || null }, "Category updated");
+          var picker = sel(categoryOptions(), "");
+          var foot = el("div", { style: { display: "flex", gap: "8px", width: "100%" } }, el("div", { style: { flex: "1" } }),
+            btn("Cancel", { variant: "btn-ghost", onClick: closeDrawer }),
+            btn("Apply", { onClick: function () { var cid = picker.value ? Number(picker.value) : null; closeDrawer(); bulkPatch({ category_id: cid }, "Category updated"); } }));
+          openDrawer("Set category for " + ids.length + " product" + (ids.length === 1 ? "" : "s"),
+            el("div", null, field("Category", picker, { hint: "Choose a category (or “No category” to clear) for the selected products." })), foot);
         } }),
         btn("Clear", { variant: "btn-ghost", style: { padding: "5px 13px", fontSize: "13px" }, onClick: function () { clearSel(); renderGrid(searchEl ? searchEl.value : ""); refreshBar(); } }));
     }
@@ -659,7 +700,7 @@
     function renderGrid(q) {
       clear(grid);
       q = (q || "").trim().toLowerCase();
-      var list = S.products.filter(function (p) { return !q || ((p.name || "") + " " + (p.category || "")).toLowerCase().indexOf(q) >= 0; });
+      var list = S.products.filter(function (p) { return !q || ((p.name || "") + " " + (categoryNameById(p.category_id) || p.category || "")).toLowerCase().indexOf(q) >= 0; });
       if (!list.length) { grid.append(emptyState("products", "No matches", "No products match your search — try a different term.", null, true)); return; }
       list.forEach(function (p) { grid.append(productCard(p, sel, q ? null : move)); });
     }
@@ -749,7 +790,12 @@
         .then(function (o) { if (o.s === 501) upMsg.textContent = "Uploads not set up — paste a URL instead."; else if (!o.b || !o.b.url) upMsg.textContent = (o.b && o.b.detail) || "Upload failed."; else { img.value = o.b.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; } })
         .catch(function () { upMsg.textContent = "Upload failed."; }).then(function () { upBtn.disabled = false; file.value = ""; });
     });
-    var cat = inp({ type: "text", value: p.category || "", maxlength: 60, placeholder: "Ranks" });
+    var catSel = sel(categoryOptions(), p.category_id != null ? String(p.category_id) : "");
+    var catManage = el("button", { type: "button", class: "linklike", onclick: function () { closeDrawer(); S.section = "categories"; render(); } }, "Manage categories →");
+    var catField = field("Category", catSel, {
+      hint: (S.categories && S.categories.length) ? "Pick a category or sub-category. " : "No categories yet — create some to group your products. ",
+    });
+    catField.querySelector(".hint").append(catManage);
     var pm = inp({ type: "number", step: "0.01", min: "0", value: p.price_money != null ? p.price_money : "", placeholder: "0.00" });
     var pc = inp({ type: "number", step: "1", min: "0", value: p.price_credits != null ? p.price_credits : "", placeholder: "0" });
     var salePm = inp({ type: "number", step: "0.01", min: "0", value: p.sale_price_money != null ? p.sale_price_money : "", placeholder: "e.g. 14.99" });
@@ -805,7 +851,7 @@
     var errEl = el("div", { class: "err" });
     var save = btn(existing ? "Save product" : "Add product", { onClick: function () {
       errEl.textContent = ""; save.disabled = true;
-      var b = { name: name.value.trim(), description: desc.value.trim() || null, image_url: img.value.trim() || null, category: cat.value.trim() || null,
+      var b = { name: name.value.trim(), description: desc.value.trim() || null, image_url: img.value.trim() || null, category_id: catSel.value ? Number(catSel.value) : null,
         price_money: pm.value === "" ? null : Number(pm.value), price_credits: pc.value === "" ? null : Number(pc.value),
         sale_price_money: salePm.value === "" ? null : Number(salePm.value),
         sale_ends_at: saleEnds.value ? new Date(saleEnds.value).toISOString() : null,
@@ -822,7 +868,7 @@
     var body = el("div", null,
       field("Name", name), field("Description", desc),
       field("Image", img, { hint: "Paste an https image URL, or upload below" }), prev, el("div", { style: { margin: "8px 0 16px" } }, upBtn, upMsg, file),
-      field("Category (optional)", cat),
+      catField,
       el("div", { class: "grid2" }, field("Price — money", pmWrap, { hint: "Blank = not sold for money" }), field("Price — credits", pc, { hint: "Blank = not sold for credits" })),
       el("div", { class: "grid2" },
         field("Sale price — money (optional)", salePmWrap, { hint: "Markdown under the money price; must be below it." }),
@@ -841,6 +887,184 @@
       el("div", { style: { flex: "1" } }),
       btn("Cancel", { variant: "btn-ghost", onClick: closeDrawer }), save);
     openDrawer(existing ? "Edit product" : "New product", body, foot);
+  }
+
+  // ── CATEGORIES ───────────────────────────────────────────────────────────────
+  // Generic drag-to-reorder for the DIRECT [data-sortable] children of a
+  // container. onOrder(ids[]) fires on drop with the new id order. Levels stay
+  // independent because we only ever match `:scope > [data-sortable]`.
+  function makeSortable(container, onOrder) {
+    var dragEl = null;
+    function rows() { return Array.prototype.slice.call(container.querySelectorAll(":scope > [data-sortable]")); }
+    container.addEventListener("dragstart", function (e) {
+      var row = e.target.closest("[data-sortable]");
+      if (!row || row.parentNode !== container) return;
+      dragEl = row; setTimeout(function () { row.classList.add("dragging"); }, 0);
+      e.dataTransfer.effectAllowed = "move";
+      try { e.dataTransfer.setData("text/plain", row.getAttribute("data-id") || ""); } catch (_) {}
+    });
+    container.addEventListener("dragend", function () { if (dragEl) dragEl.classList.remove("dragging"); dragEl = null; });
+    container.addEventListener("dragover", function (e) {
+      if (!dragEl || dragEl.parentNode !== container) return;
+      e.preventDefault(); e.dataTransfer.dropEffect = "move";
+      var after = null, closest = -Infinity;
+      rows().forEach(function (child) {
+        if (child === dragEl) return;
+        var box = child.getBoundingClientRect();
+        var off = e.clientY - box.top - box.height / 2;
+        if (off < 0 && off > closest) { closest = off; after = child; }
+      });
+      if (after == null) container.appendChild(dragEl);
+      else container.insertBefore(dragEl, after);
+    });
+    container.addEventListener("drop", function (e) {
+      if (!dragEl || dragEl.parentNode !== container) return;
+      e.preventDefault();
+      var ids = rows().map(function (n) { return parseInt(n.getAttribute("data-id"), 10); }).filter(function (n) { return !isNaN(n); });
+      onOrder(ids);
+    });
+  }
+  function saveCategoryOrder(ids) {
+    if (DEMO) return;
+    api(A("/store/categories/reorder"), { method: "POST", body: { order: ids } }).then(function (r) { if (!r.ok) toast("Couldn't save order", "err"); });
+  }
+  function delCategory(cat) {
+    var kids = (cat.children || []).length;
+    var msg = 'Delete "' + cat.name + '"?'
+      + (kids ? "\n\nIts " + kids + " sub-categor" + (kids === 1 ? "y" : "ies") + " will move up to the top level." : "")
+      + "\nProducts in it become uncategorised (nothing is deleted).";
+    if (!confirm(msg)) return;
+    api(A("/store/categories/" + cat.id), { method: "DELETE" }).then(function (r) {
+      if (!r.ok) return toast("Couldn't delete", "err");
+      refreshCategories().then(function () { toast("Category deleted"); render(); });
+    });
+  }
+  function categoryThumb(cat) {
+    if (cat.image_url) return el("div", { class: "cat-thumb", style: { backgroundImage: "url('" + cat.image_url.replace(/'/g, "%27") + "')" } });
+    return el("div", { class: "cat-thumb fb" }, initial(cat.name));
+  }
+  function dragHandle() { return el("span", { class: "drag-handle", title: "Drag to reorder", "aria-hidden": "true" }, icon("grip")); }
+  function iconBtn(name, title, onClick) {
+    var b = el("button", { class: "icon-btn", type: "button", title: title, "aria-label": title, onclick: onClick });
+    b.append(icon(name)); return b;
+  }
+
+  function renderCategories(c) {
+    var tops = S.categories || [];
+    var totalCats = tops.reduce(function (n, t) { return n + 1 + ((t.children || []).length); }, 0);
+    c.append(panel(
+      panelHead("Categories (" + totalCats + ")", btn("Add category", { icon: "plus", onClick: function () { categoryDrawer(null, null); } })),
+      el("p", { class: "panel-sub" }, "Group products into categories, with up to one level of sub-categories. Buyers browse your store by these sections. Drag the handles to reorder; products are assigned from each product’s editor.")));
+
+    if (!tops.length) {
+      c.append(emptyState("categories", "No categories yet", "Create your first category — like “Ranks”, “Kits” or “Dinos” — then assign products to it from the product editor. Add sub-categories to organise further.", btn("Add your first category", { icon: "plus", onClick: function () { categoryDrawer(null, null); } })));
+      return;
+    }
+
+    var list = el("div", { class: "cat-list" });
+    tops.forEach(function (t) {
+      var count = t.totalProductCount != null ? t.totalProductCount : (t.productCount || 0);
+      var head = el("div", { class: "cat-head" },
+        dragHandle(),
+        categoryThumb(t),
+        el("div", { class: "cat-main" },
+          el("div", { class: "cat-name" }, t.name, t.enabled === false ? badge("Hidden", "muted") : null),
+          el("div", { class: "cat-meta" }, count + " product" + (count === 1 ? "" : "s")
+            + ((t.children || []).length ? " · " + t.children.length + " sub-categor" + (t.children.length === 1 ? "y" : "ies") : ""))),
+        el("div", { class: "cat-actions" },
+          btn("Sub-category", { variant: "btn-outline", icon: "plus", style: { padding: "5px 11px", fontSize: "12.5px" }, onClick: function () { categoryDrawer(null, t.id); } }),
+          iconBtn("edit", "Edit category", function () { categoryDrawer(t, null); }),
+          iconBtn("trash", "Delete category", function () { delCategory(t); })));
+
+      var card = el("div", { class: "cat-card", "data-sortable": "top", "data-id": t.id }, head);
+      head.querySelector(".drag-handle").setAttribute("draggable", "true");
+
+      var kids = t.children || [];
+      var subWrap = el("div", { class: "cat-subs" });
+      if (kids.length) {
+        kids.forEach(function (ch) {
+          var ccount = ch.productCount || 0;
+          var row = el("div", { class: "cat-sub", "data-sortable": "sub", "data-id": ch.id },
+            dragHandle(),
+            categoryThumb(ch),
+            el("div", { class: "cat-main" },
+              el("div", { class: "cat-name" }, ch.name, ch.enabled === false ? badge("Hidden", "muted") : null),
+              el("div", { class: "cat-meta" }, ccount + " product" + (ccount === 1 ? "" : "s"))),
+            el("div", { class: "cat-actions" },
+              iconBtn("edit", "Edit sub-category", function () { categoryDrawer(ch, null); }),
+              iconBtn("trash", "Delete sub-category", function () { delCategory(ch); })));
+          row.querySelector(".drag-handle").setAttribute("draggable", "true");
+          subWrap.append(row);
+        });
+        makeSortable(subWrap, saveCategoryOrder);
+        card.append(subWrap);
+      }
+      list.append(card);
+    });
+    makeSortable(list, saveCategoryOrder);
+    c.append(list);
+  }
+
+  // Create / edit a category. presetParentId pre-selects a parent (used by the
+  // "Sub-category" buttons). Top-level categories with children can't themselves
+  // be nested (the backend enforces this too) — we disable that in the UI.
+  function categoryDrawer(existing, presetParentId) {
+    var cat = existing || {};
+    var name = inp({ type: "text", value: cat.name || "", maxlength: 60, placeholder: "e.g. Ranks" });
+    var desc = ta({ value: cat.description || "", maxlength: 500, placeholder: "Optional — a short blurb shown on the category." });
+    var img = inp({ type: "url", value: cat.image_url || "", placeholder: "https://…/image.png" });
+    var prev = el("img", { class: "img-prev", src: cat.image_url || "", alt: "", style: { display: cat.image_url ? "block" : "none" } });
+    img.addEventListener("input", function () { if (/^https:\/\/\S+\.(png|jpe?g|webp|gif)/i.test(img.value)) { prev.src = img.value; prev.style.display = "block"; } else prev.style.display = "none"; });
+    var file = el("input", { type: "file", accept: "image/png,image/jpeg,image/webp,image/gif", style: { display: "none" } });
+    var upMsg = el("span", { class: "hint", style: { marginLeft: "10px" } });
+    var upBtn = btn("⬆ Upload image", { variant: "btn-outline", style: { fontSize: "13px", padding: "7px 13px" }, onClick: function () { file.click(); } });
+    file.addEventListener("change", function () {
+      var f = file.files && file.files[0]; if (!f) return;
+      if (f.size > 5 * 1024 * 1024) { upMsg.textContent = "Max 5 MB."; return; }
+      upBtn.disabled = true; upMsg.textContent = "Uploading…";
+      fetch("/api/store-upload", { method: "POST", credentials: "include", headers: { "content-type": f.type }, body: f })
+        .then(function (r) { return r.json().catch(function () { return null; }).then(function (b) { return { s: r.status, b: b }; }); })
+        .then(function (o) { if (o.s === 501) upMsg.textContent = "Uploads not set up — paste a URL instead."; else if (!o.b || !o.b.url) upMsg.textContent = (o.b && o.b.detail) || "Upload failed."; else { img.value = o.b.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; } })
+        .catch(function () { upMsg.textContent = "Upload failed."; }).then(function () { upBtn.disabled = false; file.value = ""; });
+    });
+
+    // Parent options: top level + every top-level category except this one.
+    var selfHasChildren = !!(existing && (cat.children || []).length);
+    var parentOpts = [["", "— Top level —"]].concat((S.categories || [])
+      .filter(function (t) { return !existing || t.id !== existing.id; })
+      .map(function (t) { return [String(t.id), t.name]; }));
+    var curParent = existing ? (cat.parent_id != null ? String(cat.parent_id) : "") : (presetParentId != null ? String(presetParentId) : "");
+    var parentSel = sel(parentOpts, curParent);
+    var parentHint = "Choose a parent to make this a sub-category, or keep it at the top level.";
+    if (selfHasChildren) { parentSel.disabled = true; parentHint = "This category has sub-categories, so it must stay at the top level. Move its sub-categories out first to nest it."; }
+
+    var enabled = swRow("Visible in store", "Buyers can see and browse this category", existing ? cat.enabled !== false : true);
+
+    var errEl = el("div", { class: "err" });
+    var save = btn(existing ? "Save category" : "Add category", { onClick: function () {
+      errEl.textContent = ""; if (!name.value.trim()) { errEl.textContent = "Give the category a name."; return; }
+      save.disabled = true;
+      var b = { name: name.value.trim(), description: desc.value.trim() || null, image_url: img.value.trim() || null,
+        parent_id: parentSel.disabled ? undefined : (parentSel.value ? Number(parentSel.value) : null), enabled: enabled.input.checked };
+      if (b.parent_id === undefined) delete b.parent_id;
+      var req = existing ? api(A("/store/categories/" + existing.id), { method: "PATCH", body: b }) : api(A("/store/categories"), { method: "POST", body: b });
+      req.then(function (r) {
+        if (!r.ok) { errEl.textContent = (r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save"; save.disabled = false; return; }
+        closeDrawer(); refreshCategories().then(function () { toast(existing ? "Category saved" : "Category added"); render(); });
+      });
+    } });
+
+    var body = el("div", null,
+      field("Name", name),
+      field("Description (optional)", desc),
+      field("Image / icon", img, { hint: "Paste an https image URL, or upload below" }), prev,
+      el("div", { style: { margin: "8px 0 16px" } }, upBtn, upMsg, file),
+      field("Parent category", parentSel, { hint: parentHint }),
+      enabled.node, errEl);
+    var foot = el("div", { style: { display: "flex", gap: "8px", alignItems: "center", width: "100%" } },
+      el("div", { style: { flex: "1" } }),
+      btn("Cancel", { variant: "btn-ghost", onClick: closeDrawer }), save);
+    openDrawer(existing ? "Edit category" : (presetParentId != null ? "New sub-category" : "New category"), body, foot);
   }
 
   // ── ORDERS ─────────────────────────────────────────────────────────────────

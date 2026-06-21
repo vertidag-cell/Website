@@ -429,6 +429,40 @@
       .ro-btn { background: #ffffff; }
       .btn-primary { color: #ffffff; }
       .qbtn, .cf-del { background: #f1f3f5; }
+
+      /* ── Categories manager ───────────────────────────────────────────────── */
+      .cat-list { display: flex; flex-direction: column; gap: 12px; }
+      .cat-card { background: #ffffff; border: 1px solid rgba(16,20,24,0.09); border-radius: var(--radius-lg);
+        box-shadow: 0 1px 2px rgba(16,20,24,0.05), 0 14px 30px -26px rgba(16,20,24,0.18); overflow: hidden; }
+      .cat-head, .cat-sub { display: flex; align-items: center; gap: 13px; padding: 13px 15px; }
+      .cat-head.dragging, .cat-sub.dragging { opacity: 0.45; }
+      .cat-card.dragging { opacity: 0.5; box-shadow: 0 0 0 1px var(--accent), 0 24px 50px -22px rgba(16,20,24,0.4); }
+      .cat-subs { border-top: 1px solid rgba(16,20,24,0.07); background: #fafbfc; padding: 4px 0 4px 26px; }
+      .cat-sub { padding: 10px 15px; border-radius: 10px; margin: 2px 8px; }
+      .cat-sub:hover, .cat-head:hover { background: rgba(16,20,24,0.02); }
+      .cat-thumb { width: 42px; height: 42px; border-radius: 10px; flex: none; background-size: cover; background-position: center;
+        background-color: var(--bg-soft); border: 1px solid rgba(16,20,24,0.08); }
+      .cat-sub .cat-thumb { width: 34px; height: 34px; border-radius: 8px; }
+      .cat-thumb.fb { display: grid; place-items: center; font-weight: 800; font-size: 17px; color: var(--accent-deep);
+        background: radial-gradient(120% 120% at 30% 20%, var(--accent-tint), transparent 70%), #eef1f4; }
+      .cat-main { flex: 1; min-width: 0; }
+      .cat-name { font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+      .cat-sub .cat-name { font-size: 14px; }
+      .cat-meta { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+      .cat-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+      .badge.muted { color: var(--text-dim); border-color: var(--border); background: var(--bg-soft); }
+      .drag-handle { display: grid; place-items: center; width: 26px; height: 30px; flex: none; cursor: grab; color: var(--text-dim);
+        border-radius: 7px; }
+      .drag-handle:hover { color: var(--text-muted); background: rgba(16,20,24,0.05); }
+      .drag-handle:active { cursor: grabbing; }
+      .drag-handle svg { width: 18px; height: 18px; }
+      .icon-btn { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border: 1px solid rgba(16,20,24,0.12);
+        background: #ffffff; color: var(--text-muted); border-radius: 9px; cursor: pointer; transition: background .14s, color .14s, border-color .14s; }
+      .icon-btn:hover { background: var(--bg-soft); color: var(--text); border-color: rgba(16,20,24,0.2); }
+      .icon-btn svg { width: 16px; height: 16px; }
+      .linklike { background: none; border: none; padding: 0; margin-left: 6px; color: var(--accent-deep); font: inherit;
+        font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+      .linklike:hover { color: var(--accent); }
     </style>
   </head>
   <body>
@@ -436,6 +470,6 @@
       <div class="state-full"><div class="sk" style="width:min(900px,90vw);height:60vh"></div></div>
     </div>
     <script src="config.js"></script>
-    <script src="store-manager.js?v=37"></script>
+    <script src="store-manager.js?v=38"></script>
   </body>
 </html>
