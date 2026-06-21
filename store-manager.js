@@ -38,6 +38,22 @@
   function money(n, ccy) { return (CCY[ccy] || "") + (Number(n) || 0).toFixed(2); }
   function fmt(n) { return (Number(n) || 0).toLocaleString(); }
   function initial(s) { return (String(s || "?").trim().charAt(0) || "?").toUpperCase(); }
+  // Compact relative time ("just now" / "2h ago" / "3d ago"); falls back to a
+  // date past ~30 days. Input is a SQLite UTC string or ISO.
+  function relTime(ts) {
+    if (!ts) return "";
+    var d = new Date(String(ts).replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(ts) ? "" : "Z"));
+    var ms = d.getTime(); if (isNaN(ms)) return "";
+    var diff = Date.now() - ms;
+    if (diff < 0) diff = 0;
+    var m = Math.floor(diff / 60000), h = Math.floor(m / 60), days = Math.floor(h / 24);
+    if (m < 1) return "just now";
+    if (m < 60) return m + "m ago";
+    if (h < 24) return h + "h ago";
+    if (days < 30) return days + "d ago";
+    return d.toLocaleDateString();
+  }
+  function absDate(ts) { if (!ts) return ""; var d = new Date(String(ts).replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(ts) ? "" : "Z")); return isNaN(d.getTime()) ? "" : d.toLocaleString(); }
 
   // ── icons ─────────────────────────────────────────────────────────────────
   var IP = {
@@ -542,7 +558,7 @@
     else S.recent.forEach(function (o) {
       var total = o.rail === "credits" ? "🪙 " + fmt(o.total_credits) : money(o.total_money, o.currency);
       ord.append(el("div", { class: "sw-row" },
-        el("div", { class: "meta" }, el("div", { class: "t" }, "#" + o.id + "  ·  @" + (o.buyer_username || o.buyer_user_id)), el("div", { class: "d" }, (o.coupon_code ? "🎟️ " + o.coupon_code + " · " : "") + new Date((o.created_at || "").replace(" ", "T") + "Z").toLocaleDateString())),
+        el("div", { class: "meta" }, el("div", { class: "t" }, "#" + o.id + "  ·  @" + (o.buyer_username || o.buyer_user_id)), el("div", { class: "d", title: absDate(o.created_at) }, (o.coupon_code ? "🎟️ " + o.coupon_code + " · " : "") + relTime(o.created_at))),
         el("div", { style: { display: "flex", alignItems: "center", gap: "10px" } }, orderBadge(o.status), el("b", null, total))));
     });
 
@@ -861,7 +877,7 @@
       rowTop.append(el("div", { style: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" } },
         el("b", null, "#" + o.id), el("a", { href: "https://discord.com/users/" + o.buyer_user_id, target: "_blank", rel: "noopener", class: "muted" }, "@" + (o.buyer_username || o.buyer_user_id)),
         o.coupon_code ? badge("🎟️ " + o.coupon_code, "info") : null,
-        o.created_at ? el("span", { class: "muted", style: { fontSize: "12px" } }, new Date((o.created_at || "").replace(" ", "T") + "Z").toLocaleDateString()) : null,
+        o.created_at ? el("span", { class: "muted", style: { fontSize: "12px" }, title: absDate(o.created_at) }, relTime(o.created_at)) : null,
         el("span", { style: { marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" } }, orderBadge(o.status), el("b", null, total))));
       (o.items || []).forEach(function (i) {
         var tick = i.fulfillment_status === "delivered" ? "✅" : i.fulfillment_status === "granted" ? "⚡" : "⏳";
@@ -927,12 +943,12 @@
     function row(cust, rank) {
       var av = el("div", { class: "cust-av" }, initial(cust.username || "?"));
       var nm = el("a", { class: "cust-name", href: "https://discord.com/users/" + cust.userId, target: "_blank", rel: "noopener" }, "@" + (cust.username || cust.userId));
-      var last = cust.lastOrderAt ? new Date((cust.lastOrderAt || "").replace(" ", "T") + "Z").toLocaleDateString() : "";
+      var last = cust.lastOrderAt ? relTime(cust.lastOrderAt) : "";
       return el("div", { class: "cust-row" },
         el("span", { class: "cust-rank" }, "#" + rank),
         av,
         el("div", { class: "cust-main" }, nm,
-          el("div", { class: "cust-sub" }, cust.orders + " order" + (cust.orders === 1 ? "" : "s") + (last ? "  ·  last " + last : ""))),
+          el("div", { class: "cust-sub", title: absDate(cust.lastOrderAt) }, cust.orders + " order" + (cust.orders === 1 ? "" : "s") + (last ? "  ·  last " + last : ""))),
         el("div", { class: "cust-spend" }, spendOf(cust)));
     }
     function renderRows() {
