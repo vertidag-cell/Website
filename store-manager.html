@@ -18,7 +18,13 @@
       /* z-index scale: sidebar-scrim 40 · drawer 50 · mobile-nav 60 · toast 80 */
       .sm-app { --accent-glow: rgba(43, 255, 158, 0.42); }
       .sm-app { --side-w: 244px; --pad: clamp(18px, 3vw, 34px);
-        min-height: 100vh; display: grid; grid-template-columns: var(--side-w) 1fr; background: var(--bg); }
+        min-height: 100vh; display: grid; grid-template-columns: var(--side-w) 1fr;
+        background-color: #050608;
+        background-image:
+          radial-gradient(1150px 560px at 50% -240px, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+          radial-gradient(760px 520px at 112% -120px, color-mix(in srgb, var(--accent) 6%, transparent), transparent 55%),
+          linear-gradient(180deg, #080a0e 0%, #050608 58%);
+        background-attachment: fixed; }
 
       /* Sidebar */
       .sm-side { position: sticky; top: 0; align-self: start; height: 100vh; display: flex; flex-direction: column;
@@ -59,7 +65,10 @@
       .pill.off { color: var(--text-dim); }
 
       /* Section + card */
-      .panel { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-elev); padding: 22px 24px; margin-bottom: 18px; }
+      .panel { border: 1px solid rgba(255,255,255,0.09); border-radius: var(--radius-lg);
+        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012));
+        box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 44px -30px rgba(0,0,0,0.95);
+        padding: 22px 24px; margin-bottom: 18px; }
       .panel-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
       .panel-h h2 { margin: 0; font-size: 16px; font-weight: 800; }
       .panel-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; max-width: 70ch; }
