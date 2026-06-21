@@ -77,7 +77,10 @@
       .inp:hover { border-color: var(--border-strong); }
       .inp:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
       textarea.inp { resize: vertical; min-height: 76px; line-height: 1.5; }
-      select.inp { appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%239fb4ab' stroke-width='2'><path d='M3 5l4 4 4-4'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px; }
+      select.inp { appearance: none; color-scheme: dark; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%239fb4ab' stroke-width='2'><path d='M3 5l4 4 4-4'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px; }
+      /* Force a dark, readable option popup (browsers otherwise render it white
+         with the page's light text colour = invisible). */
+      option, optgroup { background: #11161c; color: #e6edf3; }
       .inp-prefix { position: relative; }
       .inp-prefix > span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px; pointer-events: none; }
       .inp-prefix .inp { padding-left: 26px; }

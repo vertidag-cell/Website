@@ -1496,3 +1496,56 @@
   .dash-app .dsx-up-cta { width: 100%; align-self: stretch; }
   .dash-app .dsx-up-perk { width: 100%; }
 }
+
+/* ============================================================================
+   VISUAL ELEVATION — depth + premium surfaces (appended last so it wins the
+   cascade). Turns the flat near-black theme into a layered, atmospheric app
+   without touching structure. Scoped to .dash-app; blurple stays the only
+   accent. Pairs with the single-header shell above.
+   ============================================================================ */
+
+/* Atmospheric page: a soft blurple aurora up top + depth gradient, fixed so it
+   stays put while the workspace scrolls. Replaces the flat near-black wash. */
+.dash-app {
+  background-color: #06070b;
+  background-image:
+    radial-gradient(1150px 580px at 50% -260px, rgba(88, 101, 242, 0.20), transparent 60%),
+    radial-gradient(820px 600px at 112% -160px, rgba(124, 95, 247, 0.10), transparent 55%),
+    linear-gradient(180deg, #0a0b12 0%, #06070b 58%) !important;
+  background-attachment: fixed;
+}
+
+/* Unified premium card surface: a faint top-light gradient floating over the
+   atmosphere, a crisp hairline, and a soft depth shadow. */
+.dash-app .dsx-card,
+.dash-app .dsx-ov-health,
+.dash-app .dsx-ov-stat,
+.dash-app .dsx-action,
+.dash-app .dash-stat,
+.dash-app .dash-empty-card,
+.dash-app .dash-preview-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.014));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 22px 46px -30px rgba(0, 0, 0, 0.95);
+}
+
+/* Sidebar — a glassy floating panel with a filled, glowing active row. */
+.dash-app .dsx-nav {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 22px 46px -30px rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(8px);
+}
+.dash-app .dsx-nav-item.active {
+  background: linear-gradient(180deg, rgba(88, 101, 242, 0.36), rgba(88, 101, 242, 0.18));
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 8px 18px -10px rgba(88, 101, 242, 0.55);
+}
+.dash-app .dsx-nav-item.active .dsx-nav-ico { color: #fff; }
+
+/* Native dropdowns: force a dark, readable option popup (some browsers render
+   the <option> list white-on-light otherwise — invisible text). */
+.dash-app select { color-scheme: dark; }
+.dash-app select option,
+.dash-app select optgroup { background: #1b1d24; color: #f2f3f5; }
