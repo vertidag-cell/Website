@@ -16,6 +16,15 @@
     <link rel="stylesheet" href="lx-site.css?v=1" />
     <style>
       :root { --accent: var(--red, #2bff9e); }
+      /* Atmospheric storefront backdrop — a soft, brand-adaptive aurora over a
+         deep gradient (uses each store's --accent), fixed while content scrolls.
+         Gives the shop real depth instead of a flat near-black page. */
+      body { background-color: #050608;
+        background-image:
+          radial-gradient(1150px 560px at 50% -240px, color-mix(in srgb, var(--accent) 15%, transparent), transparent 60%),
+          radial-gradient(760px 520px at 110% -120px, color-mix(in srgb, var(--accent) 7%, transparent), transparent 55%),
+          linear-gradient(180deg, #080a0e 0%, #050608 58%);
+        background-attachment: fixed; }
       .store-wrap { max-width: 1040px; margin: 0 auto; padding: 28px 20px 80px; }
 
       .store-hero {
@@ -58,9 +67,12 @@
       .store-more { text-align: center; margin-top: 24px; }
 
       .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
-      .prod { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
-        background: var(--card, rgba(255,255,255,0.05)); transition: border-color .15s, transform .15s; }
-      .prod:hover { border-color: var(--border-strong, rgba(255,255,255,0.18)); transform: translateY(-2px); }
+      .prod { display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; overflow: hidden;
+        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.014));
+        box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 18px 40px -28px rgba(0,0,0,0.95);
+        transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
+      .prod:hover { border-color: color-mix(in srgb, var(--accent) 42%, transparent); transform: translateY(-3px);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 24px 50px -26px color-mix(in srgb, var(--accent) 30%, #000); }
       .prod-img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #15151c; display: block; }
       .prod-img.prod-fb { display: grid; place-items: center; font-weight: 900; font-size: 34px; letter-spacing: -.02em;
         color: color-mix(in srgb, var(--accent) 70%, #fff);
