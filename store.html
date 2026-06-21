@@ -334,50 +334,6 @@
       }
       @media (prefers-reduced-motion: reduce) { .prod, .cart-panel, .pm-panel, .store-toast { transition: none !important; animation: none !important; } }
 
-      /* ============================================================
-         LIGHT SAAS STOREFRONT — overrides the dark base. Clean, airy
-         white surfaces + neutral grays; the store's brand colour stays
-         the accent. Tokens + color on <body> so body-mounted overlays
-         (cart, modal, checkout, toast) inherit too.
-         ============================================================ */
-      body {
-        --bg: #f4f5f7; --bg-soft: #eef0f3; --card: #ffffff; --surface: #ffffff;
-        --text: #101418; --text-muted: #5a6573; --text-dim: #8b94a1;
-        --border: rgba(16,20,24,0.10); --border-strong: rgba(16,20,24,0.17);
-        color: var(--text);
-        background-color: #f4f5f7;
-        background-image:
-          radial-gradient(1150px 560px at 50% -240px, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
-          linear-gradient(180deg, #f7f8fa 0%, #f1f3f5 58%);
-      }
-      /* Product cards + hero + state panels → white. */
-      .prod { background: #ffffff; border-color: rgba(16,20,24,0.09);
-        box-shadow: 0 1px 2px rgba(16,20,24,0.05), 0 14px 30px -24px rgba(16,20,24,0.18); }
-      .prod:hover { border-color: color-mix(in srgb, var(--accent) 45%, rgba(16,20,24,0.18));
-        box-shadow: 0 2px 6px rgba(16,20,24,0.07), 0 20px 42px -22px color-mix(in srgb, var(--accent) 22%, rgba(16,20,24,0.5)); }
-      .store-hero { background: radial-gradient(700px 260px at 50% -50px, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), #ffffff;
-        border-color: rgba(16,20,24,0.09); box-shadow: 0 1px 2px rgba(16,20,24,0.05), 0 16px 36px -26px rgba(16,20,24,0.18); }
-      .store-state { background: radial-gradient(520px 200px at 50% -24px, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), #ffffff; border-color: rgba(16,20,24,0.09); }
-      /* Image placeholders / thumbnails on light. */
-      .prod-img { background: #eef0f3; }
-      .cart-thumb { background: #eef0f3; }
-      .prod-img.prod-fb, .cart-thumb.cart-thumb-fb, .pm-rel-fb, .store-logo.store-fb {
-        color: color-mix(in srgb, var(--accent) 78%, #000);
-        background: radial-gradient(120% 120% at 28% 18%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 62%), #eef1f4; }
-      .pm-img { background: #eef0f3; }
-      /* Overlays → white floating surfaces. */
-      .cart-panel { background: #ffffff; border-left: 1px solid rgba(16,20,24,0.10); box-shadow: -30px 0 70px -24px rgba(16,20,24,0.28); }
-      .checkout-panel { background: #ffffff; border-color: rgba(16,20,24,0.10); box-shadow: 0 32px 80px -28px rgba(16,20,24,0.35); }
-      .pm-panel { background: #ffffff; border-color: rgba(16,20,24,0.12); box-shadow: 0 36px 90px -30px rgba(16,20,24,0.38); }
-      /* Controls. */
-      .store-search, .store-sort, .cart-promo-input, .pm-comment, .co-input, .qbtn, .pm-qd, .pm-var { background: #ffffff; border-color: rgba(16,20,24,0.16); }
-      .store-sort, select { color-scheme: light; }
-      option, .store-sort option, .pm-rev-sort option { background: #ffffff; color: #101418; }
-      .store-cat { background: #ffffff; border-color: rgba(16,20,24,0.12); }
-      .store-toast { background: #ffffff; color: #101418; border-color: rgba(16,20,24,0.14); box-shadow: 0 16px 40px rgba(16,20,24,0.22); }
-      .pm-x, .pm-share, .pm-nav { background: rgba(16,20,24,0.55); color: #fff; }
-      .pm-x:hover, .pm-share:hover, .pm-nav:hover { background: rgba(16,20,24,0.72); }
-
       /* ── Category nav icons + grouped browse sections ─────────────────────── */
       .store-cat { display: inline-flex; align-items: center; gap: 7px; }
       .store-cat-ico { width: 18px; height: 18px; border-radius: 5px; object-fit: cover; flex: none; }
@@ -385,15 +341,15 @@
       .store-section { display: flex; align-items: center; gap: 14px; margin: 30px 0 16px; }
       .store-section:first-child { margin-top: 6px; }
       .store-sec-img { width: 52px; height: 52px; border-radius: 13px; object-fit: cover; flex: none;
-        background: #eef0f3; border: 1px solid rgba(16,20,24,0.08); }
+        background: var(--bg-soft); border: 1px solid var(--border); }
       .store-sec-img.store-fb { display: grid; place-items: center; font-weight: 800; font-size: 20px;
-        color: color-mix(in srgb, var(--accent) 78%, #000);
-        background: radial-gradient(120% 120% at 28% 18%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 62%), #eef1f4; }
+        color: var(--accent);
+        background: radial-gradient(120% 120% at 28% 18%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%), var(--bg-elev); }
       .store-sec-text { flex: 1; min-width: 0; }
       .store-sec-title { margin: 0; font-size: 1.18rem; font-weight: 800; letter-spacing: -0.01em; color: var(--text); }
       .store-sec-desc { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
       .store-sec-count { flex: none; font-size: 12.5px; font-weight: 600; color: var(--text-muted);
-        padding: 4px 11px; border-radius: 999px; border: 1px solid rgba(16,20,24,0.10); background: #ffffff; }
+        padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); }
       .store-subhead { display: flex; align-items: center; gap: 9px; margin: 18px 0 11px; padding-left: 2px; }
       .store-subhead-ico { width: 22px; height: 22px; border-radius: 6px; object-fit: cover; flex: none; }
       .store-subhead-name { font-size: 0.95rem; font-weight: 700; color: var(--text);
