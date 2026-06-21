@@ -382,6 +382,53 @@
         display: grid; place-items: center; font-weight: 800; font-size: 13px; color: var(--accent); background: var(--accent-tint); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
 
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+      /* ============================================================
+         LIGHT SAAS THEME — overrides the dark base. Clean, airy,
+         neutral grays + a readable emerald accent. Tokens live on <body>
+         so body-mounted overlays (drawer, scrim, toast) inherit too.
+         ============================================================ */
+      body {
+        --bg: #f4f5f7; --bg-soft: #eef0f3; --bg-elev: #ffffff; --card: #ffffff;
+        --text: #101418; --text-muted: #5a6573; --text-dim: #8b94a1;
+        --border: rgba(16,20,24,0.10); --border-strong: rgba(16,20,24,0.17);
+        --accent: #0ea371; --accent-soft: #0c9466; --accent-deep: #0a8259;
+        --accent-tint: rgba(14,163,113,0.12); --accent-glow: rgba(14,163,113,0.28);
+        color: var(--text); /* descendants without an explicit color inherit dark text */
+        background: #f4f5f7;
+      }
+      .sm-app {
+        background-color: #f4f5f7;
+        background-image:
+          radial-gradient(1100px 520px at 50% -240px, rgba(14,163,113,0.07), transparent 60%),
+          linear-gradient(180deg, #f7f8fa 0%, #f1f3f5 60%);
+      }
+      /* Solid white surfaces with hairline borders + soft gray shadows (bare
+         selectors so they apply to body-mounted overlays too). */
+      .panel, .pcard, .gstat, .stat, .kpi, .hero-rev, .drawer {
+        background: #ffffff; border-color: rgba(16,20,24,0.09);
+        box-shadow: 0 1px 2px rgba(16,20,24,0.05), 0 14px 30px -24px rgba(16,20,24,0.20);
+      }
+      .pcard:hover { box-shadow: 0 2px 4px rgba(16,20,24,0.06), 0 18px 36px -22px rgba(16,20,24,0.22); }
+      .kpi::before { background: radial-gradient(120% 90% at 0% 0%, rgba(14,163,113,0.08), transparent 58%); }
+      .drawer { border-left: 1px solid rgba(16,20,24,0.12); box-shadow: -30px 0 70px -24px rgba(16,20,24,0.30); }
+      /* Sidebar + topbar. */
+      .sm-side { background: #ffffff; border-right: 1px solid rgba(16,20,24,0.09); }
+      .sm-topbar { background: color-mix(in srgb, #f4f5f7 80%, transparent); border-bottom: 1px solid rgba(16,20,24,0.09); }
+      .sm-nav button.active { background: var(--accent-tint); color: var(--accent-deep); }
+      /* Inputs / selects readable on white. */
+      .inp { background: #ffffff; border-color: rgba(16,20,24,0.16); }
+      select.inp { color-scheme: light; }
+      option, optgroup { background: #ffffff; color: #101418; }
+      /* Switch off-state needs contrast on white. */
+      .sw .track { background: #d3d8df; border-color: rgba(16,20,24,0.12); }
+      /* Overlays, empty states, misc surfaces. */
+      .toast { background: #ffffff; color: #101418; box-shadow: 0 16px 40px rgba(16,20,24,0.22); }
+      .empty { background: #ffffff; border-color: rgba(16,20,24,0.16); }
+      .topp .bar { background: #e9ecf0; }
+      .ro-btn { background: #ffffff; }
+      .btn-primary { color: #ffffff; }
+      .qbtn, .cf-del { background: #f1f3f5; }
     </style>
   </head>
   <body>
