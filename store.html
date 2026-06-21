@@ -146,13 +146,15 @@
       /* Cart / orders modal */
       .cart-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px);
         display: flex; justify-content: flex-end; }
-      .cart-panel { width: min(440px, 100%); height: 100%; overflow-y: auto; background: var(--bg, #0b0f1a);
-        border-left: 1px solid var(--border); padding: 22px 20px 30px; animation: slideIn .2s ease; }
+      .cart-panel { width: min(440px, 100%); height: 100%; overflow-y: auto;
+        background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0) 220px), var(--bg, #0b0f1a);
+        border-left: 1px solid rgba(255,255,255,0.10); box-shadow: -30px 0 70px -24px rgba(0,0,0,0.7); padding: 22px 20px 30px; animation: slideIn .2s ease; }
       @keyframes slideIn { from { transform: translateX(24px); opacity: .6; } to { transform: none; opacity: 1; } }
       /* Checkout details dialog (delivery fields) — centered card. */
       .checkout-overlay { justify-content: center; align-items: center; padding: 20px; }
-      .checkout-panel { width: min(440px, 100%); max-height: 90vh; overflow-y: auto; background: var(--bg, #0b0f1a);
-        border: 1px solid var(--border); border-radius: 18px; padding: 22px 22px 24px; animation: popIn .2s ease; }
+      .checkout-panel { width: min(440px, 100%); max-height: 90vh; overflow-y: auto;
+        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0) 200px), var(--bg, #0b0f1a);
+        border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; box-shadow: 0 32px 80px -28px rgba(0,0,0,0.85); padding: 22px 22px 24px; animation: popIn .2s ease; }
       @keyframes popIn { from { transform: scale(.96); opacity: .4; } to { transform: none; opacity: 1; } }
       .co-intro { color: var(--text-muted, #a1a1aa); font-size: 13px; margin: 0 0 16px; }
       .co-fields { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
@@ -231,7 +233,9 @@
 
       /* Product detail modal */
       .pm-overlay { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 40px 16px; }
-      .pm-panel { position: relative; width: min(560px, 100%); background: var(--bg, #0b0f1a); border: 1px solid var(--border-strong, rgba(255,255,255,0.16)); border-radius: 18px; overflow: hidden; animation: slideIn .2s ease; }
+      .pm-panel { position: relative; width: min(560px, 100%);
+        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0) 220px), var(--bg, #0b0f1a);
+        border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; box-shadow: 0 36px 90px -30px rgba(0,0,0,0.88); overflow: hidden; animation: slideIn .2s ease; }
       .pm-x { position: absolute; top: 12px; right: 12px; z-index: 2; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(0,0,0,0.5); color: #fff; font-size: 15px; cursor: pointer; }
       .pm-share { position: absolute; top: 12px; right: 52px; z-index: 2; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(0,0,0,0.5); color: #fff; font-size: 14px; cursor: pointer; }
       .pm-share:hover, .pm-x:hover { background: rgba(0,0,0,0.7); }
