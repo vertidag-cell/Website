@@ -117,7 +117,7 @@
     { id: 2, product_id: 3, product_name: "Giga lvl 150 (imprinted)", user_id: "112", username: "RexQueen", rating: 4, comment: "Delivered in-game within the hour.", status: "published", created_at: "2026-06-17 14:00:00" },
     { id: 3, product_id: 4, product_name: "Starter Kit", user_id: "113", username: "MeshGod", rating: 2, comment: "Wanted more element in the kit.", status: "hidden", created_at: "2026-06-16 09:00:00" },
   ];
-  var DEMO_CFG = { guild_id: gid, enabled: true, title: "Velated PVP Store", description: "Donor ranks, kits and in-game items for the cluster.", announcement: "🔥 Summer sale — 25% off all ranks this weekend!", currency: "GBP", accept_money: true, accept_credits: true, orders_channel_id: "10", staff_role_ids: ["4"], banner_url: null, checkout_fields: [{ id: "ign", label: "In-game character name", required: true, placeholder: "e.g. RexQueen" }, { id: "tribe", label: "Tribe name", required: false, placeholder: "" }] };
+  var DEMO_CFG = { guild_id: gid, enabled: true, title: "Velated PVP Store", description: "Donor ranks, kits and in-game items for the cluster.", announcement: "🔥 Summer sale — 25% off all ranks this weekend!", currency: "GBP", accept_money: true, accept_credits: true, orders_channel_id: "10", staff_role_ids: ["4"], banner_url: null, accent_color: null, checkout_fields: [{ id: "ign", label: "In-game character name", required: true, placeholder: "e.g. RexQueen" }, { id: "tribe", label: "Tribe name", required: false, placeholder: "" }] };
   var DEMO_SERIES = (function () {
     var m = [18, 24, 12, 30, 22, 9.99, 40, 35, 28, 52, 44, 60, 38, 74], cr = [0, 5000, 0, 8000, 2500, 0, 5000, 12000, 0, 8000, 5000, 0, 2500, 12000];
     return m.map(function (v, i) { return { date: "d" + i, money: v, credits: cr[i], orders: Math.round(v / 9) + (cr[i] ? 1 : 0) }; });
@@ -1114,6 +1114,8 @@
     var desc = ta({ value: cfg.description || "", maxlength: 1000, placeholder: "Shown under the store name" });
     var announce = inp({ type: "text", value: cfg.announcement || "", maxlength: 280, placeholder: "🔥 Summer sale — 25% off ranks!" });
     var banner = inp({ type: "url", value: cfg.banner_url || "", placeholder: "https://…/banner.png" });
+    var accentOn = swRow("Custom storefront colour", "Theme the shop with your own accent — off uses your server brand colour", cfg.accent_color != null);
+    var accentPick = inp({ type: "color", value: cfg.accent_color || "#2bff9e", style: { width: "60px", height: "40px", padding: "3px", cursor: "pointer", borderRadius: "10px" } });
     var ordersCh = sel([["", "— none —"]].concat(S.channels.map(function (ch) { return [ch.id, "#" + (ch.name || ch.id)]; })), cfg.orders_channel_id || "");
     var staff = el("select", { class: "inp", multiple: true, style: { minHeight: "120px" } }, S.roles.map(function (r) { return el("option", { value: r.id, selected: (cfg.staff_role_ids || []).indexOf(r.id) >= 0 }, r.name); }));
 
@@ -1145,7 +1147,7 @@
       save.disabled = true;
       api(A("/store/config"), { method: "POST", body: {
         enabled: open.input.checked, accept_money: accM.input.checked, accept_credits: accC.input.checked, currency: currency.value,
-        title: title.value.trim() || null, description: desc.value.trim() || null, announcement: announce.value.trim() || null, banner_url: banner.value.trim() || null,
+        title: title.value.trim() || null, description: desc.value.trim() || null, announcement: announce.value.trim() || null, banner_url: banner.value.trim() || null, accent_color: accentOn.input.checked ? accentPick.value : null,
         orders_channel_id: ordersCh.value || null, staff_role_ids: Array.prototype.map.call(staff.selectedOptions, function (o) { return o.value; }),
         checkout_fields: cfRows.filter(function (f) { return (f.label || "").trim(); }).map(function (f) { return { label: f.label.trim(), required: !!f.required, placeholder: (f.placeholder || "").trim() }; }),
       } }).then(function (r) { save.disabled = false; if (!r.ok) { toast((r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save", "err"); return; } S.cfg = r.body.config; toast("Settings saved"); render(); });
@@ -1162,7 +1164,8 @@
       el("p", { class: "panel-sub" }, "How the public store looks and what it accepts."),
       open.node, accM.node, accC.node,
       el("div", { class: "grid2", style: { marginTop: "14px" } }, field("Currency", currency), field("Title", title)),
-      field("Description", desc), field("Announcement banner", announce, { hint: "Optional, a short highlighted message across the top of the store" }), field("Banner image URL", banner, { hint: "Optional, shown across the top of the store" })));
+      field("Description", desc), field("Announcement banner", announce, { hint: "Optional, a short highlighted message across the top of the store" }), field("Banner image URL", banner, { hint: "Optional, shown across the top of the store" }),
+      accentOn.node, field("Storefront accent colour", accentPick, { hint: "Used across the public shop when 'Custom storefront colour' is on" })));
     c.append(panel(panelHead("Staff & delivery"),
       el("p", { class: "panel-sub" }, "Where manual orders go and who can fulfil them."),
       field("Orders channel", ordersCh, { hint: "Manual delivery orders are posted here for staff" }),
