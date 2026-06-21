@@ -452,6 +452,56 @@
     });
     return out.sort(function (a, b) { return a.localeCompare(b); });
   }
+  // ── nested categories (store_categories tree) ───────────────────────────────
+  // The store uses real categories when the payload includes a non-empty tree;
+  // otherwise we fall back to the legacy free-text `category` chips below so
+  // existing stores keep working until their owner creates real categories.
+  function treeCats() { return !!(S.categories && S.categories.length); }
+  var _catIndex = null;
+  function buildCatIndex() {
+    var byId = {}, parentTop = {};
+    (S.categories || []).forEach(function (t) {
+      byId[t.id] = t;
+      (t.children || []).forEach(function (ch) { byId[ch.id] = ch; parentTop[ch.id] = t.id; });
+    });
+    _catIndex = { byId: byId, parentTop: parentTop, tops: S.categories || [] };
+    return _catIndex;
+  }
+  // "Top · Sub" (or just the name) for display on a card.
+  function catFullName(id) {
+    if (!_catIndex) return '';
+    var n = _catIndex.byId[id]; if (!n) return '';
+    var topId = _catIndex.parentTop[id];
+    if (topId && _catIndex.byId[topId]) return _catIndex.byId[topId].name + ' · ' + n.name;
+    return n.name;
+  }
+  // The category label shown on a product card: tree name when assigned, else
+  // the legacy free-text category.
+  function productCatLabel(p) {
+    if (treeCats() && p.category_id != null && _catIndex && _catIndex.byId[p.category_id]) return catFullName(p.category_id);
+    return p.category || '';
+  }
+  // True when product p belongs to the selected top-level category id (its own
+  // products plus those of its sub-categories).
+  function inSelectedCat(p, topId) {
+    topId = parseInt(topId, 10);
+    if (p.category_id === topId) return true;
+    return !!(_catIndex && _catIndex.parentTop[p.category_id] === topId);
+  }
+  // A product is uncategorised when it has no category_id that resolves in the tree.
+  function isUncategorised(p) { return !(p.category_id != null && _catIndex && _catIndex.byId[p.category_id]); }
+  // Apply the active sort to a list (shared by flat + grouped views).
+  function sortList(list) {
+    var v = S.view, l = list.slice();
+    if (v.sort === 'price_asc') l.sort(function (a, b) { return priceKey(a) - priceKey(b); });
+    else if (v.sort === 'price_desc') l.sort(function (a, b) { return priceKey(b) - priceKey(a); });
+    else if (v.sort === 'name') l.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    else if (v.sort === 'sales') l.sort(function (a, b) { return (b.soldCount || 0) - (a.soldCount || 0); });
+    else if (v.sort === 'newest') l.sort(function (a, b) { return (b.id || 0) - (a.id || 0); });
+    else l.sort(function (a, b) { return (b.featured ? 1 : 0) - (a.featured ? 1 : 0); });
+    return l;
+  }
+
   // money-or-credits sort key (money wins; credits scaled to a rough comparable).
   function priceKey(p) {
     if (p.price_money != null) return Number(p.price_money);
@@ -518,8 +568,9 @@
     var rating = (ratingInner || soldTxt) ? '<div class="prod-social">' + ratingInner + soldTxt + '</div>' : '';
     var varianty = hasVariants(p);
     var disabled = !varianty && !p.inStock;
+    var catLabel = productCatLabel(p);
     return '<div class="prod' + (p.featured ? ' is-feat' : '') + rev + '" data-pid="' + p.id + '" tabindex="0" role="button"' + delay + '>' + img + '<div class="prod-body">' +
-      (p.category ? '<div class="prod-cat">' + esc(p.category) + '</div>' : '') +
+      (catLabel ? '<div class="prod-cat">' + esc(catLabel) + '</div>' : '') +
       '<h3 class="prod-name">' + esc(p.name) + '</h3>' +
       rating +
       (p.description ? '<p class="prod-desc">' + esc(p.description) + '</p>' : '') +
@@ -554,47 +605,8 @@
   // Re-render just the results grid for the current search/category/sort.
   // `more` = true keeps growing the visible page (Load more); otherwise resets.
   var PAGE = 24;
-  function renderResults(more) {
-    var box = document.getElementById('store-results'); if (!box) return;
-    S._shown = more ? (S._shown || PAGE) + PAGE : PAGE;
-    updateUrl();
-    var v = S.view, q = (v.q || '').trim().toLowerCase();
-    var list = S.products.filter(function (p) {
-      if (v.cat && (p.category || '') !== v.cat) return false;
-      if (q) {
-        var hay = (String(p.name || '') + ' ' + String(p.description || '') + ' ' + String(p.category || '')).toLowerCase();
-        if (hay.indexOf(q) < 0) return false;
-      }
-      return true;
-    });
-    if (v.sort === 'price_asc') list.sort(function (a, b) { return priceKey(a) - priceKey(b); });
-    else if (v.sort === 'price_desc') list.sort(function (a, b) { return priceKey(b) - priceKey(a); });
-    else if (v.sort === 'name') list.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
-    else if (v.sort === 'sales') list.sort(function (a, b) { return (b.soldCount || 0) - (a.soldCount || 0); }); // best selling
-    else if (v.sort === 'newest') list.sort(function (a, b) { return (b.id || 0) - (a.id || 0); }); // newest first
-    else list.sort(function (a, b) { return (b.featured ? 1 : 0) - (a.featured ? 1 : 0); }); // featured first
-
-    if (!list.length) {
-      box.innerHTML = '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>No matches</h2><p>Nothing matches your search or filter.</p><button type="button" class="btn btn-outline" id="store-clear">Clear filters</button></div>';
-      var cb = document.getElementById('store-clear');
-      if (cb) cb.addEventListener('click', function () {
-        S.view = { q: '', cat: '', sort: 'featured' };
-        var se = document.getElementById('store-search'); if (se) se.value = '';
-        var so = document.getElementById('store-sort'); if (so) so.value = 'featured';
-        root.querySelectorAll('.store-cat').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-cat') === ''); });
-        renderResults();
-      });
-      return;
-    }
-    var shown = Math.min(S._shown, list.length);
-    var slice = list.slice(0, shown);
-    box.innerHTML = '<div class="store-count">' + (shown < list.length ? 'Showing ' + shown + ' of ' + list.length : list.length + ' ' + (list.length === 1 ? 'product' : 'products')) + '</div>' +
-      '<div class="store-grid">' + slice.map(productCardHtml).join('') + '</div>' +
-      (shown < list.length ? '<div class="store-more"><button type="button" class="btn btn-outline" id="store-loadmore">Load more (' + (list.length - shown) + ')</button></div>' : '');
-    S._revealed = true; // animate only the first paint
-    var lm = document.getElementById('store-loadmore');
-    if (lm) lm.addEventListener('click', function () { renderResults(true); });
-    wireImgFallbacks(box);
+  // Wire add-to-cart buttons + card open/keyboard handlers inside a container.
+  function wireGridEvents(box) {
     box.querySelectorAll('.prod-btn').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -609,6 +621,105 @@
       card.addEventListener('click', function (e) { if (!e.target.closest('.prod-btn')) open(); });
       card.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
     });
+  }
+  function clearFiltersHandler() {
+    S.view = { q: '', cat: '', sort: 'featured' };
+    var se = document.getElementById('store-search'); if (se) se.value = '';
+    var so = document.getElementById('store-sort'); if (so) so.value = 'featured';
+    root.querySelectorAll('.store-cat').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-cat') === ''); });
+    renderResults();
+  }
+  function sectionHeaderHtml(cat, count) {
+    var img = cat.image_url
+      ? '<img class="store-sec-img" src="' + esc(cat.image_url) + '" alt="" loading="lazy" data-letter="' + initial(cat.name) + '">'
+      : '<div class="store-sec-img store-fb">' + initial(cat.name) + '</div>';
+    return '<div class="store-section" id="cat-' + (cat.id || 'other') + '">' + img +
+      '<div class="store-sec-text"><h2 class="store-sec-title">' + esc(cat.name) + '</h2>' +
+      (cat.description ? '<p class="store-sec-desc">' + esc(cat.description) + '</p>' : '') +
+      '</div><span class="store-sec-count">' + count + ' item' + (count === 1 ? '' : 's') + '</span></div>';
+  }
+  function renderResults(more) {
+    var box = document.getElementById('store-results'); if (!box) return;
+    updateUrl();
+    var v = S.view, q = (v.q || '').trim().toLowerCase();
+    // Grouped browse: only when the store has real categories and the buyer
+    // isn't searching. A search always flattens to one ranked result grid.
+    if (treeCats() && !q) { renderGrouped(box); return; }
+
+    S._shown = more ? (S._shown || PAGE) + PAGE : PAGE;
+    var list = sortList(S.products.filter(function (p) {
+      if (v.cat) {
+        if (treeCats()) { if (!inSelectedCat(p, v.cat)) return false; }
+        else if ((p.category || '') !== v.cat) return false;
+      }
+      if (q) {
+        var hay = (String(p.name || '') + ' ' + String(p.description || '') + ' ' + String(productCatLabel(p) || '')).toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    }));
+
+    if (!list.length) {
+      box.innerHTML = '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>No matches</h2><p>Nothing matches your search or filter.</p><button type="button" class="btn btn-outline" id="store-clear">Clear filters</button></div>';
+      var cb = document.getElementById('store-clear');
+      if (cb) cb.addEventListener('click', clearFiltersHandler);
+      return;
+    }
+    var shown = Math.min(S._shown, list.length);
+    var slice = list.slice(0, shown);
+    box.innerHTML = '<div class="store-count">' + (shown < list.length ? 'Showing ' + shown + ' of ' + list.length : list.length + ' ' + (list.length === 1 ? 'product' : 'products')) + '</div>' +
+      '<div class="store-grid">' + slice.map(productCardHtml).join('') + '</div>' +
+      (shown < list.length ? '<div class="store-more"><button type="button" class="btn btn-outline" id="store-loadmore">Load more (' + (list.length - shown) + ')</button></div>' : '');
+    S._revealed = true; // animate only the first paint
+    var lm = document.getElementById('store-loadmore');
+    if (lm) lm.addEventListener('click', function () { renderResults(true); });
+    wireImgFallbacks(box);
+    wireGridEvents(box);
+  }
+  // Grouped browse view: one section per top-level category (image + name),
+  // directly-assigned products first, then a labelled sub-group per sub-category
+  // that has products, then an "Other" section for uncategorised products. When
+  // a category chip is selected we drill into just that section.
+  function renderGrouped(box) {
+    var v = S.view, selected = v.cat ? parseInt(v.cat, 10) : null;
+    var sections = [];
+    _catIndex.tops.forEach(function (t) {
+      if (selected && t.id !== selected) return;
+      var direct = sortList(S.products.filter(function (p) { return p.category_id === t.id; }));
+      var subs = [];
+      (t.children || []).forEach(function (ch) {
+        var sp = sortList(S.products.filter(function (p) { return p.category_id === ch.id; }));
+        if (sp.length) subs.push({ cat: ch, products: sp });
+      });
+      if (direct.length || subs.length) sections.push({ cat: t, direct: direct, subs: subs });
+    });
+    var other = selected ? [] : sortList(S.products.filter(isUncategorised));
+
+    if (!sections.length && !other.length) {
+      box.innerHTML = '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>Nothing here yet</h2><p>This category has no products yet.</p><button type="button" class="btn btn-outline" id="store-clear">Show all</button></div>';
+      var cb = document.getElementById('store-clear'); if (cb) cb.addEventListener('click', clearFiltersHandler);
+      return;
+    }
+    var html = '';
+    sections.forEach(function (sec) {
+      var count = sec.direct.length + sec.subs.reduce(function (n, s) { return n + s.products.length; }, 0);
+      html += sectionHeaderHtml(sec.cat, count);
+      if (sec.direct.length) html += '<div class="store-grid">' + sec.direct.map(productCardHtml).join('') + '</div>';
+      sec.subs.forEach(function (sub) {
+        html += '<div class="store-subhead">' +
+          (sub.cat.image_url ? '<img class="store-subhead-ico" src="' + esc(sub.cat.image_url) + '" alt="" loading="lazy">' : '') +
+          '<span class="store-subhead-name">' + esc(sub.cat.name) + '</span><span class="store-subhead-n">' + sub.products.length + '</span></div>' +
+          '<div class="store-grid">' + sub.products.map(productCardHtml).join('') + '</div>';
+      });
+    });
+    if (other.length) {
+      html += sectionHeaderHtml({ name: sections.length ? 'More' : 'All products', image_url: null }, other.length);
+      html += '<div class="store-grid">' + other.map(productCardHtml).join('') + '</div>';
+    }
+    box.innerHTML = html;
+    S._revealed = true;
+    wireImgFallbacks(box);
+    wireGridEvents(box);
   }
   // ── product detail modal (description + reviews + review form) ──────────────
   var _pmKey = null;
@@ -638,7 +749,7 @@
       '<button type="button" class="pm-share" id="pm-share" aria-label="Copy product link" title="Copy link">🔗</button>' +
       '<button type="button" class="pm-x" aria-label="Close">✕</button>' + img +
       '<div class="pm-body">' +
-        (p.category ? '<div class="prod-cat">' + esc(p.category) + '</div>' : '') +
+        (productCatLabel(p) ? '<div class="prod-cat">' + esc(productCatLabel(p)) + '</div>' : '') +
         '<h2 class="pm-name">' + esc(p.name) + '</h2>' +
         '<div class="pm-rating" id="pm-rating"></div>' +
         ((p.soldCount && p.soldCount >= 1) ? '<div class="pm-sold">🔥 ' + fmt(p.soldCount) + ' sold</div>' : '') +
@@ -750,7 +861,8 @@
     var inStock = function (x) { return x.inStock !== false || hasVariants(x); };
     var score = function (x) {
       var s = 0;
-      if (p.category && x.category === p.category) s += 100;
+      if (p.category_id != null && x.category_id === p.category_id) s += 100;
+      else if (p.category && x.category === p.category) s += 100;
       if (x.bestseller) s += 30;
       if (x.featured) s += 20;
       s += Math.min(x.soldCount || 0, 50) / 10;
@@ -853,6 +965,8 @@
   function renderStore(data) {
     S.store = data.store || {};
     S.products = data.products || [];
+    S.categories = data.categories || [];
+    buildCatIndex();
     if (!S.view) S.view = { q: params.get('q') || '', cat: params.get('cat') || '', sort: params.get('sort') || 'featured' };
     var s = S.store;
     // Only accept a valid hex accent (CSS vars can't run script, but stay strict).
@@ -915,7 +1029,15 @@
       '<option value="price_asc">Price: low to high</option>' +
       '<option value="price_desc">Price: high to low</option>' +
       '<option value="name">Name A–Z</option></select></div>';
-    if (cats.length) {
+    if (treeCats()) {
+      // Real categories: a nav of top-level categories (with their icon), each
+      // drilling into that section. "All" shows the full grouped browse.
+      html += '<div class="store-cats"><button type="button" class="store-cat" data-cat="">All</button>' +
+        S.categories.map(function (t) {
+          var ico = t.image_url ? '<img class="store-cat-ico" src="' + esc(t.image_url) + '" alt="">' : '';
+          return '<button type="button" class="store-cat" data-cat="' + t.id + '">' + ico + esc(t.name) + '</button>';
+        }).join('') + '</div>';
+    } else if (cats.length) {
       html += '<div class="store-cats"><button type="button" class="store-cat" data-cat="">All</button>' +
         cats.map(function (c) { return '<button type="button" class="store-cat" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>';
     }
