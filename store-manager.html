@@ -302,6 +302,25 @@
 
       .empty.sm { padding: 26px 16px; } .empty.sm .e-ic { width: 40px; height: 40px; } .empty.sm h3 { font-size: 15px; }
 
+      /* Customers view */
+      .cust-headrow { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--text-dim); padding: 0 2px 8px; }
+      .cust-row { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); }
+      .cust-row:last-child { border-bottom: none; }
+      .cust-rank { flex: none; width: 30px; font-size: 12px; font-weight: 800; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+      .cust-av { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 15px;
+        color: color-mix(in srgb, var(--accent) 72%, #fff);
+        background: radial-gradient(120% 120% at 28% 18%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 62%), linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.015)); }
+      .cust-av.sm { width: 30px; height: 30px; font-size: 13px; }
+      .cust-main { flex: 1; min-width: 0; }
+      .cust-name { font-weight: 700; font-size: 14px; color: var(--text); text-decoration: none; }
+      .cust-name:hover { color: var(--accent); }
+      .cust-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 1px; }
+      .cust-spend { font-weight: 800; font-size: 14px; white-space: nowrap; text-align: right; }
+      .topc-row { display: flex; align-items: center; gap: 10px; }
+      .topc-rank { flex: none; width: 24px; font-size: 12px; font-weight: 800; color: var(--text-dim); }
+      .topc-main { flex: 1; min-width: 0; }
+      .topc-spend { white-space: nowrap; font-size: 13.5px; }
+
       /* Variant / tier manager (inside product editor) */
       .var-mgr { display: flex; flex-direction: column; gap: 8px; }
       .var-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elev); }
@@ -334,6 +353,6 @@
       <div class="state-full"><div class="sk" style="width:min(900px,90vw);height:60vh"></div></div>
     </div>
     <script src="config.js"></script>
-    <script src="store-manager.js?v=30"></script>
+    <script src="store-manager.js?v=31"></script>
   </body>
 </html>

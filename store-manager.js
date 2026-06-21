@@ -52,6 +52,7 @@
     coin: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9.5 9a2.5 2.5 0 0 1 5 0M9.5 9v6M14.5 12H9.5", truck: "M1 3h15v13H1zM16 8h4l3 3v5h-7M5.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM18.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z",
     chart: "M3 3v18h18M7 14l3-3 3 3 5-6", lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
     star: "M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z",
+    customers: "M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM22 19v-2a4 4 0 0 0-3-3.87M16 2.1a4 4 0 0 1 0 7.75",
   };
   function icon(name) {
     var ns = "http://www.w3.org/2000/svg";
@@ -127,6 +128,13 @@
     { name: "Giga lvl 150 (imprinted)", qty: 11, money: 0, credits: 88000 },
     { name: "Starter Kit", qty: 7, money: 34.93, credits: 0 },
   ];
+  var DEMO_CUSTOMERS = [
+    { userId: "111", username: "ApexHunter", orders: 9, money: 184.91, credits: 4000, lastOrderAt: "2026-06-19 14:02:00", firstOrderAt: "2026-03-02 10:00:00" },
+    { userId: "112", username: "RexQueen", orders: 6, money: 74.94, credits: 32000, lastOrderAt: "2026-06-19 12:40:00", firstOrderAt: "2026-04-11 18:20:00" },
+    { userId: "113", username: "MeshGod", orders: 5, money: 99.95, credits: 0, lastOrderAt: "2026-06-18 22:10:00", firstOrderAt: "2026-05-01 09:00:00" },
+    { userId: "114", username: "TribeLeader", orders: 4, money: 59.96, credits: 12000, lastOrderAt: "2026-06-15 08:30:00", firstOrderAt: "2026-05-20 14:00:00" },
+    { userId: "115", username: "DodoWrangler", orders: 2, money: 0, credits: 16000, lastOrderAt: "2026-06-10 11:15:00", firstOrderAt: "2026-06-01 11:15:00" },
+  ];
   function demoResp(path, opts) {
     if (opts && opts.method && opts.method !== "GET") return { ok: true };
     if (/\/me$/.test(path)) return { user: { id: "0", username: "previewowner", globalName: "Preview Owner" } };
@@ -134,8 +142,9 @@
       if (params.get("new") === "1") return { config: Object.assign({}, DEMO_CFG, { title: "My New Store", enabled: false }), recentOrders: [], series: [], topProducts: [], stats: { revenueMoney: 0, revenueCredits: 0, paidOrders: 0, needsDelivery: 0, products: 0, enabledProducts: 0, activeCoupons: 0 } };
       var ser = DEMO_SERIES;
       if (/days=30/.test(path)) { ser = []; for (var di = 0; di < 30; di++) { var b = DEMO_SERIES[di % DEMO_SERIES.length]; ser.push({ date: "d" + di, money: b.money, credits: b.credits, orders: b.orders }); } }
-      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: ser, topProducts: DEMO_TOP, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, activeCoupons: 2 }, inventory: { outOfStock: [{ id: 4, name: "Starter Kit" }], lowStock: [{ id: 3, name: "Giga lvl 150 (imprinted)", stock: 5 }] } };
+      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: ser, topProducts: DEMO_TOP, topCustomers: DEMO_CUSTOMERS.slice(0, 5), stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, customers: DEMO_CUSTOMERS.length, activeCoupons: 2 }, inventory: { outOfStock: [{ id: 4, name: "Starter Kit" }], lowStock: [{ id: 3, name: "Giga lvl 150 (imprinted)", stock: 5 }] } };
     }
+    if (/\/store\/customers/.test(path)) { var cq = decodeURIComponent((path.match(/[?&]q=([^&]*)/) || [])[1] || "").toLowerCase(); return { customers: cq ? DEMO_CUSTOMERS.filter(function (c) { return (c.username || "").toLowerCase().indexOf(cq) >= 0 || String(c.userId).indexOf(cq) >= 0; }) : DEMO_CUSTOMERS }; }
     if (/\/variants/.test(path)) return { variants: DEMO_VARIANTS };
     if (/\/store\/products/.test(path)) return { products: DEMO_PRODUCTS };
     if (/\/store\/coupons/.test(path)) return { coupons: DEMO_COUPONS };
@@ -249,20 +258,21 @@
     if (ov.status === 403 && ov.body && ov.body.error === "premium_required") { return fullState("lock", "Premium required", "The web store is a Premium feature. Unlock it with /subscribe in Discord.", btn("See Premium", { onClick: function () { location.href = "pricing.html"; } })); }
     if (ov.status === 401 || ov.status === 403) { return fullState("lock", "No access", "You don't manage this server, or your session expired.", btn("Back to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); }
     if (!ov.ok) { return fullState("store", "Couldn't load the store", "Please try again in a moment.", btn("Retry", { onClick: function () { location.reload(); } })); }
-    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || []; S.series = ov.body.series || []; S.top = ov.body.topProducts || []; S.inventory = ov.body.inventory || { outOfStock: [], lowStock: [] };
+    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || []; S.series = ov.body.series || []; S.top = ov.body.topProducts || []; S.topCustomers = ov.body.topCustomers || []; S.inventory = ov.body.inventory || { outOfStock: [], lowStock: [] };
     S.products = (res[1].body && res[1].body.products) || [];
     S.roles = (res[2].body && res[2].body.roles) || [];
     S.channels = (res[3].body && res[3].body.channels) || [];
     render();
   }).catch(function (e) { if (e !== "redirect") fullState("store", "Couldn't reach the backend", "Please try again shortly.", btn("Retry", { onClick: function () { location.reload(); } })); });
 
-  function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; S.inventory = r.body.inventory || { outOfStock: [], lowStock: [] }; } }); }
+  function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; S.topCustomers = r.body.topCustomers || []; S.inventory = r.body.inventory || { outOfStock: [], lowStock: [] }; } }); }
   function refreshProducts() { return api(A("/store/products")).then(function (r) { S.products = (r.body && r.body.products) || []; }); }
 
   // ── shell render ──────────────────────────────────────────────────────────
-  var NAV = [["overview", "Overview", "overview"], ["products", "Products", "products"], ["orders", "Orders", "orders"], ["reviews", "Reviews", "star"], ["coupons", "Coupons", "coupons"], ["settings", "Settings", "settings"], ["payments", "Payments", "payments"]];
+  var NAV = [["overview", "Overview", "overview"], ["products", "Products", "products"], ["orders", "Orders", "orders"], ["customers", "Customers", "customers"], ["reviews", "Reviews", "star"], ["coupons", "Coupons", "coupons"], ["settings", "Settings", "settings"], ["payments", "Payments", "payments"]];
   var SECTION_META = {
     overview: ["Overview", "Your store at a glance"], products: ["Products", "What you sell"], orders: ["Orders", "Fulfil and refund purchases"],
+    customers: ["Customers", "Who buys from your store"],
     reviews: ["Reviews", "Customer ratings — hide anything unfair"],
     coupons: ["Coupons", "Discount codes for checkout"], settings: ["Settings", "Store name, currency, payment rails, staff"], payments: ["Payments", "Connect a provider to take real money"],
   };
@@ -305,6 +315,7 @@
     if (S.section === "overview") renderOverview(content);
     else if (S.section === "products") renderProducts(content);
     else if (S.section === "orders") renderOrders(content);
+    else if (S.section === "customers") renderCustomers(content);
     else if (S.section === "reviews") renderReviews(content);
     else if (S.section === "coupons") renderCoupons(content);
     else if (S.section === "settings") renderSettings(content);
@@ -469,6 +480,24 @@
       top.append(list);
     }
 
+    // Top customers by spend (mirrors the SellAuth-style "top customers").
+    var cust = panel(panelHead("Top customers", (S.topCustomers && S.topCustomers.length) ? btn("View all", { variant: "btn-ghost", onClick: function () { S.section = "customers"; render(); } }) : null));
+    if (!S.topCustomers || !S.topCustomers.length) cust.append(emptyState("customers", "No customers yet", "Your biggest spenders will rank here once orders come in.", null, true));
+    else {
+      var clist = el("div", { class: "topp" });
+      S.topCustomers.forEach(function (cu, i) {
+        var spend = cu.money > 0 ? money(cu.money, ccy) : cu.credits > 0 ? "🪙 " + fmt(cu.credits) : "—";
+        clist.append(el("div", { class: "topc-row" },
+          el("span", { class: "topc-rank" }, "#" + (i + 1)),
+          el("div", { class: "cust-av sm" }, initial(cu.username || "?")),
+          el("div", { class: "topc-main" },
+            el("a", { class: "cust-name", href: "https://discord.com/users/" + cu.userId, target: "_blank", rel: "noopener" }, "@" + (cu.username || cu.userId)),
+            el("div", { class: "cust-sub" }, cu.orders + " order" + (cu.orders === 1 ? "" : "s"))),
+          el("b", { class: "topc-spend" }, spend)));
+      });
+      cust.append(clist);
+    }
+
     var ord = panel(panelHead("Recent orders", S.recent.length ? btn("View all", { variant: "btn-ghost", onClick: function () { S.section = "orders"; render(); } }) : null));
     if (!S.recent.length) ord.append(emptyState("orders", "No orders yet", "Purchases will appear here the moment customers check out.", null, true));
     else S.recent.forEach(function (o) {
@@ -478,7 +507,8 @@
         el("div", { style: { display: "flex", alignItems: "center", gap: "10px" } }, orderBadge(o.status), el("b", null, total))));
     });
 
-    c.append(reveal(el("div", { class: "ov-cols" }, top, ord)));
+    c.append(reveal(el("div", { class: "ov-cols" }, top, cust)));
+    c.append(reveal(ord));
   }
   function orderBadge(status) {
     var m = { completed: ["Completed", "ok"], paid: ["Paid", "ok"], needs_delivery: ["Needs delivery", "warn"], pending: ["Pending", "dim"], cancelled: ["Cancelled", "dim"], refunded: ["Refunded", "info"], failed: ["Failed", "dim"] };
@@ -841,6 +871,58 @@
 
   // ── REVIEWS (moderation) ─────────────────────────────────────────────────────
   function starStr(n) { n = Math.max(0, Math.min(5, n | 0)); return "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n); }
+  function renderCustomers(c) {
+    var wrap = panel(panelHead("Customers", btn("Export CSV", { variant: "btn-outline", style: { padding: "6px 13px", fontSize: "13px" }, onClick: function () { exportCustomers(); } })));
+    c.append(wrap);
+    var search = inp({ type: "search", placeholder: "Search by name or Discord ID…", style: { margin: "4px 0 12px" } });
+    var listBox = el("div");
+    wrap.append(search, listBox);
+    var loaded = [];
+    var ccy = function () { return S.cfg.currency || "GBP"; };
+    function spendOf(cust) {
+      var parts = [];
+      if (cust.money) parts.push(money(cust.money, ccy()));
+      if (cust.credits) parts.push("🪙 " + fmt(cust.credits));
+      return parts.length ? parts.join("  ·  ") : "—";
+    }
+    function row(cust, rank) {
+      var av = el("div", { class: "cust-av" }, initial(cust.username || "?"));
+      var nm = el("a", { class: "cust-name", href: "https://discord.com/users/" + cust.userId, target: "_blank", rel: "noopener" }, "@" + (cust.username || cust.userId));
+      var last = cust.lastOrderAt ? new Date((cust.lastOrderAt || "").replace(" ", "T") + "Z").toLocaleDateString() : "";
+      return el("div", { class: "cust-row" },
+        el("span", { class: "cust-rank" }, "#" + rank),
+        av,
+        el("div", { class: "cust-main" }, nm,
+          el("div", { class: "cust-sub" }, cust.orders + " order" + (cust.orders === 1 ? "" : "s") + (last ? "  ·  last " + last : ""))),
+        el("div", { class: "cust-spend" }, spendOf(cust)));
+    }
+    function renderRows() {
+      clear(listBox);
+      var q = search.value.trim().toLowerCase();
+      var rows = q ? loaded.filter(function (x) { return (x.username || "").toLowerCase().indexOf(q) >= 0 || String(x.userId).indexOf(q) >= 0; }) : loaded;
+      if (!rows.length) { listBox.append(emptyState("customers", q ? "No matching customers" : "No customers yet", q ? "Try a different name or ID." : "Customers appear here as soon as people buy from your store.", null, true)); return; }
+      listBox.append(el("div", { class: "cust-headrow" }, el("span", null, rows.length + " customer" + (rows.length === 1 ? "" : "s")), el("span", null, "Total spent")));
+      rows.forEach(function (x, i) { listBox.append(row(x, i + 1)); });
+    }
+    function exportCustomers() {
+      if (!loaded.length) { toast("No customers to export", "err"); return; }
+      function cell(v) { v = v == null ? "" : String(v); return '"' + v.replace(/"/g, '""') + '"'; }
+      var rows = [["Discord ID", "Username", "Orders", "Money spent", "Currency", "Credits spent", "First order", "Last order"].map(cell).join(",")];
+      loaded.forEach(function (x) {
+        rows.push([x.userId, x.username || "", x.orders, x.money != null ? x.money : "", ccy(), x.credits != null ? x.credits : "", (x.firstOrderAt || "").replace("T", " ").slice(0, 19), (x.lastOrderAt || "").replace("T", " ").slice(0, 19)].map(cell).join(","));
+      });
+      var blob = new Blob([rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = el("a", { href: url, download: "customers.csv" });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      toast("CSV exported");
+    }
+    search.addEventListener("input", renderRows);
+    clear(listBox); listBox.append(el("div", { class: "sk", style: { height: "62px", marginBottom: "8px" } }), el("div", { class: "sk", style: { height: "62px" } }));
+    api(A("/store/customers")).then(function (r) { loaded = (r.body && r.body.customers) || []; renderRows(); });
+  }
+
   function renderReviews(c) {
     var wrap = panel(panelHead("Reviews"), el("p", { class: "panel-sub" }, "Ratings buyers left on your products. Hide anything unfair — hidden reviews drop out of the public score."));
     c.append(wrap);
