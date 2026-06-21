@@ -139,10 +139,10 @@
     if (opts && opts.method && opts.method !== "GET") return { ok: true };
     if (/\/me$/.test(path)) return { user: { id: "0", username: "previewowner", globalName: "Preview Owner" } };
     if (/\/store\/overview/.test(path)) {
-      if (params.get("new") === "1") return { config: Object.assign({}, DEMO_CFG, { title: "My New Store", enabled: false }), recentOrders: [], series: [], topProducts: [], stats: { revenueMoney: 0, revenueCredits: 0, paidOrders: 0, needsDelivery: 0, products: 0, enabledProducts: 0, activeCoupons: 0 } };
+      if (params.get("new") === "1") return { config: Object.assign({}, DEMO_CFG, { title: "My New Store", enabled: false }), recentOrders: [], series: [], topProducts: [], topCustomers: [], paymentsConnected: false, stats: { revenueMoney: 0, revenueCredits: 0, paidOrders: 0, needsDelivery: 0, products: 0, enabledProducts: 0, customers: 0, activeCoupons: 0 } };
       var ser = DEMO_SERIES;
       if (/days=30/.test(path)) { ser = []; for (var di = 0; di < 30; di++) { var b = DEMO_SERIES[di % DEMO_SERIES.length]; ser.push({ date: "d" + di, money: b.money, credits: b.credits, orders: b.orders }); } }
-      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: ser, topProducts: DEMO_TOP, topCustomers: DEMO_CUSTOMERS.slice(0, 5), stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, customers: DEMO_CUSTOMERS.length, activeCoupons: 2 }, inventory: { outOfStock: [{ id: 4, name: "Starter Kit" }], lowStock: [{ id: 3, name: "Giga lvl 150 (imprinted)", stock: 5 }] } };
+      return { config: DEMO_CFG, recentOrders: DEMO_ORDERS, series: ser, topProducts: DEMO_TOP, topCustomers: DEMO_CUSTOMERS.slice(0, 5), paymentsConnected: true, stats: { revenueMoney: 1284.5, revenueCredits: 96000, paidOrders: 73, needsDelivery: 1, products: DEMO_PRODUCTS.length, enabledProducts: 4, customers: DEMO_CUSTOMERS.length, activeCoupons: 2 }, inventory: { outOfStock: [{ id: 4, name: "Starter Kit" }], lowStock: [{ id: 3, name: "Giga lvl 150 (imprinted)", stock: 5 }] } };
     }
     if (/\/store\/customers/.test(path)) { var cq = decodeURIComponent((path.match(/[?&]q=([^&]*)/) || [])[1] || "").toLowerCase(); return { customers: cq ? DEMO_CUSTOMERS.filter(function (c) { return (c.username || "").toLowerCase().indexOf(cq) >= 0 || String(c.userId).indexOf(cq) >= 0; }) : DEMO_CUSTOMERS }; }
     if (/\/variants/.test(path)) return { variants: DEMO_VARIANTS };
@@ -258,14 +258,14 @@
     if (ov.status === 403 && ov.body && ov.body.error === "premium_required") { return fullState("lock", "Premium required", "The web store is a Premium feature. Unlock it with /subscribe in Discord.", btn("See Premium", { onClick: function () { location.href = "pricing.html"; } })); }
     if (ov.status === 401 || ov.status === 403) { return fullState("lock", "No access", "You don't manage this server, or your session expired.", btn("Back to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); }
     if (!ov.ok) { return fullState("store", "Couldn't load the store", "Please try again in a moment.", btn("Retry", { onClick: function () { location.reload(); } })); }
-    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || []; S.series = ov.body.series || []; S.top = ov.body.topProducts || []; S.topCustomers = ov.body.topCustomers || []; S.inventory = ov.body.inventory || { outOfStock: [], lowStock: [] };
+    S.cfg = ov.body.config; S.stats = ov.body.stats || {}; S.recent = ov.body.recentOrders || []; S.series = ov.body.series || []; S.top = ov.body.topProducts || []; S.topCustomers = ov.body.topCustomers || []; S.inventory = ov.body.inventory || { outOfStock: [], lowStock: [] }; S.paymentsConnected = !!ov.body.paymentsConnected;
     S.products = (res[1].body && res[1].body.products) || [];
     S.roles = (res[2].body && res[2].body.roles) || [];
     S.channels = (res[3].body && res[3].body.channels) || [];
     render();
   }).catch(function (e) { if (e !== "redirect") fullState("store", "Couldn't reach the backend", "Please try again shortly.", btn("Retry", { onClick: function () { location.reload(); } })); });
 
-  function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; S.topCustomers = r.body.topCustomers || []; S.inventory = r.body.inventory || { outOfStock: [], lowStock: [] }; } }); }
+  function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; S.topCustomers = r.body.topCustomers || []; S.inventory = r.body.inventory || { outOfStock: [], lowStock: [] }; S.paymentsConnected = !!r.body.paymentsConnected; } }); }
   function refreshProducts() { return api(A("/store/products")).then(function (r) { S.products = (r.body && r.body.products) || []; }); }
 
   // ── shell render ──────────────────────────────────────────────────────────
@@ -360,25 +360,41 @@
     var d = 0; // stagger delay
     function reveal(node) { node.classList.add("reveal"); node.style.animationDelay = (d += 70) + "ms"; return node; }
 
-    // Brand-new store → onboarding checklist instead of empty stats.
-    if (!s.products) {
-      var steps = [
-        { done: !!S.cfg.title, label: "Name your store", desc: "Give it a title and description buyers will see.", go: function () { S.section = "settings"; render(); } },
-        { done: false, label: "Add your first product", desc: "Price it in money, server credits, or both.", go: function () { S.section = "products"; render(); productDrawer(null); } },
-        { done: false, label: "Connect a payment provider", desc: "Take card & PayPal payments (skip if you sell for credits only).", go: function () { S.section = "payments"; render(); } },
-        { done: !!S.cfg.enabled, label: "Open your store", desc: "Flip it live so customers can buy.", go: function () { S.section = "settings"; render(); } },
-      ];
+    // Guided setup — accurate step states + progress. Shown until the store is
+    // actually live (has a product AND is open); a credits-only store needs no
+    // payment provider, so that step auto-completes for it.
+    var creditsOnly = !!S.cfg.accept_credits && !S.cfg.accept_money;
+    var setupSteps = [
+      { done: !!S.cfg.title, label: "Name your store", desc: "Give it a title and description buyers will see.", cta: "Name it", go: function () { S.section = "settings"; render(); } },
+      { done: s.products > 0, label: "Add your first product", desc: "Price it in real money, server credits, or both.", cta: "Add product", go: function () { S.section = "products"; render(); productDrawer(null); } },
+      { done: !!S.paymentsConnected || creditsOnly, label: "Set up payments", desc: "Connect Stripe or PayPal for real money — or sell for server credits with no setup.", cta: "Set up", go: function () { S.section = "payments"; render(); } },
+      { done: !!S.cfg.enabled, label: "Open your store", desc: "Flip it live so your community can buy.", cta: "Go live", go: function () { S.section = "settings"; render(); } },
+    ];
+    var doneN = setupSteps.filter(function (x) { return x.done; }).length;
+    var liveReady = s.products > 0 && S.cfg.enabled;
+    if (!liveReady) {
+      var pct = Math.round((doneN / setupSteps.length) * 100);
       var ol = el("div", { class: "onb-list" });
-      steps.forEach(function (st, i) {
+      setupSteps.forEach(function (st, i) {
         ol.append(el("div", { class: "onb-step" + (st.done ? " done" : "") },
           el("div", { class: "onb-num" }, st.done ? "✓" : String(i + 1)),
           el("div", { class: "grow" }, el("div", { class: "onb-t" }, st.label), el("div", { class: "onb-d" }, st.desc)),
-          st.done ? badge("Done", "ok") : btn("Do it", { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: st.go })));
+          st.done ? badge("Done", "ok") : btn(st.cta, { variant: "btn-outline", style: { padding: "5px 13px", fontSize: "13px" }, onClick: st.go })));
       });
-      c.append(reveal(panel(panelHead("Get your store live"),
-        el("p", { class: "panel-sub" }, "A few quick steps and you're selling. Your stats and revenue will appear here once orders start coming in."),
+      c.append(reveal(panel(panelHead("Set up your store", el("span", { class: "onb-pct" }, pct + "%")),
+        el("p", { class: "panel-sub" }, doneN >= setupSteps.length - 1 ? "Almost there — one step to go and you're selling." : "A few quick steps and you're selling."),
+        el("div", { class: "onb-bar" }, el("i", { style: { width: pct + "%" } })),
         ol)));
       return;
+    }
+    // Live store that accepts money but has no provider connected → slim nudge.
+    if (S.cfg.accept_money && !S.paymentsConnected) {
+      c.append(reveal(el("div", { class: "alert" },
+        el("div", { class: "ai" }, icon("payments")),
+        el("div", { class: "grow" },
+          el("div", { class: "t" }, "Connect a payment provider"),
+          el("div", { class: "d" }, "Your store accepts money, but no Stripe/PayPal is connected — buyers can't pay with money until you do.")),
+        btn("Set up payments", { onClick: function () { S.section = "payments"; render(); } }))));
     }
 
     // needs-delivery call to action
