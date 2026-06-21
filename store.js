@@ -35,6 +35,19 @@
     return '<span class="stars">' + s + '</span>';
   }
   function fmtDate(d) { try { return esc(new Date(String(d).replace(' ', 'T') + 'Z').toLocaleDateString()); } catch (e) { return ''; } }
+  // Compact relative time ("just now" / "2h ago" / "3d ago"), date past ~30d.
+  function relTime(ts) {
+    if (!ts) return '';
+    var d = new Date(String(ts).replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(ts) ? '' : 'Z'));
+    var ms = d.getTime(); if (isNaN(ms)) return '';
+    var diff = Date.now() - ms; if (diff < 0) diff = 0;
+    var m = Math.floor(diff / 60000), h = Math.floor(m / 60), days = Math.floor(h / 24);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + 'm ago';
+    if (h < 24) return h + 'h ago';
+    if (days < 30) return days + 'd ago';
+    return esc(d.toLocaleDateString());
+  }
 
   // ── tiny API client (credentials + CSRF for unsafe methods) ─────────────────
   var _csrf = '';
@@ -413,10 +426,11 @@
           var st = { delivered: '✅', granted: '⚡', pending: '⏳', failed: '⚠️' }[i.fulfillment_status] || '';
           return '<div class="order-item"><span>' + (st ? st + ' ' : '') + i.quantity + '× ' + esc(i.name) + '</span>' + rv + '</div>';
         }).join('');
-        var date = o.created_at ? esc(new Date(String(o.created_at).replace(' ', 'T') + 'Z').toLocaleDateString()) : '';
+        var date = o.created_at ? relTime(o.created_at) : '';
+        var dateAbs = o.created_at ? esc(new Date(String(o.created_at).replace(' ', 'T') + 'Z').toLocaleString()) : '';
         var cf = (o.customFields || []).map(function (f) { return '<span class="order-cf"><b>' + esc(f.label) + ':</b> ' + esc(f.value) + '</span>'; }).join('');
         html += '<li class="order-row"><div class="order-top"><b>#' + o.id + '</b><span>' + (STAT[o.status] || o.status) + '</span><b>' + total + '</b></div>' +
-          '<div class="order-items">' + itemsHtml + '</div>' + (cf ? '<div class="order-cf-row">' + cf + '</div>' : '') + (date ? '<div class="order-date">' + date + '</div>' : '') + '</li>';
+          '<div class="order-items">' + itemsHtml + '</div>' + (cf ? '<div class="order-cf-row">' + cf + '</div>' : '') + (date ? '<div class="order-date" title="' + dateAbs + '">' + date + '</div>' : '') + '</li>';
       });
       html += '</ul>';
       body.innerHTML = html;
