@@ -899,7 +899,7 @@
     }
     function load(f) {
       current = f; clear(chips);
-      [["all", "All"], ["needs_delivery", "Needs delivery"], ["completed", "Completed"], ["refunded", "Refunded"]].forEach(function (x) {
+      [["all", "All"], ["needs_delivery", "Needs delivery"], ["completed", "Completed"], ["pending", "Pending"], ["refunded", "Refunded"], ["cancelled", "Cancelled"]].forEach(function (x) {
         var ch = el("button", { class: "chip" + (x[0] === current ? " on" : "") }, x[1]); ch.addEventListener("click", function () { load(x[0]); }); chips.append(ch);
       });
       clear(listBox); listBox.append(el("div", { class: "sk", style: { height: "70px", marginBottom: "9px" } }), el("div", { class: "sk", style: { height: "70px" } }));
