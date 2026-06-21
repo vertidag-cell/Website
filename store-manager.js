@@ -626,7 +626,12 @@
       });
       check = el("label", { class: "pcard-check" }, cb);
     }
-    return el("div", { class: "pcard" + (p.enabled ? "" : " off") + (sel && sel.set[p.id] ? " sel" : "") }, check, img,
+    // Drag-to-reorder handle (only when reordering is active — i.e. not while
+    // searching/filtering, same gate as the ▲▼ controls below).
+    var dragH = move ? el("span", { class: "pcard-drag", title: "Drag to reorder", draggable: "true", "aria-hidden": "true" }, icon("grip")) : null;
+    var attrs = { class: "pcard" + (p.enabled ? "" : " off") + (sel && sel.set[p.id] ? " sel" : ""), "data-id": p.id };
+    if (move) attrs["data-sortable"] = "p";
+    return el("div", attrs, check, dragH, img,
       el("div", { class: "body" },
         el("div", { class: "nm" }, p.name),
         el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
@@ -686,23 +691,38 @@
       Promise.all(ids.map(function (id) { return api(A("/store/products/" + id), { method: "PATCH", body: patch }); }))
         .then(function () { clearSel(); toast(msg); refreshProducts().then(function () { render(); }); });
     }
-    var sel = { set: selected, onChange: refreshBar };
+    var selection = { set: selected, onChange: refreshBar };
+    function persistOrder() {
+      api(A("/store/products/reorder"), { method: "POST", body: { order: S.products.map(function (x) { return x.id; }) } }).then(function (r) { if (!r.ok) toast("Couldn't save order", "err"); });
+    }
     // Reorder: swap with the neighbour in S.products and persist the new order.
     function move(p, dir) {
       var idx = -1; for (var k = 0; k < S.products.length; k++) { if (S.products[k].id === p.id) { idx = k; break; } }
       var j = idx + dir;
       if (idx < 0 || j < 0 || j >= S.products.length) return;
       var t = S.products[idx]; S.products[idx] = S.products[j]; S.products[j] = t;
-      api(A("/store/products/reorder"), { method: "POST", body: { order: S.products.map(function (x) { return x.id; }) } }).then(function (r) { if (!r.ok) toast("Couldn't save order", "err"); });
+      persistOrder();
       renderGrid(searchEl ? searchEl.value : "");
     }
     var grid = el("div", { class: "pgrid" });
+    // Drag-to-reorder the product grid (only meaningful in the unfiltered order;
+    // cards drop their drag attrs while searching). makeSortable is attached once
+    // — its listeners read the live DOM, so they no-op when no cards are sortable.
+    makeSortable(grid, function (ids) {
+      var byId = {}; S.products.forEach(function (p) { byId[p.id] = p; });
+      var reordered = ids.map(function (id) { return byId[id]; }).filter(Boolean);
+      S.products.forEach(function (p) { if (ids.indexOf(p.id) < 0) reordered.push(p); });
+      S.products = reordered;
+      persistOrder();
+      renderGrid(searchEl ? searchEl.value : ""); // refresh ▲▼ disabled states
+      toast("Order saved");
+    });
     function renderGrid(q) {
       clear(grid);
       q = (q || "").trim().toLowerCase();
       var list = S.products.filter(function (p) { return !q || ((p.name || "") + " " + (categoryNameById(p.category_id) || p.category || "")).toLowerCase().indexOf(q) >= 0; });
       if (!list.length) { grid.append(emptyState("products", "No matches", "No products match your search — try a different term.", null, true)); return; }
-      list.forEach(function (p) { grid.append(productCard(p, sel, q ? null : move)); });
+      list.forEach(function (p) { grid.append(productCard(p, selection, q ? null : move)); });
     }
     var initialQ = S.pfilter || ""; S.pfilter = null; // deep-link from "Needs attention"
     var searchEl = null;
