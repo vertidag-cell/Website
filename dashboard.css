@@ -1549,3 +1549,52 @@
 .dash-app select { color-scheme: dark; }
 .dash-app select option,
 .dash-app select optgroup { background: #1b1d24; color: #f2f3f5; }
+
+/* ============================================================================
+   LIGHT SAAS THEME — final layer, overrides the dark theme above. Clean, airy,
+   neutral grays with the blurple accent (reads great on white). Tokens + an
+   explicit color live on body.dash-app so every descendant inherits dark text
+   (not just elements that use var(--dsc-text)).
+   ============================================================================ */
+body.dash-app, .dash-app {
+  --dsc-page: #f5f6f8; --dsc-bg: #eef0f3; --dsc-bg-raise: #ffffff;
+  --dsc-bg-hover: #eef1f5; --dsc-bg-active: #e6e9ef;
+  --dsc-line: rgba(18,22,30,0.10);
+  --dsc-text: #0f1115; --dsc-text-body: #232b38; --dsc-text-muted: #5a6473; --dsc-text-faint: #8a93a1;
+  --border: rgba(18,22,30,0.10); --border-strong: rgba(18,22,30,0.16);
+  --panel: #ffffff; --surface: #ffffff; --surface-solid: #ffffff; --card-hover: #f3f4f7;
+  --dash-shadow-glow: 0 1px 2px rgba(18,22,30,0.05), 0 14px 30px -24px rgba(18,22,30,0.18);
+  color: var(--dsc-text);
+}
+.dash-app {
+  background-color: #f5f6f8 !important;
+  background-image:
+    radial-gradient(1150px 560px at 50% -260px, rgba(88,101,242,0.10), transparent 60%),
+    linear-gradient(180deg, #f7f8fb 0%, #f3f4f7 58%) !important;
+}
+/* Elevated surfaces → white card on light, hairline border, soft gray shadow. */
+.dash-app .dsx-card, .dash-app .dsx-ov-health, .dash-app .dsx-ov-stat, .dash-app .dsx-action,
+.dash-app .dash-stat, .dash-app .dash-empty-card, .dash-app .dash-preview-card,
+.dash-app .dsx-topbar, .dash-app .kpi {
+  background: #ffffff; border-color: rgba(18,22,30,0.09);
+  box-shadow: 0 1px 2px rgba(18,22,30,0.05), 0 14px 30px -24px rgba(18,22,30,0.18);
+}
+.dash-app .dsx-ov-stat::before { background: radial-gradient(120% 90% at 0% 0%, rgba(88,101,242,0.07), transparent 58%); }
+/* Sidebar: clean white panel + soft active row. */
+.dash-app .dsx-nav {
+  background: #ffffff; border-color: rgba(18,22,30,0.09);
+  box-shadow: 0 1px 2px rgba(18,22,30,0.04), 0 14px 30px -26px rgba(18,22,30,0.16);
+  backdrop-filter: none;
+}
+.dash-app .dsx-nav-item.active { background: rgba(88,101,242,0.12); color: #1f2433; box-shadow: none; }
+.dash-app .dsx-nav-item.active .dsx-nav-ico { color: var(--dsc-blurple); }
+.dash-app .dsx-topbar { background: color-mix(in srgb, #ffffff 82%, transparent); }
+/* Mobile bar + module hero on light. */
+.dash-app .dash-mobile-bar { background: color-mix(in srgb, #ffffff 86%, transparent); border-color: rgba(18,22,30,0.09); }
+/* Native dropdowns light. */
+.dash-app select { color-scheme: light; }
+.dash-app select option, .dash-app select optgroup { background: #ffffff; color: #0f1115; }
+/* Filled primary buttons keep white text on blurple. */
+.dash-app .btn-primary { color: #ffffff; }
+/* Scrollbars on light. */
+.dash-app ::-webkit-scrollbar-thumb, .dash-app::-webkit-scrollbar-thumb { background: rgba(18,22,30,0.18); }
