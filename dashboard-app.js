@@ -42,10 +42,19 @@
   let csrfToken = "";
   async function getCsrfToken() {
     if (csrfToken) return csrfToken;
+    // MUST be time-bounded: this is awaited before EVERY state-changing request
+    // (POST/PUT/DELETE). Without its own AbortController the main fetch's timeout
+    // can't protect it, so a stalled /auth/csrf would hang the whole call forever
+    // — e.g. the Subscribe button stuck on "Starting checkout…" (a freeze). On
+    // timeout or any error we fail OPEN (return "") and the request proceeds; the
+    // backend's sameSite=Lax cookie + Origin guard still protect it.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
     try {
       const res = await fetch(API_BASE + "/auth/csrf", {
         method: "GET",
         credentials: "include",
+        signal: ctrl.signal,
         headers: { Accept: "application/json" },
       });
       if (!res.ok) return "";
@@ -54,6 +63,8 @@
       return csrfToken;
     } catch {
       return "";
+    } finally {
+      clearTimeout(timer);
     }
   }
 
