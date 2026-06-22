@@ -664,7 +664,7 @@
   function quickGenerateDrawer() {
     var body = el("div");
     body.append(el("p", { class: "hint", style: { margin: "0 0 14px" } },
-      "Pick a ready-made catalog. Its categories and products are created for you — edit prices, add images, reorder or delete anything afterwards. This adds to your store; it won't remove what's already there."));
+      "Pick a ready-made catalog. ⚠️ This REPLACES your store — it removes all current products and categories first, then creates the template's. You can edit prices, add images and reorder afterwards."));
     var listBox = el("div", { class: "tpl-list" }, el("p", { class: "hint" }, "Loading templates…"));
     body.append(listBox);
     openDrawer("Quick generate", body, null);
@@ -674,16 +674,21 @@
       var tpls = (r.body && r.body.templates) || [];
       if (!tpls.length) { listBox.append(el("p", { class: "hint" }, "No templates available right now.")); return; }
       tpls.forEach(function (t) {
-        var applyBtn = btn("Generate store", { icon: "wand", onClick: function () {
-          if (!confirm("Add " + t.products + " products across " + t.categories + " categories to your store?\n\nPrices are in " + (t.currency || "GBP") + ". You can edit or remove anything afterwards.")) return;
+        var applyBtn = btn("Replace store", { icon: "wand", onClick: function () {
+          var curProd = (S.products || []).length;
+          var curCat = (S.categories || []).reduce(function (n, c) { return n + 1 + ((c.children || []).length); }, 0);
+          var warn = (curProd || curCat)
+            ? "This REMOVES your current " + curProd + " product" + (curProd === 1 ? "" : "s") + " and " + curCat + " categor" + (curCat === 1 ? "y" : "ies") + ", then adds " + t.products + " products in " + t.categories + " categories. Continue?"
+            : "Add " + t.products + " products across " + t.categories + " categories (prices in " + (t.currency || "GBP") + ")?";
+          if (!confirm(warn)) return;
           applyBtn.disabled = true; applyBtn.lastChild.nodeValue = "Generating…";
-          api(A("/store/template/apply"), { method: "POST", body: { templateId: t.id } }).then(function (rr) {
-            if (!rr.ok) { applyBtn.disabled = false; applyBtn.lastChild.nodeValue = "Generate store"; toast((rr.body && rr.body.errors && rr.body.errors.join("; ")) || "Couldn't generate the store", "err"); return; }
-            var made = (rr.body && rr.body.created) || {};
+          api(A("/store/template/apply"), { method: "POST", body: { templateId: t.id, replace: true } }).then(function (rr) {
+            if (!rr.ok) { applyBtn.disabled = false; applyBtn.lastChild.nodeValue = "Replace store"; toast((rr.body && rr.body.errors && rr.body.errors.join("; ")) || "Couldn't generate the store", "err"); return; }
+            var made = (rr.body && rr.body.created) || {}, gone = (rr.body && rr.body.removed) || {};
             if (rr.body && rr.body.currency) S.cfg.currency = rr.body.currency;
             closeDrawer();
             Promise.all([refreshProducts(), refreshCategories()]).then(function () {
-              toast("Added " + (made.products || 0) + " products in " + (made.categories || 0) + " categories");
+              toast((gone.products ? "Replaced — " : "Added ") + (made.products || 0) + " products in " + (made.categories || 0) + " categories");
               S.section = "products"; render();
             });
           });
