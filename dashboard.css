@@ -1063,6 +1063,15 @@
 .dash-app .mc-chips { padding: 4px 0; }
 .dash-app .mc-chip-hash { color: var(--dsc-text-faint); font-weight: 700; }
 
+/* ---- Native dropdowns on the dark theme ----
+   Without color-scheme:dark the browser paints the <option> popup with the OS
+   default (light) while the page's light text colour carries over, so the
+   options render invisible (e.g. the store currency picker). Force a dark,
+   readable popup for every <select> in the dashboard. */
+.dash-app select { color-scheme: dark; }
+.dash-app option,
+.dash-app optgroup { background: #1b1d22; color: #e9edf5; }
+
 /* ---- XP canvas (level-up + leaderboard preview, reward grid) ---- */
 .dash-app .xp-preview { margin-bottom: 14px; }
 .dash-app .xp-lvl { display: flex; align-items: center; gap: 8px; color: #dbdee1; font-size: 0.92rem; flex-wrap: wrap; }

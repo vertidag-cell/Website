@@ -73,6 +73,7 @@
     grip: "M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01",
     edit: "M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z",
     trash: "M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6",
+    wand: "M12 3 9.9 9.9 3 12l6.9 2.1L12 21l2.1-6.9L21 12l-6.9-2.1z",
   };
   function icon(name) {
     var ns = "http://www.w3.org/2000/svg";
@@ -658,10 +659,58 @@
       el("button", { class: "ro-btn", type: "button", title: "Move up", disabled: idx <= 0, onclick: function () { move(p, -1); } }, "▲"),
       el("button", { class: "ro-btn", type: "button", title: "Move down", disabled: idx < 0 || idx >= S.products.length - 1, onclick: function () { move(p, 1); } }, "▼"));
   }
+  // Quick generate: drop a ready-made catalog (categories + products) into the
+  // store in one click. Append-only and confirmed, so it never wipes existing work.
+  function quickGenerateDrawer() {
+    var body = el("div");
+    body.append(el("p", { class: "hint", style: { margin: "0 0 14px" } },
+      "Pick a ready-made catalog. Its categories and products are created for you — edit prices, add images, reorder or delete anything afterwards. This adds to your store; it won't remove what's already there."));
+    var listBox = el("div", { class: "tpl-list" }, el("p", { class: "hint" }, "Loading templates…"));
+    body.append(listBox);
+    openDrawer("Quick generate", body, null);
+
+    api(A("/store/templates")).then(function (r) {
+      clear(listBox);
+      var tpls = (r.body && r.body.templates) || [];
+      if (!tpls.length) { listBox.append(el("p", { class: "hint" }, "No templates available right now.")); return; }
+      tpls.forEach(function (t) {
+        var applyBtn = btn("Generate store", { icon: "wand", onClick: function () {
+          if (!confirm("Add " + t.products + " products across " + t.categories + " categories to your store?\n\nPrices are in " + (t.currency || "GBP") + ". You can edit or remove anything afterwards.")) return;
+          applyBtn.disabled = true; applyBtn.lastChild.nodeValue = "Generating…";
+          api(A("/store/template/apply"), { method: "POST", body: { templateId: t.id } }).then(function (rr) {
+            if (!rr.ok) { applyBtn.disabled = false; applyBtn.lastChild.nodeValue = "Generate store"; toast((rr.body && rr.body.errors && rr.body.errors.join("; ")) || "Couldn't generate the store", "err"); return; }
+            var made = (rr.body && rr.body.created) || {};
+            if (rr.body && rr.body.currency) S.cfg.currency = rr.body.currency;
+            closeDrawer();
+            Promise.all([refreshProducts(), refreshCategories()]).then(function () {
+              toast("Added " + (made.products || 0) + " products in " + (made.categories || 0) + " categories");
+              S.section = "products"; render();
+            });
+          });
+        } });
+        listBox.append(el("div", { class: "tpl-card" },
+          el("div", { class: "tpl-meta" },
+            el("div", { class: "tpl-name" }, t.name),
+            el("div", { class: "tpl-desc" }, t.description || ""),
+            el("div", { class: "tpl-stat" }, t.categories + " categories · " + t.products + " products · " + (t.currency || "GBP"))),
+          applyBtn));
+      });
+    });
+  }
+
   function renderProducts(c) {
-    c.append(panel(panelHead("Products (" + S.products.length + ")", btn("Add product", { icon: "plus", onClick: function () { productDrawer(null); } })),
+    var headActions = el("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+      btn("Quick generate", { variant: "btn-ghost", icon: "wand", onClick: function () { quickGenerateDrawer(); } }),
+      btn("Add product", { icon: "plus", onClick: function () { productDrawer(null); } }));
+    c.append(panel(panelHead("Products (" + S.products.length + ")", headActions),
       el("p", { class: "panel-sub" }, "Each product is sold on your public store. Price in money, credits, or both; deliver an instant Discord role or a manual in-game handover.")));
-    if (!S.products.length) { c.append(emptyState("products", "No products yet", "Add your first product to start selling. You can price it in real money, server credits, or both.", btn("Add your first product", { icon: "plus", onClick: function () { productDrawer(null); } }))); return; }
+    if (!S.products.length) {
+      var emptyActions = el("div", { style: { display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center" } },
+        btn("Quick-generate a catalog", { icon: "wand", onClick: function () { quickGenerateDrawer(); } }),
+        btn("Add one manually", { variant: "btn-ghost", icon: "plus", onClick: function () { productDrawer(null); } }));
+      c.append(emptyState("products", "No products yet", "Quick-generate a ready-made ARK catalog — categories, products and prices in one click — then tweak it. Or add products one at a time.", emptyActions));
+      return;
+    }
     // Bulk selection — show/hide many products at once.
     var selected = {};
     function clearSel() { Object.keys(selected).forEach(function (k) { delete selected[k]; }); }

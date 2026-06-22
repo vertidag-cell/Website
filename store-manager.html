@@ -191,6 +191,17 @@
       .drawer-f { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 22px; border-top: 1px solid var(--border); background: var(--bg-soft); }
       .img-prev { width: 110px; height: 66px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border); margin-top: 8px; }
 
+      /* Quick-generate template cards */
+      .tpl-list { display: flex; flex-direction: column; gap: 12px; }
+      .tpl-card { display: flex; align-items: center; gap: 14px; padding: 16px; border: 1px solid var(--border); border-radius: 14px;
+        background: var(--bg-soft); transition: border-color .15s, background .15s; }
+      .tpl-card:hover { border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+      .tpl-meta { flex: 1; min-width: 0; }
+      .tpl-name { font-weight: 700; font-size: 15px; color: var(--text); }
+      .tpl-desc { font-size: 13px; color: var(--text-muted); margin-top: 3px; line-height: 1.45; }
+      .tpl-stat { font-size: 12px; font-weight: 600; color: var(--accent-soft); margin-top: 8px; letter-spacing: .01em; }
+      .tpl-card .btn { flex: none; }
+
       /* Filters */
       .chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; }
       .chip { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
@@ -431,6 +442,6 @@
       <div class="state-full"><div class="sk" style="width:min(900px,90vw);height:60vh"></div></div>
     </div>
     <script src="config.js"></script>
-    <script src="store-manager.js?v=41"></script>
+    <script src="store-manager.js?v=42"></script>
   </body>
 </html>
