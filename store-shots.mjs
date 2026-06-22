@@ -21,29 +21,43 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}`;
 
-// ── Mock catalog (imageless, GBP) ────────────────────────────────────────────
-const CATS = [
-  ["Resource Packs", [["Beer Pack", 5], ["Mutagen Pack", 10], ["Small Dedi Pack", 10], ["Large Dedi Pack", 20]]],
-  ["Turret Packs", [["Heavy Turret Bundle", 15], ["Tek Turret Bundle", 15]]],
-  ["Ammo Packs", [["Basic Pack", 8], ["Advanced Bullet Pack", 20]]],
-  ["Blueprint Packs", [["Small Blueprint Pack", 3], ["Medium Blueprint Pack", 7], ["Large Blueprint Pack", 20], ["Flak Blueprint Pack", 12]]],
-  ["Tek Blueprint Packs", [["Simple Tek Blueprint Pack", 5], ["Advanced Tek Blueprint Pack", 12], ["Deluxe Mek Blueprint Pack", 5]]],
-  ["Ascension Packs", [["Simple Ascension Pack", 5], ["Small Ascension Pack", 15], ["Medium Ascension Pack", 20], ["Large Ascension Pack", 25]]],
-  ["Base Packs", [["Small Base Pack", 15], ["Medium Base Pack", 25], ["Large Base Pack", 40]]],
-  ["Dino Bundles", [["Basic Bundle", 15], ["Advanced Bundle", 25], ["Elite Bundle", 30], ["Mega Bundle", 40]]],
-  ["Breeding Packs", [["Small Breeder Pack", 4], ["Medium Breeder Pack", 10], ["Large Breeder Pack", 25]]],
-  ["Unbreedable Dinos", [["Basic Bundle", 4], ["Advanced Bundle", 10], ["Medium Dino Pack", 25], ["Large Dino Pack", 35]]],
-  ["Cloner Female Packs", [["Small Cloner Pack", 5], ["Medium Cloner Pack", 10], ["Large Cloner Pack", 15]]],
-  ["Mystery Boxes", [["Mystery Box", 10], ["Mega Mystery Box", 25]]],
+// ── Mock catalog (imageless, GBP) — mirrors the grouped ark-irons template:
+//    8 top-level categories, three of them with sub-categories. ─────────────────
+const GROUPS = [
+  { name: "Resource Packs", products: [["Beer Pack", 5], ["Mutagen Pack", 10], ["Small Dedi Pack", 10], ["Large Dedi Pack", 20]] },
+  { name: "Turrets & Ammo", subs: [
+    { name: "Turret Packs", products: [["Heavy Turret Bundle", 15], ["Tek Turret Bundle", 15]] },
+    { name: "Ammo Packs", products: [["Basic Pack", 8], ["Advanced Bullet Pack", 20]] },
+  ] },
+  { name: "Blueprints", subs: [
+    { name: "Blueprint Packs", products: [["Small Blueprint Pack", 3], ["Medium Blueprint Pack", 7], ["Large Blueprint Pack", 20], ["Flak Blueprint Pack", 12]] },
+    { name: "Tek Blueprint Packs", products: [["Simple Tek Blueprint Pack", 5], ["Advanced Tek Blueprint Pack", 12], ["Deluxe Mek Blueprint Pack", 5]] },
+    { name: "Bullet Blueprint Packs", products: [["Basic ARB Blueprint Pack", 2], ["Advanced ARB Blueprint Pack", 10]] },
+  ] },
+  { name: "Ascension Packs", products: [["Simple Ascension Pack", 5], ["Small Ascension Pack", 15], ["Medium Ascension Pack", 20], ["Large Ascension Pack", 25]] },
+  { name: "Base Packs", products: [["Small Base Pack", 15], ["Medium Base Pack", 25], ["Large Base Pack", 40]] },
+  { name: "Dino Bundles", products: [["Basic Bundle", 15], ["Advanced Bundle", 25], ["Elite Bundle", 30], ["Mega Bundle", 40]] },
+  { name: "Dinos & Breeding", subs: [
+    { name: "Breeding Packs", products: [["Small Breeder Pack", 4], ["Medium Breeder Pack", 10], ["Large Breeder Pack", 25]] },
+    { name: "Unbreedable Dinos", products: [["Basic Bundle", 4], ["Advanced Bundle", 10], ["Medium Dino Pack", 25], ["Large Dino Pack", 35]] },
+    { name: "Cloner Female Packs", products: [["Small Cloner Pack", 5], ["Medium Cloner Pack", 10], ["Large Cloner Pack", 15]] },
+  ] },
+  { name: "Mystery Boxes", products: [["Mystery Box", 10], ["Mega Mystery Box", 25]] },
 ];
 const categories = [], products = [];
-let pid = 100;
-CATS.forEach(([name, items], i) => {
-  const id = i + 1;
-  categories.push({ id, parent_id: null, name, description: name + " for your tribe.", image_url: null, position: i, enabled: true, children: [], productCount: items.length, totalProductCount: items.length });
-  items.forEach(([pname, price], j) => {
-    products.push({ id: pid++, name: pname, description: "Delivered in-game via a redeem code in a ticket.", image_url: null, category: null, category_id: id, price_money: price, price_credits: null, sale_price_money: null, sale_ends_at: null, fulfillment_type: "manual", inStock: true, lowStock: null, featured: i === 0 && j === 0, isBundle: false, rating: 0, reviewCount: 0, variants: [], soldCount: 0, bestseller: false, bundle: null });
+let cid = 1, pid = 100;
+const addProduct = (catId, name, price, featured) => products.push({ id: pid++, name, description: "Delivered in-game via a redeem code in a ticket.", image_url: null, category: null, category_id: catId, price_money: price, price_credits: null, sale_price_money: null, sale_ends_at: null, fulfillment_type: "manual", inStock: true, lowStock: null, featured: !!featured, isBundle: false, rating: 0, reviewCount: 0, variants: [], soldCount: 0, bestseller: false, bundle: null });
+GROUPS.forEach((g, gi) => {
+  const top = { id: cid++, parent_id: null, name: g.name, description: g.name + " for your tribe.", image_url: null, position: gi, enabled: true, children: [], productCount: (g.products || []).length, totalProductCount: 0 };
+  let total = 0;
+  (g.products || []).forEach(([n, p], j) => { addProduct(top.id, n, p, gi === 0 && j === 0); total++; });
+  (g.subs || []).forEach((s, si) => {
+    const sub = { id: cid++, parent_id: top.id, name: s.name, description: s.name + ".", image_url: null, position: si, enabled: true, children: [], productCount: s.products.length, totalProductCount: s.products.length };
+    s.products.forEach(([n, p]) => { addProduct(sub.id, n, p, false); total++; });
+    top.children.push(sub);
   });
+  top.totalProductCount = total;
+  categories.push(top);
 });
 const STORE = { guildId: "1", guildName: "Iron Ark", guildIcon: null, title: "Iron Ark", description: "Donation store — support the cluster and gear up.", announcement: "Season 4 is live — new base packs added!", checkoutFields: [], banner: null, logo: null, color: "#2bff9e", currency: "GBP", acceptMoney: true, acceptCredits: false, enabled: true, testMode: true };
 
@@ -74,7 +88,7 @@ for (const [name, w, h, drill] of [["landing", 1440, 1100, false], ["landing-pho
   await page.goto(base + "/store.html?guild=100000000000000001");
   await page.waitForTimeout(1000);
   if (drill) {
-    await page.evaluate(() => { const t = document.querySelector(".cat-tile[data-cat]"); if (t) t.click(); });
+    await page.evaluate(() => { const t = document.querySelectorAll(".cat-tile[data-cat]")[1]; if (t) t.click(); }); // grouped parent w/ sub-sections
     await page.waitForTimeout(800);
   }
   // Scroll through so every scroll-reveal fires, then return to the top.
