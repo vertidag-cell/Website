@@ -387,43 +387,71 @@
       .store-back-row .btn { padding: 7px 14px; font-size: 13px; }
 
       /* ───────────────────────────────────────────────────────────────────────
-         "Alive" pass — per-category colour + visible motion. Each category owns a
-         hue (set as --c on cards/tiles/sections/chips by store.js) so an imageless
-         catalogue reads as a vivid, intentional shop; two drifting colour orbs and
-         a living hero keep the page moving; cards scroll-reveal, zoom, tilt (JS)
-         and sheen. All motion is disabled under prefers-reduced-motion.
+         IMMERSIVE pass — the whole shop is themed to ONE brand colour (--accent,
+         pulled from the logo by store.js). A living backdrop (breathing core glow,
+         a receding neon grid floor, drifting orbs), a bold centred hero, and cards
+         that scroll-reveal, tilt (JS), zoom + sheen + glow. Disabled under
+         prefers-reduced-motion. (--c falls back to --accent everywhere now.)
          ─────────────────────────────────────────────────────────────────────── */
 
-      /* Two drifting colour orbs behind everything — clearly in motion. Scoped to
-         .store-wrap so they never clobber the site-wide body::before. */
-      .store-wrap::before, .store-wrap::after { content: ""; position: fixed; z-index: -1; pointer-events: none;
-        border-radius: 50%; filter: blur(64px); will-change: transform; }
-      .store-wrap::before { width: 62vw; height: 62vw; max-width: 780px; max-height: 780px; left: -14vw; top: -18vh; opacity: .5;
-        background: radial-gradient(circle, color-mix(in srgb, var(--accent) 34%, transparent), transparent 66%);
-        animation: orbA 23s ease-in-out infinite alternate; }
-      .store-wrap::after { width: 54vw; height: 54vw; max-width: 700px; max-height: 700px; right: -16vw; top: 6vh; opacity: .42;
-        background: radial-gradient(circle, color-mix(in srgb, #34d8ff 30%, transparent), transparent 66%);
-        animation: orbB 27s ease-in-out infinite alternate; }
-      @keyframes orbA { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(15%, 9%, 0) scale(1.2); } }
-      @keyframes orbB { from { transform: translate3d(0,0,0) scale(1.05); } to { transform: translate3d(-13%, 13%, 0) scale(.88); } }
+      /* Animated backdrop layers (fixed, behind everything). */
+      .store-bg { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+      .store-bg-glow { position: absolute; left: 50%; top: -12%; width: 120vw; height: 78vh; transform: translateX(-50%);
+        background: radial-gradient(52% 60% at 50% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 72%);
+        animation: bgGlow 8s ease-in-out infinite; }
+      @keyframes bgGlow { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+      .store-bg-grid { position: absolute; left: -45%; right: -45%; bottom: -12%; height: 62vh;
+        background-image:
+          linear-gradient(color-mix(in srgb, var(--accent) 17%, transparent) 1px, transparent 1px),
+          linear-gradient(90deg, color-mix(in srgb, var(--accent) 17%, transparent) 1px, transparent 1px);
+        background-size: 48px 48px;
+        transform: perspective(440px) rotateX(64deg); transform-origin: bottom center;
+        -webkit-mask-image: linear-gradient(to top, #000 4%, transparent 80%);
+        mask-image: linear-gradient(to top, #000 4%, transparent 80%);
+        opacity: .45; animation: gridMove 5.5s linear infinite; }
+      @keyframes gridMove { from { background-position: 0 0; } to { background-position: 0 48px; } }
 
-      /* Living hero: a rotating conic glow + a periodic diagonal shine, logo pulse. */
-      .store-hero::before { content: ""; position: absolute; inset: -45%; z-index: 0; pointer-events: none;
-        background: conic-gradient(from 90deg at 70% 12%, transparent 0deg,
-          color-mix(in srgb, var(--accent) 18%, transparent) 70deg, transparent 160deg, transparent 360deg);
-        opacity: .8; animation: heroSweep 16s linear infinite; will-change: transform; }
+      /* Drifting brand-colour orbs (both --accent now — one cohesive colour). */
+      .store-wrap::before, .store-wrap::after { content: ""; position: fixed; z-index: -1; pointer-events: none;
+        border-radius: 50%; filter: blur(70px); will-change: transform; }
+      .store-wrap::before { width: 66vw; height: 66vw; max-width: 860px; max-height: 860px; left: -16vw; top: -20vh; opacity: .48;
+        background: radial-gradient(circle, color-mix(in srgb, var(--accent) 40%, transparent), transparent 64%);
+        animation: orbA 24s ease-in-out infinite alternate; }
+      .store-wrap::after { width: 56vw; height: 56vw; max-width: 740px; max-height: 740px; right: -18vw; top: 4vh; opacity: .34;
+        background: radial-gradient(circle, color-mix(in srgb, var(--accent) 26%, transparent), transparent 66%);
+        animation: orbB 29s ease-in-out infinite alternate; }
+      @keyframes orbA { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(16%, 10%, 0) scale(1.22); } }
+      @keyframes orbB { from { transform: translate3d(0,0,0) scale(1.05); } to { transform: translate3d(-14%, 14%, 0) scale(.86); } }
+
+      /* Bold, immersive, centred hero — themed to the brand colour. */
+      .store-hero { text-align: center; border-radius: 26px; isolation: isolate;
+        border-color: color-mix(in srgb, var(--accent) 26%, var(--border));
+        background:
+          radial-gradient(120% 130% at 50% -25%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 58%),
+          color-mix(in srgb, var(--accent) 6%, var(--card, rgba(255,255,255,0.04)));
+        box-shadow: 0 34px 90px -44px color-mix(in srgb, var(--accent) 42%, #000); }
+      .store-hero::before { content: ""; position: absolute; inset: -55%; z-index: 0; pointer-events: none;
+        background: conic-gradient(from 90deg at 50% 8%, transparent 0deg,
+          color-mix(in srgb, var(--accent) 22%, transparent) 55deg, transparent 140deg, transparent 220deg,
+          color-mix(in srgb, var(--accent) 14%, transparent) 290deg, transparent 360deg);
+        opacity: .85; animation: heroSweep 18s linear infinite; will-change: transform; }
       @keyframes heroSweep { to { transform: rotate(1turn); } }
       .store-hero::after { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-        background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.10) 48%, transparent 56%);
-        transform: translateX(-120%); animation: heroShine 7.5s ease-in-out infinite; }
+        background: linear-gradient(115deg, transparent 40%, color-mix(in srgb, var(--accent) 16%, rgba(255,255,255,.06)) 48%, transparent 56%);
+        transform: translateX(-120%); animation: heroShine 7s ease-in-out infinite; }
       @keyframes heroShine { 0%, 72% { transform: translateX(-120%); } 90%, 100% { transform: translateX(120%); } }
-      .store-hero-inner, .store-hero-banner, .store-trust { position: relative; z-index: 1; }
-      .store-logo { animation: logoPulse 4s ease-in-out infinite; }
+      .store-hero-inner { position: relative; z-index: 1; flex-direction: column; align-items: center; gap: 16px; padding: 48px 26px 22px; }
+      .store-hero-banner, .store-trust { position: relative; z-index: 1; }
+      .store-htext { text-align: center; min-width: 0; }
+      .store-title { font-size: clamp(32px, 6vw, 56px); line-height: 1.03; text-shadow: 0 4px 44px color-mix(in srgb, var(--accent) 38%, transparent); }
+      .store-pays, .store-trust { justify-content: center; }
+      .store-logo { width: 100px; height: 100px; border-radius: 28px; animation: logoPulse 4s ease-in-out infinite; }
       @keyframes logoPulse {
-        0%, 100% { box-shadow: 0 10px 36px color-mix(in srgb, var(--accent) 24%, transparent); }
-        50%      { box-shadow: 0 12px 52px color-mix(in srgb, var(--accent) 52%, transparent); } }
-      .store-trust-pill { transition: border-color .15s, color .15s, transform .15s; }
-      .store-trust-pill:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+        0%, 100% { box-shadow: 0 12px 40px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+        50%      { box-shadow: 0 14px 64px color-mix(in srgb, var(--accent) 58%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); } }
+      .store-trust-pill { transition: border-color .15s, color .15s, transform .15s, box-shadow .2s; }
+      .store-trust-pill:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+        box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 22%, transparent); }
 
       /* Scroll-reveal: cards/sections fade-up as they enter view (store.js wires IO). */
       .reveal-up { opacity: 0; }
@@ -444,12 +472,20 @@
       .prod:hover::after { transform: translateX(130%); }
       .prod:hover { border-color: color-mix(in srgb, var(--c, var(--accent)) 55%, transparent);
         box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 26px 54px -24px color-mix(in srgb, var(--c, var(--accent)) 38%, #000); }
-      .prod.is-feat { border-color: color-mix(in srgb, var(--c, var(--accent)) 48%, transparent);
-        box-shadow: 0 0 0 1px color-mix(in srgb, var(--c, var(--accent)) 24%, transparent), 0 14px 34px color-mix(in srgb, var(--c, var(--accent)) 16%, transparent); }
+      .prod.is-feat { border-color: color-mix(in srgb, var(--accent) 50%, transparent); animation: featGlow 3.2s ease-in-out infinite; }
+      @keyframes featGlow {
+        0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 14px 34px color-mix(in srgb, var(--accent) 14%, transparent); }
+        50%      { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 18px 48px color-mix(in srgb, var(--accent) 32%, transparent); } }
       .prod-cat { color: var(--c, var(--accent)); }
       .prod-btn { transition: transform .12s ease, box-shadow .22s ease, filter .2s ease; }
       .prod-btn:hover:not(:disabled) { box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 32%, transparent); }
       .prod-btn:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+      /* Brand-colour every primary button on the page (nav, cards, cart, checkout,
+         product modal) so the whole store matches the logo colour. */
+      .btn.btn-primary {
+        background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 74%, #fff), var(--accent));
+        color: #06120c; border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+      .btn.btn-primary:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 84%, #fff), color-mix(in srgb, var(--accent) 92%, #000)); }
 
       /* Image fallbacks in the category colour, with texture + position variety. */
       .prod-img.prod-fb { position: relative; overflow: hidden;
@@ -481,8 +517,17 @@
       .cart-fab:hover { transform: translateY(-2px); box-shadow: 0 18px 46px color-mix(in srgb, var(--accent) 52%, transparent); }
       .cart-fab:active { transform: translateY(0) scale(.97); }
 
+      /* Scale the bold hero down on phones. */
+      @media (max-width: 560px) {
+        .store-logo { width: 74px; height: 74px; border-radius: 20px; }
+        .store-hero-inner { padding: 32px 18px 16px; }
+        .store-title { font-size: clamp(26px, 8vw, 40px); }
+        .store-bg-grid { height: 46vh; }
+      }
+
       @media (prefers-reduced-motion: reduce) {
-        .store-wrap::before, .store-wrap::after, .store-hero::before, .store-hero::after, .store-logo { animation: none !important; }
+        .store-bg-glow, .store-bg-grid, .store-wrap::before, .store-wrap::after,
+        .store-hero::before, .store-hero::after, .store-logo, .prod.is-feat { animation: none !important; }
         .reveal-up, .reveal-up.in { opacity: 1 !important; animation: none !important; }
         .prod-img, .prod::after, .prod::before, .cat-tile-go, .cart-fab, .prod-btn, .store-trust-pill { transition: none !important; }
         .prod:hover .prod-img { transform: none !important; }
@@ -491,6 +536,11 @@
     </style>
   </head>
   <body>
+    <!-- Immersive animated backdrop (brand-coloured, derived from --accent). -->
+    <div class="store-bg" aria-hidden="true">
+      <div class="store-bg-glow"></div>
+      <div class="store-bg-grid"></div>
+    </div>
     <header class="navbar">
       <div class="container nav-inner">
         <a class="brand" href="index.html">
@@ -519,6 +569,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=39"></script>
+    <script src="store.js?v=40"></script>
   </body>
 </html>

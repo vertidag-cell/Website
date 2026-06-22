@@ -472,9 +472,9 @@
   var CAT_PALETTE = ['#2bff9e', '#34d8ff', '#a78bfa', '#fbbf24', '#fb7185', '#b6ff5b', '#2dd4bf', '#60a5fa', '#e879f9', '#fb923c', '#f472b6', '#4ade80'];
   var _catColor = {};
   function catColor(id) {
-    if (id == null || id === '') return '';
-    if (id === 'other') return '#94a3b8';
-    return _catColor[id] || '';
+    // "Match the logo" direction: the whole shop is themed to ONE brand colour, so
+    // cards/tiles/labels fall back to var(--accent) — no per-category hues.
+    return '';
   }
   // style="--c:.." attribute for an element tinted to a category (empty if none).
   function colorVar(id) { var c = catColor(id); return c ? '--c:' + c + ';' : ''; }
@@ -522,6 +522,64 @@
     });
   }
   function animateGrid(box) { animateIn(box); enableTilt(box); }
+
+  // ── Brand colour from the logo ───────────────────────────────────────────────
+  // Pull the dominant vivid colour out of the store's logo and theme the whole
+  // shop to it by setting --accent (every color-mix recolours live). Falls back
+  // silently to the configured brand colour if the logo can't be read (CORS/taint).
+  function rgbToHex(r, g, b) {
+    return '#' + [r, g, b].map(function (x) { return ('0' + Math.max(0, Math.min(255, Math.round(x))).toString(16)).slice(-2); }).join('');
+  }
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b), h = 0, s = 0, l = (max + min) / 2;
+    if (max !== min) {
+      var d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h /= 6;
+    }
+    return [h, s, l];
+  }
+  function hslToRgb(h, s, l) {
+    var hue2rgb = function (p, q, t) { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; };
+    if (s === 0) return [l * 255, l * 255, l * 255];
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    return [hue2rgb(p, q, h + 1 / 3) * 255, hue2rgb(p, q, h) * 255, hue2rgb(p, q, h - 1 / 3) * 255];
+  }
+  // Make any logo colour a vivid accent that reads on the near-black theme.
+  function vivify(r, g, b) {
+    var hsl = rgbToHsl(r, g, b);
+    var rgb = hslToRgb(hsl[0], Math.max(hsl[1], 0.55), Math.min(Math.max(hsl[2], 0.52), 0.66));
+    return rgbToHex(rgb[0], rgb[1], rgb[2]);
+  }
+  function applyLogoColor(url) {
+    if (!url) return;
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function () {
+      try {
+        var n = 40, cv = document.createElement('canvas'); cv.width = n; cv.height = n;
+        var ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, n, n);
+        var d = ctx.getImageData(0, 0, n, n).data, buckets = {};
+        for (var i = 0; i < d.length; i += 4) {
+          var r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+          if (a < 200) continue;
+          var mx = Math.max(r, g, b), mn = Math.min(r, g, b), sat = mx ? (mx - mn) / mx : 0, lum = (mx + mn) / 510;
+          if (sat < 0.22 || lum < 0.1 || lum > 0.93) continue; // skip greys / near-black / near-white
+          var key = (r >> 4) + '-' + (g >> 4) + '-' + (b >> 4);
+          var bk = buckets[key] || (buckets[key] = { r: 0, g: 0, b: 0, n: 0, s: 0 });
+          bk.r += r; bk.g += g; bk.b += b; bk.n++; bk.s += sat;
+        }
+        var best = null, bestScore = -1;
+        for (var k in buckets) { var bk2 = buckets[k], avgSat = bk2.s / bk2.n, sc = bk2.n * avgSat * avgSat; if (sc > bestScore) { bestScore = sc; best = bk2; } }
+        if (best) document.documentElement.style.setProperty('--accent', vivify(best.r / best.n, best.g / best.n, best.b / best.n));
+      } catch (e) { /* tainted canvas (logo served without CORS) — keep the brand colour */ }
+    };
+    img.src = url;
+  }
   // "Top · Sub" (or just the name) for display on a card.
   function catFullName(id) {
     if (!_catIndex) return '';
@@ -1096,8 +1154,10 @@
     buildCatIndex();
     if (!S.view) S.view = { q: params.get('q') || '', cat: params.get('cat') || '', sort: params.get('sort') || 'featured' };
     var s = S.store;
-    // Only accept a valid hex accent (CSS vars can't run script, but stay strict).
+    // Theme the shop to the brand: the configured accent first (instant), then the
+    // logo's own dominant colour once it loads (overrides live if readable).
     if (s.color && /^#[0-9a-f]{6}$/i.test(s.color)) document.documentElement.style.setProperty('--accent', s.color);
+    applyLogoColor(s.logo || s.guildIcon);
     var name = s.title || s.guildName || 'Store';
     document.title = name + ' — Store';
 
