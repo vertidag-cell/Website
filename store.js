@@ -787,7 +787,7 @@
       var go = function () {
         var key = tile.getAttribute('data-cat');
         S.view.cat = key;
-        root.querySelectorAll('.store-cat').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-cat') === (key === 'other' ? ' ' : key)); });
+        root.querySelectorAll('.store-cat').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-cat') === (key === 'other' ? '__none__' : key)); });
         renderResults();
         try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
       };

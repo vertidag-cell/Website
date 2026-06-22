@@ -385,6 +385,79 @@
       .cat-tile-go { font-size: 13px; font-weight: 700; color: var(--accent); }
       .store-back-row { margin: 0 0 16px; }
       .store-back-row .btn { padding: 7px 14px; font-size: 13px; }
+
+      /* ───────────────────────────────────────────────────────────────────────
+         Motion + depth pass — gives the shop life without touching the markup:
+         a drifting aurora, a living hero, card zoom/sheen, richer image
+         fallbacks, and tactile controls. All disabled under reduced-motion.
+         ─────────────────────────────────────────────────────────────────────── */
+
+      /* Slow-drifting aurora behind the content (the page no longer sits still).
+         Scoped to .store-wrap so it never clobbers the site-wide body::before. */
+      .store-wrap::before { content: ""; position: fixed; left: -15%; right: -15%; top: -25vh; height: 85vh; z-index: -1;
+        pointer-events: none; opacity: .7;
+        background:
+          radial-gradient(38% 60% at 32% 30%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+          radial-gradient(34% 55% at 72% 22%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 72%);
+        filter: blur(36px); animation: storeAurora 19s ease-in-out infinite alternate; will-change: transform; }
+      @keyframes storeAurora {
+        from { transform: translate3d(-3%, 0, 0) rotate(-2deg) scale(1); }
+        to   { transform: translate3d(5%, 2%, 0) rotate(2deg) scale(1.12); } }
+
+      /* Living hero: a slow conic light sweep behind the hero content. */
+      .store-hero::before { content: ""; position: absolute; inset: -45%; z-index: 0; pointer-events: none;
+        background: conic-gradient(from 90deg at 70% 12%, transparent 0deg,
+          color-mix(in srgb, var(--accent) 15%, transparent) 70deg, transparent 150deg, transparent 360deg);
+        opacity: .7; animation: heroSweep 17s linear infinite; will-change: transform; }
+      @keyframes heroSweep { to { transform: rotate(1turn); } }
+      .store-hero-inner, .store-hero-banner, .store-trust { position: relative; z-index: 1; }
+      .store-logo { animation: logoPulse 4s ease-in-out infinite; }
+      @keyframes logoPulse {
+        0%, 100% { box-shadow: 0 10px 36px color-mix(in srgb, var(--accent) 24%, transparent); }
+        50%      { box-shadow: 0 12px 48px color-mix(in srgb, var(--accent) 46%, transparent); } }
+      .store-trust-pill { transition: border-color .15s, color .15s, transform .15s; }
+      .store-trust-pill:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+      /* Product cards: zoom-on-hover image, a sheen sweep, a top accent line. */
+      .prod { position: relative; }
+      .prod-img { transition: transform .55s cubic-bezier(.22,.61,.36,1); }
+      .prod:hover .prod-img { transform: scale(1.07); }
+      .prod::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 4;
+        pointer-events: none; opacity: 0; transition: opacity .22s ease;
+        background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+      .prod:hover::before { opacity: .95; }
+      .prod::after { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit;
+        background: linear-gradient(115deg, transparent 28%, rgba(255,255,255,.12) 46%, transparent 62%);
+        transform: translateX(-130%); transition: transform .7s cubic-bezier(.22,.61,.36,1); }
+      .prod:hover::after { transform: translateX(130%); }
+      .prod-btn { transition: transform .12s ease, box-shadow .22s ease, filter .2s ease; }
+      .prod-btn:hover:not(:disabled) { box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 32%, transparent); }
+      .prod-btn:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+
+      /* Richer image fallbacks so an imageless catalogue still has texture + variety. */
+      .prod-img.prod-fb { position: relative; overflow: hidden; }
+      .prod-img.prod-fb::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+        background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,.06) 1px, transparent 0); background-size: 15px 15px; }
+      .store-grid .prod:nth-child(4n+1) .prod-fb { background-position: 22% 18%, 0 0; }
+      .store-grid .prod:nth-child(4n+2) .prod-fb { background-position: 78% 22%, 0 0; }
+      .store-grid .prod:nth-child(4n+3) .prod-fb { background-position: 50% 82%, 0 0; }
+      .store-grid .prod:nth-child(4n)   .prod-fb { background-position: 86% 76%, 0 0; }
+
+      /* Category tiles: the arrow leans in on hover. */
+      .cat-tile-go { transition: transform .2s cubic-bezier(.22,.61,.36,1); }
+      .cat-tile:hover .cat-tile-go { transform: translateX(5px); }
+
+      /* Cart button: a tactile lift. */
+      .cart-fab { transition: transform .16s ease, box-shadow .22s ease, background .2s; }
+      .cart-fab:hover { transform: translateY(-2px); box-shadow: 0 18px 46px color-mix(in srgb, var(--accent) 52%, transparent); }
+      .cart-fab:active { transform: translateY(0) scale(.97); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .store-wrap::before, .store-hero::before, .store-logo { animation: none !important; }
+        .prod-img, .prod::after, .prod::before, .cat-tile-go, .cart-fab, .prod-btn, .store-trust-pill { transition: none !important; }
+        .prod:hover .prod-img { transform: none !important; }
+        .prod::after { display: none !important; }
+      }
     </style>
   </head>
   <body>
@@ -416,6 +489,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=37"></script>
+    <script src="store.js?v=38"></script>
   </body>
 </html>
