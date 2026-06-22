@@ -715,37 +715,40 @@
     return '<div class="prod-bundle"><span class="prod-bundle-h">🎁 Includes</span>' +
       p.bundle.map(function (c) { return '<span class="prod-bundle-item">' + c.quantity + '× ' + esc(c.name) + '</span>'; }).join('') + '</div>';
   }
+  // Stock pill (matches the reference: a coloured dot + short label).
+  function stockHtml(p) {
+    var varianty = hasVariants(p);
+    if (!p.inStock && !varianty) return '<span class="prod-stock out">Sold out</span>';
+    if (p.lowStock && !varianty) return '<span class="prod-stock low">' + p.lowStock + ' left</span>';
+    return '<span class="prod-stock ok">In stock</span>';
+  }
+  // Image-forward product card (reference-style): a big media tile carries the
+  // image/glyph + overlay badges + a hover "add" button; below sits a tight
+  // price + stock row, then the name. Click opens the full product modal.
   function productCardHtml(p, idx) {
-    // Scroll-reveal stagger (animateIn observes these) + the card's category hue.
-    var rdelay = Math.min((idx || 0) * 45, 360);
-    var style = ' style="' + colorVar(p.category_id) + 'animation-delay:' + rdelay + 'ms"';
-    var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + productGlyph(p) + '</div>';
-    var badges = '';
-    if (S.cart && S.cart.items && S.cart.items.some(function (it) { return it.productId === p.id; })) badges += '<span class="prod-badge incart">✓ In cart</span>';
-    if (p.sale_price_money != null) badges += '<span class="prod-badge sale">Sale</span>';
-    if (p.bestseller) badges += '<span class="prod-badge best">🔥 Bestseller</span>';
-    if (p.featured) badges += '<span class="prod-badge feat">★ Featured</span>';
-    if (p.isBundle) badges += '<span class="prod-badge bundle">🎁 Bundle</span>';
-    else badges += p.fulfillment_type === 'role' ? '<span class="prod-badge role">⚡ Instant role</span>' : '<span class="prod-badge">📦 In-game delivery</span>';
-    if (!p.inStock && !hasVariants(p)) badges += '<span class="prod-badge oos">Out of stock</span>';
-    else if (p.lowStock && !hasVariants(p)) badges += '<span class="prod-badge low">Only ' + p.lowStock + ' left</span>';
-    var ratingInner = p.reviewCount ? '<div class="prod-rating">' + starDisplay(p.rating) + '<span class="prod-rating-n">' + Number(p.rating).toFixed(1) + ' (' + p.reviewCount + ')</span></div>' : '';
-    var soldTxt = (p.soldCount && p.soldCount >= 1) ? '<span class="prod-sold">🔥 ' + fmt(p.soldCount) + ' sold</span>' : '';
-    var rating = (ratingInner || soldTxt) ? '<div class="prod-social">' + ratingInner + soldTxt + '</div>' : '';
+    var style = ' style="animation-delay:' + Math.min((idx || 0) * 45, 360) + 'ms"';
+    var media = p.image_url
+      ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">'
+      : '<div class="prod-img prod-fb">' + productGlyph(p) + '</div>';
+    var ob = '';
+    if (p.sale_price_money != null) ob += '<span class="prod-badge sale">Sale</span>';
+    if (p.featured) ob += '<span class="prod-badge feat">★ Featured</span>';
+    else if (p.bestseller) ob += '<span class="prod-badge best">🔥 Bestseller</span>';
+    if (p.isBundle) ob += '<span class="prod-badge bundle">🎁 Bundle</span>';
+    if (S.cart && S.cart.items && S.cart.items.some(function (it) { return it.productId === p.id; })) ob += '<span class="prod-badge incart">✓ In cart</span>';
     var varianty = hasVariants(p);
     var disabled = !varianty && !p.inStock;
-    var catLabel = productCatLabel(p);
-    return '<div class="prod reveal-up' + (p.featured ? ' is-feat' : '') + '" data-pid="' + p.id + '" tabindex="0" role="button"' + style + '>' + img + '<div class="prod-body">' +
-      (catLabel ? '<div class="prod-cat">' + esc(catLabel) + '</div>' : '') +
-      '<h3 class="prod-name">' + esc(p.name) + '</h3>' +
-      rating +
-      (p.description ? '<p class="prod-desc">' + esc(p.description) + '</p>' : '') +
-      '<div class="prod-badges">' + badges + '</div>' +
-      bundleHtml(p) +
-      saleEndsHtml(p) +
-      '<div class="prod-foot"><div class="prod-price">' + cardPriceHtml(p) + '</div>' +
-      '<button class="btn btn-primary prod-btn" type="button" data-pid="' + p.id + '"' + (disabled ? ' disabled' : '') + '>' + (varianty ? 'Choose options' : 'Add to cart') + '</button>' +
-      '</div></div></div>';
+    var btn = '<button class="btn btn-primary prod-add" type="button" data-pid="' + p.id + '"' + (disabled ? ' disabled' : '') + '>'
+      + (disabled ? 'Sold out' : (varianty ? 'Choose options' : 'Add to cart')) + '</button>';
+    return '<div class="prod prod-v2 reveal-up' + (p.featured ? ' is-feat' : '') + '" data-pid="' + p.id + '" tabindex="0" role="button"' + style + '>'
+      + '<div class="prod-media">' + media
+        + (ob ? '<div class="prod-badges">' + ob + '</div>' : '')
+        + '<div class="prod-hover">' + btn + '</div>'
+      + '</div>'
+      + '<div class="prod-body">'
+        + '<div class="prod-meta"><div class="prod-price">' + cardPriceHtml(p) + '</div>' + stockHtml(p) + '</div>'
+        + '<h3 class="prod-name">' + esc(p.name) + '</h3>'
+      + '</div></div>';
   }
   function wireImgFallbacks(container) {
     container.querySelectorAll('img[data-letter]').forEach(function (img) {
@@ -773,7 +776,7 @@
   var PAGE = 24;
   // Wire add-to-cart buttons + card open/keyboard handlers inside a container.
   function wireGridEvents(box) {
-    box.querySelectorAll('.prod-btn').forEach(function (btn) {
+    box.querySelectorAll('.prod-add').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
         if (btn.disabled) return;
@@ -921,16 +924,40 @@
   // Landing view: top-level categories as product-style cards. Clicking one
   // opens that category's products (renderGrouped drilled-in). An "Other" tile
   // appears when there are uncategorised products.
+  // Products belonging to a top-level category (its own + its sub-categories), or
+  // the uncategorised bucket for 'other'.
+  function catProducts(catKey) {
+    return S.products.filter(function (p) {
+      if (catKey === 'other') return isUncategorised(p);
+      return p.category_id === catKey || (_catIndex && _catIndex.parentTop[p.category_id] === catKey);
+    });
+  }
+  // A "£min – £max" range (or a single price) across a set of products.
+  function priceRangeHtml(prods) {
+    var ccy = S.store && S.store.currency;
+    var ms = prods.map(function (p) { return p.sale_price_money != null ? p.sale_price_money : p.price_money; }).filter(function (v) { return v != null; });
+    if (ms.length) {
+      var mn = Math.min.apply(null, ms), mx = Math.max.apply(null, ms);
+      return '<span class="prod-money">' + money(mn, ccy) + (mx !== mn ? ' – ' + money(mx, ccy) : '') + '</span>';
+    }
+    var cs = prods.map(function (p) { return p.price_credits; }).filter(function (v) { return v != null; });
+    if (cs.length) { var c0 = Math.min.apply(null, cs), c1 = Math.max.apply(null, cs); return '<span class="prod-credits">🪙 ' + fmt(c0) + (c1 !== c0 ? ' – ' + fmt(c1) : '') + '</span>'; }
+    return '';
+  }
+  // Image-forward category tile (reference-style): big media + a price range and
+  // product count, then the category name. Click drills into the category.
   function categoryTileHtml(catKey, name, image, count, desc, idx) {
-    var img = image
+    var media = image
       ? '<img class="prod-img" src="' + esc(image) + '" alt="" loading="lazy" data-letter="' + initial(name) + '">'
       : '<div class="prod-img prod-fb">' + glyphSvg(name) + '</div>';
-    var style = ' style="' + colorVar(catKey) + 'animation-delay:' + Math.min((idx || 0) * 50, 400) + 'ms"';
-    return '<div class="prod cat-tile reveal-up" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button"' + style + '>' + img +
-      '<div class="prod-body"><h3 class="prod-name">' + esc(name) + '</h3>' +
-      (desc ? '<p class="prod-desc">' + esc(desc) + '</p>' : '') +
-      '<div class="prod-foot"><span class="cat-tile-count">' + count + ' ' + (count === 1 ? 'item' : 'items') + '</span>' +
-      '<span class="cat-tile-go">Browse →</span></div></div></div>';
+    var range = priceRangeHtml(catProducts(catKey));
+    var style = ' style="animation-delay:' + Math.min((idx || 0) * 50, 400) + 'ms"';
+    return '<div class="prod prod-v2 cat-tile reveal-up" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button"' + style + '>'
+      + '<div class="prod-media">' + media + '<div class="prod-hover"><span class="prod-add">Browse →</span></div></div>'
+      + '<div class="prod-body">'
+        + '<div class="prod-meta">' + (range || '<span class="prod-money muted-price">View</span>') + '<span class="prod-stock ok">' + count + ' item' + (count === 1 ? '' : 's') + '</span></div>'
+        + '<h3 class="prod-name">' + esc(name) + '</h3>'
+      + '</div></div>';
   }
   function renderCategoryTiles(box) {
     var tops = _catIndex.tops || [];
@@ -1238,8 +1265,12 @@
     if (S.products.some(function (pp) { return pp.fulfillment_type === 'role'; })) trust.push('<span class="store-trust-pill">⚡ Instant delivery</span>');
     trust.push('<span class="store-trust-pill">🔒 Secure checkout</span>');
 
-    var html = '<div class="store-hero">';
-    if (s.banner) html += '<img class="store-hero-banner" src="' + esc(s.banner) + '" alt="">';
+    // Full-bleed cinematic hero: the banner image (if a clean https URL) becomes
+    // the background, else a brand-coloured gradient. Legibility overlay is in CSS.
+    var heroImg = (s.banner && /^https:\/\/[^\s"'()<>]+$/.test(s.banner))
+      ? "url('" + s.banner + "')"
+      : 'radial-gradient(120% 130% at 50% -10%, color-mix(in srgb, var(--accent) 34%, transparent), transparent 58%)';
+    var html = '<div class="store-hero" style="--hero-img:' + heroImg + '">';
     html += '<div class="store-hero-inner">';
     html += logo ? '<img class="store-logo" src="' + esc(logo) + '" alt="" data-letter="' + initial(name) + '">' : '<div class="store-logo store-fb">' + initial(name) + '</div>';
     html += '<div class="store-htext"><h1 class="store-title">' + esc(name) + '</h1>' +

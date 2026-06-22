@@ -34,7 +34,21 @@ function solidPng(w, h, [r, g, b]) {
   const raw = Buffer.concat(Array.from({ length: h }, () => row));
   return Buffer.concat([sig, pngChunk("IHDR", ihdr), pngChunk("IDAT", zlib.deflateSync(raw)), pngChunk("IEND", Buffer.alloc(0))]);
 }
+function gradientPng(w, h, top, bot) {
+  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 6;
+  const rows = [];
+  for (let y = 0; y < h; y++) {
+    const t = h === 1 ? 0 : y / (h - 1);
+    const r = Math.round(top[0] + (bot[0] - top[0]) * t), g = Math.round(top[1] + (bot[1] - top[1]) * t), b = Math.round(top[2] + (bot[2] - top[2]) * t);
+    const row = Buffer.alloc(1 + w * 4);
+    for (let x = 0; x < w; x++) { row[1 + x * 4] = r; row[2 + x * 4] = g; row[3 + x * 4] = b; row[4 + x * 4] = 255; }
+    rows.push(row);
+  }
+  return Buffer.concat([sig, pngChunk("IHDR", ihdr), pngChunk("IDAT", zlib.deflateSync(Buffer.concat(rows))), pngChunk("IEND", Buffer.alloc(0))]);
+}
 const TEST_LOGO = solidPng(24, 24, [232, 98, 42]); // distinct orange to prove auto-theming
+const TEST_BANNER = gradientPng(64, 40, [150, 64, 22], [8, 7, 6]); // stand-in hero artwork
 
 const ROOT = path.dirname(url.fileURLToPath(import.meta.url));
 const MIME = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon", ".json": "application/json" };
@@ -88,7 +102,7 @@ GROUPS.forEach((g, gi) => {
   top.totalProductCount = total;
   categories.push(top);
 });
-const STORE = { guildId: "1", guildName: "Iron Ark", guildIcon: null, title: "Iron Ark", description: "Donation store — support the cluster and gear up.", announcement: "Season 4 is live — new base packs added!", checkoutFields: [], banner: null, logo: "/__logo.png", color: "#2bff9e", currency: "GBP", acceptMoney: true, acceptCredits: false, enabled: true, testMode: true };
+const STORE = { guildId: "1", guildName: "Iron Ark", guildIcon: null, title: "Iron Ark", description: "Donation store — support the cluster and gear up.", announcement: "Season 4 is live — new base packs added!", checkoutFields: [], banner: "/__banner.png", logo: "/__logo.png", color: "#2bff9e", currency: "GBP", acceptMoney: true, acceptCredits: false, enabled: true, testMode: true };
 
 const json = (o) => ({ status: 200, contentType: "application/json", body: JSON.stringify(o) });
 
@@ -103,6 +117,7 @@ STORE.guildId = GUILD;
 
 async function mock(page) {
   await page.route(/\/__logo\.png/, (r) => r.fulfill({ status: 200, contentType: "image/png", body: TEST_LOGO }));
+  await page.route(/\/__banner\.png/, (r) => r.fulfill({ status: 200, contentType: "image/png", body: TEST_BANNER }));
   await page.route(/\/auth\/csrf/, (r) => r.fulfill(json({ csrfToken: "x" })));
   await page.route(/\/api\/dashboard\/me/, (r) => r.fulfill(json({ user: null })));
   await page.route(/\/api\/dashboard\/store\/cart/, (r) => r.fulfill(json({ items: [] })));

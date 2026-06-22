@@ -425,29 +425,32 @@
       @keyframes orbA { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(16%, 10%, 0) scale(1.22); } }
       @keyframes orbB { from { transform: translate3d(0,0,0) scale(1.05); } to { transform: translate3d(-14%, 14%, 0) scale(.86); } }
 
-      /* Bold, immersive, centred hero — themed to the brand colour. */
-      .store-hero { text-align: center; border-radius: 26px; isolation: isolate;
-        border-color: color-mix(in srgb, var(--accent) 26%, var(--border));
-        background:
-          radial-gradient(120% 130% at 50% -25%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 58%),
-          color-mix(in srgb, var(--accent) 6%, var(--card, rgba(255,255,255,0.04)));
-        box-shadow: 0 34px 90px -44px color-mix(in srgb, var(--accent) 42%, #000); }
+      /* Full-bleed cinematic hero (reference-style): the banner image (or a brand
+         gradient) fills it edge-to-edge under a legibility overlay; content centred. */
+      html, body { overflow-x: hidden; } /* guard the 100vw full-bleed against scrollbars */
+      .store-hero { width: 100vw; margin: -28px calc(50% - 50vw) 30px; border: 0;
+        border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border)); border-radius: 0;
+        min-height: 350px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; isolation: isolate; overflow: hidden;
+        background-image:
+          linear-gradient(180deg, rgba(5,6,8,.18) 0%, rgba(5,6,8,.5) 56%, #050608 100%),
+          var(--hero-img, none),
+          radial-gradient(100% 90% at 50% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%);
+        background-size: cover; background-position: center; background-repeat: no-repeat; box-shadow: none; }
       .store-hero::before { content: ""; position: absolute; inset: -55%; z-index: 0; pointer-events: none;
         background: conic-gradient(from 90deg at 50% 8%, transparent 0deg,
-          color-mix(in srgb, var(--accent) 22%, transparent) 55deg, transparent 140deg, transparent 220deg,
-          color-mix(in srgb, var(--accent) 14%, transparent) 290deg, transparent 360deg);
-        opacity: .85; animation: heroSweep 18s linear infinite; will-change: transform; }
+          color-mix(in srgb, var(--accent) 16%, transparent) 55deg, transparent 140deg, transparent 230deg,
+          color-mix(in srgb, var(--accent) 10%, transparent) 300deg, transparent 360deg);
+        opacity: .6; animation: heroSweep 20s linear infinite; will-change: transform; mix-blend-mode: screen; }
       @keyframes heroSweep { to { transform: rotate(1turn); } }
-      .store-hero::after { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-        background: linear-gradient(115deg, transparent 40%, color-mix(in srgb, var(--accent) 16%, rgba(255,255,255,.06)) 48%, transparent 56%);
-        transform: translateX(-120%); animation: heroShine 7s ease-in-out infinite; }
-      @keyframes heroShine { 0%, 72% { transform: translateX(-120%); } 90%, 100% { transform: translateX(120%); } }
-      .store-hero-inner { position: relative; z-index: 1; flex-direction: column; align-items: center; gap: 16px; padding: 48px 26px 22px; }
-      .store-hero-banner, .store-trust { position: relative; z-index: 1; }
+      .store-hero-inner { position: relative; z-index: 1; flex-direction: column; align-items: center; gap: 15px; padding: 30px 26px; max-width: 720px; }
+      .store-trust { position: relative; z-index: 1; padding-bottom: 22px; }
       .store-htext { text-align: center; min-width: 0; }
-      .store-title { font-size: clamp(32px, 6vw, 56px); line-height: 1.03; text-shadow: 0 4px 44px color-mix(in srgb, var(--accent) 38%, transparent); }
+      .store-title { font-size: clamp(30px, 5.5vw, 52px); line-height: 1.04;
+        text-shadow: 0 2px 26px rgba(0,0,0,.85), 0 0 52px color-mix(in srgb, var(--accent) 35%, transparent); }
+      .store-desc { color: #d6dee6; text-shadow: 0 1px 12px rgba(0,0,0,.8); }
       .store-pays, .store-trust { justify-content: center; }
-      .store-logo { width: 100px; height: 100px; border-radius: 28px; animation: logoPulse 4s ease-in-out infinite; }
+      .store-logo { width: 78px; height: 78px; border-radius: 22px; animation: logoPulse 4s ease-in-out infinite; }
       @keyframes logoPulse {
         0%, 100% { box-shadow: 0 12px 40px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
         50%      { box-shadow: 0 14px 64px color-mix(in srgb, var(--accent) 58%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); } }
@@ -537,6 +540,41 @@
       .prod-cat { font-size: 10.5px; letter-spacing: .09em; opacity: .92; }
       .prod-money { font-size: 19px; letter-spacing: -.01em; }
 
+      /* ── Reference-style image-forward cards ─────────────────────────────────── */
+      .prod-v2 { border-radius: 16px; }
+      .prod-v2 .prod-media { position: relative; aspect-ratio: 4 / 3; overflow: hidden; }
+      .prod-v2 .prod-media .prod-img { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; display: block; }
+      .prod-v2 .prod-media .prod-fb { width: 100%; height: 100%; }
+      /* Atmospheric imageless tile: a smoky brand glow + vignette + a big glyph. */
+      .prod-v2 .prod-fb {
+        background:
+          radial-gradient(78% 66% at 50% 34%, color-mix(in srgb, var(--accent) 42%, transparent), transparent 70%),
+          radial-gradient(120% 100% at 50% 122%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 60%),
+          linear-gradient(180deg, #0e1318, #07090c); }
+      .prod-v2 .prod-fb::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(62% 52% at 50% 44%, transparent 42%, rgba(0,0,0,.5) 100%); }
+      .prod-v2 .prod-fb .fb-ico { width: 38%; height: 38%; position: relative; z-index: 1; }
+      .prod-badges { position: absolute; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 3; margin: 0; }
+      .prod-hover { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3;
+        opacity: 0; transform: translateY(10px); transition: opacity .22s ease, transform .22s ease; }
+      .prod:hover .prod-hover, .prod:focus-visible .prod-hover { opacity: 1; transform: none; }
+      .prod-hover .btn.prod-add { width: 100%; justify-content: center; }
+      .prod-hover span.prod-add { display: block; text-align: center; padding: 10px 14px; border-radius: 11px;
+        font-weight: 800; font-size: 13.5px; color: #06120c;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 74%, #fff), var(--accent)); }
+      .prod-v2 .prod-body { padding: 12px 14px 14px; display: block; }
+      .prod-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; min-height: 18px; }
+      .prod-meta .prod-money { font-size: 15px; font-weight: 800; }
+      .prod-meta .prod-credits { font-size: 13px; }
+      .muted-price { color: var(--text-muted); font-weight: 700; }
+      .prod-stock { font-size: 11.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); white-space: nowrap; }
+      .prod-stock::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+      .prod-stock.ok { color: color-mix(in srgb, #34d399 65%, var(--text-muted)); }
+      .prod-stock.ok::before { background: #34d399; box-shadow: 0 0 7px #34d399; }
+      .prod-stock.low { color: #fb923c; } .prod-stock.low::before { background: #fb923c; }
+      .prod-stock.out { color: #f87171; } .prod-stock.out::before { background: #f87171; }
+      .prod-v2 .prod-name { font-size: 15.5px; font-weight: 700; margin: 0; line-height: 1.25; }
+
       /* Scale the bold hero down on phones. */
       @media (max-width: 560px) {
         .store-logo { width: 74px; height: 74px; border-radius: 20px; }
@@ -589,6 +627,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=41"></script>
+    <script src="store.js?v=42"></script>
   </body>
 </html>
