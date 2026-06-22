@@ -129,7 +129,7 @@
   ];
   var DEMO_ORDERS = [
     { id: 312, buyer_user_id: "111", buyer_username: "ApexHunter", rail: "money", total_money: 9.99, currency: "GBP", total_credits: null, status: "completed", coupon_code: null, created_at: "2026-06-19 14:02:00", items: [{ id: 1, name: "VIP Rank", quantity: 1, fulfillment_type: "role", fulfillment_status: "granted" }] },
-    { id: 311, buyer_user_id: "112", buyer_username: "RexQueen", rail: "credits", total_credits: 8000, status: "needs_delivery", coupon_code: "SUMMER20", created_at: "2026-06-19 12:40:00", customFields: [{ id: "ign", label: "In-game character name", value: "RexQueen" }, { id: "tribe", label: "Tribe name", value: "Apex Predators" }], items: [{ id: 2, name: "Giga lvl 150 (imprinted)", quantity: 1, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", fulfillment_status: "pending" }] },
+    { id: 311, buyer_user_id: "112", buyer_username: "RexQueen", rail: "credits", total_credits: 8000, status: "needs_delivery", coupon_code: "SUMMER20", redeem_code: "ARK-7Q2M-4XZ9", redeemed_at: null, created_at: "2026-06-19 12:40:00", customFields: [{ id: "ign", label: "In-game character name", value: "RexQueen" }, { id: "tribe", label: "Tribe name", value: "Apex Predators" }], items: [{ id: 2, name: "Giga lvl 150 (imprinted)", quantity: 1, fulfillment_type: "manual", delivery_instructions: "Spawn imprinted Giga 150 at buyer base", fulfillment_status: "pending" }] },
     { id: 310, buyer_user_id: "113", buyer_username: "MeshGod", rail: "money", total_money: 19.99, currency: "GBP", status: "paid", coupon_code: null, created_at: "2026-06-18 22:10:00", items: [{ id: 3, name: "MVP Rank", quantity: 1, fulfillment_type: "role", fulfillment_status: "granted" }] },
   ];
   var DEMO_COUPONS = [
@@ -1119,6 +1119,9 @@
       rowTop.append(el("div", { style: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" } },
         el("b", null, "#" + o.id), el("a", { href: "https://discord.com/users/" + o.buyer_user_id, target: "_blank", rel: "noopener", class: "muted" }, "@" + (o.buyer_username || o.buyer_user_id)),
         o.coupon_code ? badge("🎟️ " + o.coupon_code, "info") : null,
+        // Claim status for code-redeemable (needs-delivery) orders: has the buyer
+        // brought their code to a ticket yet?
+        (o.status === "needs_delivery" && o.redeem_code) ? (o.redeemed_at ? badge("Code redeemed", "ok") : badge("Awaiting redemption", "warn")) : null,
         o.created_at ? el("span", { class: "muted", style: { fontSize: "12px" }, title: absDate(o.created_at) }, relTime(o.created_at)) : null,
         el("span", { style: { marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" } }, orderBadge(o.status), el("b", null, total))));
       (o.items || []).forEach(function (i) {
