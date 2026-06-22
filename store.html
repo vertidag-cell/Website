@@ -10,7 +10,7 @@
     <meta property="og:type" content="website" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="assets/logo.png?v=2" />
     <link rel="stylesheet" href="styles.css?v=57" />
     <link rel="stylesheet" href="lx-site.css?v=1" />
@@ -394,8 +394,10 @@
          prefers-reduced-motion. (--c falls back to --accent everywhere now.)
          ─────────────────────────────────────────────────────────────────────── */
 
-      /* Animated backdrop layers (fixed, behind everything). */
-      .store-bg { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+      /* Animated backdrop layers (fixed, behind everything). A faint dot-grid
+         gives premium texture; a glow + receding floor + orbs give depth. */
+      .store-bg { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none;
+        background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.022) 1px, transparent 0); background-size: 32px 32px; }
       .store-bg-glow { position: absolute; left: 50%; top: -12%; width: 120vw; height: 78vh; transform: translateX(-50%);
         background: radial-gradient(52% 60% at 50% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 72%);
         animation: bgGlow 8s ease-in-out infinite; }
@@ -406,9 +408,9 @@
           linear-gradient(90deg, color-mix(in srgb, var(--accent) 17%, transparent) 1px, transparent 1px);
         background-size: 48px 48px;
         transform: perspective(440px) rotateX(64deg); transform-origin: bottom center;
-        -webkit-mask-image: linear-gradient(to top, #000 4%, transparent 80%);
-        mask-image: linear-gradient(to top, #000 4%, transparent 80%);
-        opacity: .45; animation: gridMove 5.5s linear infinite; }
+        -webkit-mask-image: linear-gradient(to top, #000 2%, transparent 78%);
+        mask-image: linear-gradient(to top, #000 2%, transparent 78%);
+        opacity: .28; animation: gridMove 6.5s linear infinite; }
       @keyframes gridMove { from { background-position: 0 0; } to { background-position: 0 48px; } }
 
       /* Drifting brand-colour orbs (both --accent now — one cohesive colour). */
@@ -517,6 +519,24 @@
       .cart-fab:hover { transform: translateY(-2px); box-shadow: 0 18px 46px color-mix(in srgb, var(--accent) 52%, transparent); }
       .cart-fab:active { transform: translateY(0) scale(.97); }
 
+      /* ── Craft pass: display type, real glyphs, refined cards ────────────────── */
+      .store-title, .prod-name, .cat-tile .prod-name, .store-sec-title, .pm-name,
+      .cart-head h2, .store-state h2 { font-family: "Space Grotesk", "Inter", system-ui, sans-serif; }
+      .store-title { letter-spacing: -0.025em; font-weight: 700; }
+      .prod-name, .store-sec-title, .pm-name { letter-spacing: -0.015em; }
+
+      /* Line-glyph placeholders (replace bare letters) — brand-tinted, glowing. */
+      .prod-fb .fb-ico { width: 46px; height: 46px; opacity: .95;
+        filter: drop-shadow(0 3px 14px color-mix(in srgb, var(--accent) 45%, transparent)); }
+      .store-sec-img .fb-ico { width: 24px; height: 24px; }
+
+      /* Card refinement: more breathing room, crisper price + label. */
+      .prod { border-radius: 18px; }
+      .prod-body { padding: 15px 16px 16px; gap: 8px; }
+      .prod-name { font-size: 16.5px; }
+      .prod-cat { font-size: 10.5px; letter-spacing: .09em; opacity: .92; }
+      .prod-money { font-size: 19px; letter-spacing: -.01em; }
+
       /* Scale the bold hero down on phones. */
       @media (max-width: 560px) {
         .store-logo { width: 74px; height: 74px; border-radius: 20px; }
@@ -569,6 +589,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=40"></script>
+    <script src="store.js?v=41"></script>
   </body>
 </html>

@@ -478,6 +478,59 @@
   }
   // style="--c:.." attribute for an element tinted to a category (empty if none).
   function colorVar(id) { var c = catColor(id); return c ? '--c:' + c + ';' : ''; }
+
+  // ── Iconography ──────────────────────────────────────────────────────────────
+  // Imageless products/categories show a clean line glyph (matched on keywords)
+  // instead of a bare letter, so the shop reads as designed, not unfinished.
+  var GLYPHS = {
+    box: 'M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8',
+    layers: 'M12 3 3 7l9 4 9-4zM3 12l9 4 9-4M3 17l9 4 9-4',
+    turret: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 2v4M12 18v4M2 12h4M18 12h4',
+    bullet: 'M9 21V11l3-5 3 5v10zM9 16h6M11 6V3h2v3',
+    blueprint: 'M5 3h9l5 5v13H5zM14 3v5h5M8 13h8M8 17h5',
+    tek: 'M7 7h10v10H7zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3',
+    ascension: 'M5 17l7-7 7 7M5 11l7-7 7 7',
+    base: 'M3 21h18M5 21V9l3 2V6l4-3 4 3v5l3-2v12',
+    dino: 'M12 13a2.6 2.6 0 0 1 2.6 2.6c0 1.8-2.6 3.4-2.6 3.4s-2.6-1.6-2.6-3.4A2.6 2.6 0 0 1 12 13zM6.5 9.5a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8zM17.5 9.5a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8zM9.5 6.4a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8zM14.5 6.4a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8z',
+    egg: 'M12 3c-3.5 0-6 5.4-6 9.4A6 6 0 0 0 18 12.4C18 8.4 15.5 3 12 3z',
+    dna: 'M6 3c0 6 12 6 12 12M6 21c0-6 12-6 12-12M7 5h10M7 19h10M9 9h6M9 15h6',
+    gift: 'M20 12v9H4v-9M2 7.5h20V12H2zM12 21V7.5M12 7.5S10.5 3.5 8 3.5 4.5 5.5 6 7.5M12 7.5s1.5-4 4-4 3.5 2 2 4',
+    beer: 'M5 8h11v9a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3zM16 9h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2M8 4v2M11 4v2',
+    flask: 'M9 3h6M10 3v6l-4.5 8.5A2 2 0 0 0 7.3 21h9.4a2 2 0 0 0 1.8-3.5L14 9V3M7.5 15h9',
+    element: 'M12 3l8 3v6c0 4.5-3.5 8-8 9-4.5-1-8-4.5-8-9V6z',
+    star: 'M12 3l2.4 5.4L20 9l-4 4 1 6-5-2.8L7 19l1-6-4-4 5.6-.6z',
+  };
+  function glyphFor(text) {
+    var t = String(text || '').toLowerCase();
+    if (/mystery/.test(t)) return 'gift';
+    if (/beer/.test(t)) return 'beer';
+    if (/mutagen/.test(t)) return 'flask';
+    if (/turret/.test(t)) return 'turret';
+    if (/ammo|bullet|\barb\b/.test(t)) return 'bullet';
+    if (/tek|mek/.test(t)) return 'tek';
+    if (/blueprint/.test(t)) return 'blueprint';
+    if (/ascension/.test(t)) return 'ascension';
+    if (/base/.test(t)) return 'base';
+    if (/breed|egg/.test(t)) return 'egg';
+    if (/cloner/.test(t)) return 'dna';
+    if (/dino|unbreedable/.test(t)) return 'dino';
+    if (/dedi|resource/.test(t)) return 'layers';
+    if (/element/.test(t)) return 'element';
+    return 'box';
+  }
+  function iconSvg(kind) {
+    return '<svg class="fb-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" '
+      + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + (GLYPHS[kind] || GLYPHS.box) + '"/></svg>';
+  }
+  function glyphSvg(text) { return iconSvg(glyphFor(text)); }
+  // Product icon: match the product NAME first; only fall back to its leaf
+  // (sub-)category when the name has no keyword — so an "Ammo Packs" item isn't
+  // mislabelled by the parent "Turrets & Ammo" category name.
+  function productGlyph(p) {
+    var k = glyphFor(p.name);
+    if (k === 'box' && p.category_id != null && _catIndex && _catIndex.byId[p.category_id]) k = glyphFor(_catIndex.byId[p.category_id].name);
+    return iconSvg(k);
+  }
   function buildCatIndex() {
     var byId = {}, parentTop = {};
     _catColor = {};
@@ -666,7 +719,7 @@
     // Scroll-reveal stagger (animateIn observes these) + the card's category hue.
     var rdelay = Math.min((idx || 0) * 45, 360);
     var style = ' style="' + colorVar(p.category_id) + 'animation-delay:' + rdelay + 'ms"';
-    var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + initial(p.name) + '</div>';
+    var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + productGlyph(p) + '</div>';
     var badges = '';
     if (S.cart && S.cart.items && S.cart.items.some(function (it) { return it.productId === p.id; })) badges += '<span class="prod-badge incart">✓ In cart</span>';
     if (p.sale_price_money != null) badges += '<span class="prod-badge sale">Sale</span>';
@@ -745,7 +798,7 @@
   function sectionHeaderHtml(cat, count) {
     var img = cat.image_url
       ? '<img class="store-sec-img" src="' + esc(cat.image_url) + '" alt="" loading="lazy" data-letter="' + initial(cat.name) + '">'
-      : '<div class="store-sec-img store-fb">' + initial(cat.name) + '</div>';
+      : '<div class="store-sec-img store-fb">' + glyphSvg(cat.name) + '</div>';
     return '<div class="store-section reveal-up" id="cat-' + (cat.id || 'other') + '" style="' + colorVar(cat.id) + '">' + img +
       '<div class="store-sec-text"><h2 class="store-sec-title">' + esc(cat.name) + '</h2>' +
       (cat.description ? '<p class="store-sec-desc">' + esc(cat.description) + '</p>' : '') +
@@ -871,7 +924,7 @@
   function categoryTileHtml(catKey, name, image, count, desc, idx) {
     var img = image
       ? '<img class="prod-img" src="' + esc(image) + '" alt="" loading="lazy" data-letter="' + initial(name) + '">'
-      : '<div class="prod-img prod-fb">' + initial(name) + '</div>';
+      : '<div class="prod-img prod-fb">' + glyphSvg(name) + '</div>';
     var style = ' style="' + colorVar(catKey) + 'animation-delay:' + Math.min((idx || 0) * 50, 400) + 'ms"';
     return '<div class="prod cat-tile reveal-up" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button"' + style + '>' + img +
       '<div class="prod-body"><h3 class="prod-name">' + esc(name) + '</h3>' +
