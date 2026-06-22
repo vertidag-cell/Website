@@ -237,10 +237,12 @@
         closeCart();
         S.cart = null; renderCartButton();
         var done = r.body.status === 'completed';
+        var code = r.body.redeemCode;
         state(
           '<div class="store-badge">✓ Order #' + esc(String(r.body.orderId)) + '</div>' +
           '<h2>' + (done ? 'Order complete!' : 'Order placed!') + '</h2>' +
-          '<p>' + (done ? 'Your items have been delivered — check Discord.' : 'Your roles were delivered instantly; any in-game items are now with the staff team, who\'ve been notified.') + '</p>' +
+          '<p>' + (done ? 'Your items have been delivered — check Discord.' : 'Your roles were delivered instantly. To claim any in-game items, open a ticket in the server and paste your code below.') + '</p>' +
+          (code ? '<div class="redeem-box"><span class="redeem-label">Your redemption code</span><code class="redeem-code">' + esc(code) + '</code><span class="redeem-hint">Open a ticket in the server and paste this to claim your items. We\'ve also DM\'d it to you.</span></div>' : '') +
           '<a class="btn btn-primary" id="back-to-store" href="#">Back to store</a>',
           ICON.bag
         );
@@ -429,8 +431,12 @@
         var date = o.created_at ? relTime(o.created_at) : '';
         var dateAbs = o.created_at ? esc(new Date(String(o.created_at).replace(' ', 'T') + 'Z').toLocaleString()) : '';
         var cf = (o.customFields || []).map(function (f) { return '<span class="order-cf"><b>' + esc(f.label) + ':</b> ' + esc(f.value) + '</span>'; }).join('');
+        // Unredeemed code → show it so the buyer can paste it into a ticket.
+        var codeHtml = (o.redeem_code && !o.redeemed_at)
+          ? '<div class="order-code"><span>Redemption code</span><code>' + esc(o.redeem_code) + '</code><span class="order-code-hint">Paste in a ticket to claim</span></div>'
+          : (o.redeemed_at ? '<div class="order-code redeemed"><span>Code redeemed ✓</span></div>' : '');
         html += '<li class="order-row"><div class="order-top"><b>#' + o.id + '</b><span>' + (STAT[o.status] || o.status) + '</span><b>' + total + '</b></div>' +
-          '<div class="order-items">' + itemsHtml + '</div>' + (cf ? '<div class="order-cf-row">' + cf + '</div>' : '') + (date ? '<div class="order-date" title="' + dateAbs + '">' + date + '</div>' : '') + '</li>';
+          '<div class="order-items">' + itemsHtml + '</div>' + codeHtml + (cf ? '<div class="order-cf-row">' + cf + '</div>' : '') + (date ? '<div class="order-date" title="' + dateAbs + '">' + date + '</div>' : '') + '</li>';
       });
       html += '</ul>';
       body.innerHTML = html;
