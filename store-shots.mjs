@@ -72,11 +72,18 @@ for (const [name, w, h, drill] of [["landing", 1440, 1100, false], ["landing-pho
   page.on("pageerror", (e) => errors.push(`${name}: ${e}`));
   await mock(page);
   await page.goto(base + "/store.html?guild=100000000000000001");
-  await page.waitForTimeout(1100);
+  await page.waitForTimeout(1000);
   if (drill) {
     await page.evaluate(() => { const t = document.querySelector(".cat-tile[data-cat]"); if (t) t.click(); });
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(800);
   }
+  // Scroll through so every scroll-reveal fires, then return to the top.
+  await page.evaluate(async () => {
+    const step = Math.max(500, window.innerHeight * 0.8);
+    for (let y = 0; y < document.body.scrollHeight; y += step) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 80)); }
+    window.scrollTo(0, 0);
+  });
+  await page.waitForTimeout(700);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   if (overflow > 1) errors.push(`${name}: horizontal overflow ${overflow}px`);
   await page.screenshot({ path: path.join(outDir, `${name}.png`), fullPage: true });

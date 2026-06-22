@@ -15,6 +15,7 @@
   var root = document.getElementById('store-root');
   var params = new URLSearchParams(location.search);
   var guildId = (params.get('guild') || params.get('g') || '').trim();
+  var REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   var S = { store: null, products: [], user: null, cart: null, coupon: null }; // page state
 
@@ -464,15 +465,63 @@
   // existing stores keep working until their owner creates real categories.
   function treeCats() { return !!(S.categories && S.categories.length); }
   var _catIndex = null;
+  // A vivid per-category accent palette so an imageless catalogue still reads as a
+  // colourful, intentional shop instead of a wall of identical green tiles. Each
+  // top-level category gets a hue; its sub-categories inherit it. Uncategorised =
+  // slate. Used to tint fallback tiles, labels, badges, hovers and chip dots.
+  var CAT_PALETTE = ['#2bff9e', '#34d8ff', '#a78bfa', '#fbbf24', '#fb7185', '#b6ff5b', '#2dd4bf', '#60a5fa', '#e879f9', '#fb923c', '#f472b6', '#4ade80'];
+  var _catColor = {};
+  function catColor(id) {
+    if (id == null || id === '') return '';
+    if (id === 'other') return '#94a3b8';
+    return _catColor[id] || '';
+  }
+  // style="--c:.." attribute for an element tinted to a category (empty if none).
+  function colorVar(id) { var c = catColor(id); return c ? '--c:' + c + ';' : ''; }
   function buildCatIndex() {
     var byId = {}, parentTop = {};
-    (S.categories || []).forEach(function (t) {
+    _catColor = {};
+    (S.categories || []).forEach(function (t, i) {
       byId[t.id] = t;
-      (t.children || []).forEach(function (ch) { byId[ch.id] = ch; parentTop[ch.id] = t.id; });
+      _catColor[t.id] = CAT_PALETTE[i % CAT_PALETTE.length];
+      (t.children || []).forEach(function (ch) { byId[ch.id] = ch; parentTop[ch.id] = t.id; _catColor[ch.id] = _catColor[t.id]; });
     });
     _catIndex = { byId: byId, parentTop: parentTop, tops: S.categories || [] };
     return _catIndex;
   }
+  // Scroll-reveal: cards/sections fade-up as they enter the viewport (every render,
+  // not just first paint) so a long store feels alive while you scroll. Robust by
+  // default — content is shown if IO is unavailable, reduced-motion is on, or a
+  // safety timeout elapses (never ships blank in headless/hidden tabs).
+  function animateIn(box) {
+    var els = box.querySelectorAll('.reveal-up');
+    if (!els.length) return;
+    if (REDUCED || !('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.remove('reveal-up'); }); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        var el = en.target; io.unobserve(el); el.classList.add('in');
+        el.addEventListener('animationend', function () { el.classList.remove('reveal-up', 'in'); }, { once: true });
+      });
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0.04 });
+    els.forEach(function (e) { io.observe(e); });
+    setTimeout(function () { els.forEach(function (e) { if (e.classList.contains('reveal-up')) e.classList.remove('reveal-up', 'in'); }); }, 1500);
+  }
+  // Pointer-tilt: cards lean toward the cursor (mouse only) for a tactile, 3D feel.
+  function enableTilt(box) {
+    if (REDUCED) return;
+    box.querySelectorAll('.prod').forEach(function (card) {
+      card.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') card.style.transition = 'transform .08s linear'; });
+      card.addEventListener('pointermove', function (e) {
+        if (e.pointerType !== 'mouse') return;
+        var r = card.getBoundingClientRect();
+        var px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5;
+        card.style.transform = 'perspective(820px) rotateX(' + (-py * 4.5).toFixed(2) + 'deg) rotateY(' + (px * 5.5).toFixed(2) + 'deg) translateY(-5px)';
+      });
+      card.addEventListener('pointerleave', function () { card.style.transition = ''; card.style.transform = ''; });
+    });
+  }
+  function animateGrid(box) { animateIn(box); enableTilt(box); }
   // "Top · Sub" (or just the name) for display on a card.
   function catFullName(id) {
     if (!_catIndex) return '';
@@ -556,9 +605,9 @@
       p.bundle.map(function (c) { return '<span class="prod-bundle-item">' + c.quantity + '× ' + esc(c.name) + '</span>'; }).join('') + '</div>';
   }
   function productCardHtml(p, idx) {
-    // Stagger a fade-up on the FIRST paint only (not on every filter re-render).
-    var rev = S._revealed ? '' : ' reveal';
-    var delay = S._revealed ? '' : ' style="animation-delay:' + Math.min((idx || 0) * 30, 240) + 'ms"';
+    // Scroll-reveal stagger (animateIn observes these) + the card's category hue.
+    var rdelay = Math.min((idx || 0) * 45, 360);
+    var style = ' style="' + colorVar(p.category_id) + 'animation-delay:' + rdelay + 'ms"';
     var img = p.image_url ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">' : '<div class="prod-img prod-fb">' + initial(p.name) + '</div>';
     var badges = '';
     if (S.cart && S.cart.items && S.cart.items.some(function (it) { return it.productId === p.id; })) badges += '<span class="prod-badge incart">✓ In cart</span>';
@@ -575,7 +624,7 @@
     var varianty = hasVariants(p);
     var disabled = !varianty && !p.inStock;
     var catLabel = productCatLabel(p);
-    return '<div class="prod' + (p.featured ? ' is-feat' : '') + rev + '" data-pid="' + p.id + '" tabindex="0" role="button"' + delay + '>' + img + '<div class="prod-body">' +
+    return '<div class="prod reveal-up' + (p.featured ? ' is-feat' : '') + '" data-pid="' + p.id + '" tabindex="0" role="button"' + style + '>' + img + '<div class="prod-body">' +
       (catLabel ? '<div class="prod-cat">' + esc(catLabel) + '</div>' : '') +
       '<h3 class="prod-name">' + esc(p.name) + '</h3>' +
       rating +
@@ -639,7 +688,7 @@
     var img = cat.image_url
       ? '<img class="store-sec-img" src="' + esc(cat.image_url) + '" alt="" loading="lazy" data-letter="' + initial(cat.name) + '">'
       : '<div class="store-sec-img store-fb">' + initial(cat.name) + '</div>';
-    return '<div class="store-section" id="cat-' + (cat.id || 'other') + '">' + img +
+    return '<div class="store-section reveal-up" id="cat-' + (cat.id || 'other') + '" style="' + colorVar(cat.id) + '">' + img +
       '<div class="store-sec-text"><h2 class="store-sec-title">' + esc(cat.name) + '</h2>' +
       (cat.description ? '<p class="store-sec-desc">' + esc(cat.description) + '</p>' : '') +
       '</div><span class="store-sec-count">' + count + ' item' + (count === 1 ? '' : 's') + '</span></div>';
@@ -681,11 +730,12 @@
     box.innerHTML = '<div class="store-count">' + (shown < list.length ? 'Showing ' + shown + ' of ' + list.length : list.length + ' ' + (list.length === 1 ? 'product' : 'products')) + '</div>' +
       '<div class="store-grid">' + slice.map(productCardHtml).join('') + '</div>' +
       (shown < list.length ? '<div class="store-more"><button type="button" class="btn btn-outline" id="store-loadmore">Load more (' + (list.length - shown) + ')</button></div>' : '');
-    S._revealed = true; // animate only the first paint
+    S._revealed = true;
     var lm = document.getElementById('store-loadmore');
     if (lm) lm.addEventListener('click', function () { renderResults(true); });
     wireImgFallbacks(box);
     wireGridEvents(box);
+    animateGrid(box);
   }
   // Grouped browse view: one section per top-level category (image + name),
   // directly-assigned products first, then a labelled sub-group per sub-category
@@ -708,9 +758,9 @@
     // Drilled into the uncategorised ("Other") bucket.
     if (v.cat === 'other') {
       var items = sortList(S.products.filter(isUncategorised));
-      box.innerHTML = backRowHtml() + sectionHeaderHtml({ name: 'Other', image_url: null }, items.length) +
+      box.innerHTML = backRowHtml() + sectionHeaderHtml({ name: 'Other', image_url: null, id: 'other' }, items.length) +
         '<div class="store-grid">' + items.map(productCardHtml).join('') + '</div>';
-      S._revealed = true; wireImgFallbacks(box); wireGridEvents(box); wireBack(box);
+      S._revealed = true; wireImgFallbacks(box); wireGridEvents(box); animateGrid(box); wireBack(box);
       return;
     }
     var selected = v.cat ? parseInt(v.cat, 10) : null;
@@ -753,17 +803,19 @@
     S._revealed = true;
     wireImgFallbacks(box);
     wireGridEvents(box);
+    animateGrid(box);
     wireBack(box);
   }
 
   // Landing view: top-level categories as product-style cards. Clicking one
   // opens that category's products (renderGrouped drilled-in). An "Other" tile
   // appears when there are uncategorised products.
-  function categoryTileHtml(catKey, name, image, count, desc) {
+  function categoryTileHtml(catKey, name, image, count, desc, idx) {
     var img = image
       ? '<img class="prod-img" src="' + esc(image) + '" alt="" loading="lazy" data-letter="' + initial(name) + '">'
       : '<div class="prod-img prod-fb">' + initial(name) + '</div>';
-    return '<div class="prod cat-tile" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button">' + img +
+    var style = ' style="' + colorVar(catKey) + 'animation-delay:' + Math.min((idx || 0) * 50, 400) + 'ms"';
+    return '<div class="prod cat-tile reveal-up" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button"' + style + '>' + img +
       '<div class="prod-body"><h3 class="prod-name">' + esc(name) + '</h3>' +
       (desc ? '<p class="prod-desc">' + esc(desc) + '</p>' : '') +
       '<div class="prod-foot"><span class="cat-tile-count">' + count + ' ' + (count === 1 ? 'item' : 'items') + '</span>' +
@@ -771,18 +823,19 @@
   }
   function renderCategoryTiles(box) {
     var tops = _catIndex.tops || [];
-    var tiles = tops.map(function (t) {
+    var tiles = tops.map(function (t, i) {
       var count = t.totalProductCount != null ? t.totalProductCount : (t.productCount || 0);
-      return categoryTileHtml(t.id, t.name, t.image_url, count, t.description);
+      return categoryTileHtml(t.id, t.name, t.image_url, count, t.description, i);
     });
     var otherCount = S.products.filter(isUncategorised).length;
-    if (otherCount) tiles.push(categoryTileHtml('other', 'Other', null, otherCount, null));
+    if (otherCount) tiles.push(categoryTileHtml('other', 'Other', null, otherCount, null, tiles.length));
     // No category tiles at all → just show the products (drill into "Other").
     if (!tiles.length) { S.view.cat = 'other'; return renderGrouped(box); }
     box.innerHTML = '<div class="store-count">' + tops.length + ' ' + (tops.length === 1 ? 'category' : 'categories') + ' — tap to browse</div>' +
       '<div class="store-grid">' + tiles.join('') + '</div>';
     S._revealed = true;
     wireImgFallbacks(box);
+    animateGrid(box);
     box.querySelectorAll('.cat-tile[data-cat]').forEach(function (tile) {
       var go = function () {
         var key = tile.getAttribute('data-cat');
@@ -1109,8 +1162,8 @@
       // drilling into that section. "All" shows the full grouped browse.
       html += '<div class="store-cats"><button type="button" class="store-cat" data-cat="">All</button>' +
         S.categories.map(function (t) {
-          var ico = t.image_url ? '<img class="store-cat-ico" src="' + esc(t.image_url) + '" alt="">' : '';
-          return '<button type="button" class="store-cat" data-cat="' + t.id + '">' + ico + esc(t.name) + '</button>';
+          var ico = t.image_url ? '<img class="store-cat-ico" src="' + esc(t.image_url) + '" alt="">' : '<span class="store-cat-dot"></span>';
+          return '<button type="button" class="store-cat" data-cat="' + t.id + '" style="' + colorVar(t.id) + '">' + ico + esc(t.name) + '</button>';
         }).join('') + '</div>';
     } else if (cats.length) {
       html += '<div class="store-cats"><button type="button" class="store-cat" data-cat="">All</button>' +
