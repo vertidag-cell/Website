@@ -648,9 +648,14 @@
     var box = document.getElementById('store-results'); if (!box) return;
     updateUrl();
     var v = S.view, q = (v.q || '').trim().toLowerCase();
-    // Grouped browse: only when the store has real categories and the buyer
-    // isn't searching. A search always flattens to one ranked result grid.
-    if (treeCats() && !q) { renderGrouped(box); return; }
+    // Category browse: when the store has real categories and the buyer isn't
+    // searching, the landing is a grid of category CARDS (like products); the
+    // buyer clicks one to open that category's products. A search always
+    // flattens to one ranked result grid across everything.
+    if (treeCats() && !q) {
+      if (!v.cat) { renderCategoryTiles(box); return; } // landing: category cards
+      renderGrouped(box); return;                       // drilled into one category
+    }
 
     S._shown = more ? (S._shown || PAGE) + PAGE : PAGE;
     var list = sortList(S.products.filter(function (p) {
@@ -686,8 +691,29 @@
   // directly-assigned products first, then a labelled sub-group per sub-category
   // that has products, then an "Other" section for uncategorised products. When
   // a category chip is selected we drill into just that section.
+  // "← All categories" back link shown when drilled into one category.
+  function backRowHtml() {
+    return '<div class="store-back-row"><button type="button" class="btn btn-outline" id="store-back">← All categories</button></div>';
+  }
+  function wireBack(box) {
+    var b = box.querySelector('#store-back');
+    if (b) b.addEventListener('click', function () {
+      S.view.cat = '';
+      root.querySelectorAll('.store-cat').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-cat') === ''); });
+      renderResults();
+    });
+  }
   function renderGrouped(box) {
-    var v = S.view, selected = v.cat ? parseInt(v.cat, 10) : null;
+    var v = S.view;
+    // Drilled into the uncategorised ("Other") bucket.
+    if (v.cat === 'other') {
+      var items = sortList(S.products.filter(isUncategorised));
+      box.innerHTML = backRowHtml() + sectionHeaderHtml({ name: 'Other', image_url: null }, items.length) +
+        '<div class="store-grid">' + items.map(productCardHtml).join('') + '</div>';
+      S._revealed = true; wireImgFallbacks(box); wireGridEvents(box); wireBack(box);
+      return;
+    }
+    var selected = v.cat ? parseInt(v.cat, 10) : null;
     var sections = [];
     _catIndex.tops.forEach(function (t) {
       if (selected && t.id !== selected) return;
@@ -702,11 +728,12 @@
     var other = selected ? [] : sortList(S.products.filter(isUncategorised));
 
     if (!sections.length && !other.length) {
-      box.innerHTML = '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>Nothing here yet</h2><p>This category has no products yet.</p><button type="button" class="btn btn-outline" id="store-clear">Show all</button></div>';
+      box.innerHTML = (selected ? backRowHtml() : '') + '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>Nothing here yet</h2><p>This category has no products yet.</p><button type="button" class="btn btn-outline" id="store-clear">Show all</button></div>';
       var cb = document.getElementById('store-clear'); if (cb) cb.addEventListener('click', clearFiltersHandler);
+      wireBack(box);
       return;
     }
-    var html = '';
+    var html = selected ? backRowHtml() : '';
     sections.forEach(function (sec) {
       var count = sec.direct.length + sec.subs.reduce(function (n, s) { return n + s.products.length; }, 0);
       html += sectionHeaderHtml(sec.cat, count);
@@ -726,6 +753,47 @@
     S._revealed = true;
     wireImgFallbacks(box);
     wireGridEvents(box);
+    wireBack(box);
+  }
+
+  // Landing view: top-level categories as product-style cards. Clicking one
+  // opens that category's products (renderGrouped drilled-in). An "Other" tile
+  // appears when there are uncategorised products.
+  function categoryTileHtml(catKey, name, image, count, desc) {
+    var img = image
+      ? '<img class="prod-img" src="' + esc(image) + '" alt="" loading="lazy" data-letter="' + initial(name) + '">'
+      : '<div class="prod-img prod-fb">' + initial(name) + '</div>';
+    return '<div class="prod cat-tile" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button">' + img +
+      '<div class="prod-body"><h3 class="prod-name">' + esc(name) + '</h3>' +
+      (desc ? '<p class="prod-desc">' + esc(desc) + '</p>' : '') +
+      '<div class="prod-foot"><span class="cat-tile-count">' + count + ' ' + (count === 1 ? 'item' : 'items') + '</span>' +
+      '<span class="cat-tile-go">Browse →</span></div></div></div>';
+  }
+  function renderCategoryTiles(box) {
+    var tops = _catIndex.tops || [];
+    var tiles = tops.map(function (t) {
+      var count = t.totalProductCount != null ? t.totalProductCount : (t.productCount || 0);
+      return categoryTileHtml(t.id, t.name, t.image_url, count, t.description);
+    });
+    var otherCount = S.products.filter(isUncategorised).length;
+    if (otherCount) tiles.push(categoryTileHtml('other', 'Other', null, otherCount, null));
+    // No category tiles at all → just show the products (drill into "Other").
+    if (!tiles.length) { S.view.cat = 'other'; return renderGrouped(box); }
+    box.innerHTML = '<div class="store-count">' + tops.length + ' ' + (tops.length === 1 ? 'category' : 'categories') + ' — tap to browse</div>' +
+      '<div class="store-grid">' + tiles.join('') + '</div>';
+    S._revealed = true;
+    wireImgFallbacks(box);
+    box.querySelectorAll('.cat-tile[data-cat]').forEach(function (tile) {
+      var go = function () {
+        var key = tile.getAttribute('data-cat');
+        S.view.cat = key;
+        root.querySelectorAll('.store-cat').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-cat') === (key === 'other' ? ' ' : key)); });
+        renderResults();
+        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+      };
+      tile.addEventListener('click', go);
+      tile.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    });
   }
   // ── product detail modal (description + reviews + review form) ──────────────
   var _pmKey = null;
