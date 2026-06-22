@@ -146,7 +146,7 @@
     { id: 2, product_id: 3, product_name: "Giga lvl 150 (imprinted)", user_id: "112", username: "RexQueen", rating: 4, comment: "Delivered in-game within the hour.", status: "published", created_at: "2026-06-17 14:00:00" },
     { id: 3, product_id: 4, product_name: "Starter Kit", user_id: "113", username: "MeshGod", rating: 2, comment: "Wanted more element in the kit.", status: "hidden", created_at: "2026-06-16 09:00:00" },
   ];
-  var DEMO_CFG = { guild_id: gid, enabled: true, title: "Velated PVP Store", description: "Donor ranks, kits and in-game items for the cluster.", announcement: "🔥 Summer sale — 25% off all ranks this weekend!", currency: "GBP", accept_money: true, accept_credits: true, orders_channel_id: "10", staff_role_ids: ["4"], banner_url: null, accent_color: null, checkout_fields: [{ id: "ign", label: "In-game character name", required: true, placeholder: "e.g. RexQueen" }, { id: "tribe", label: "Tribe name", required: false, placeholder: "" }] };
+  var DEMO_CFG = { guild_id: gid, enabled: true, title: "Velated PVP Store", description: "Donor ranks, kits and in-game items for the cluster.", announcement: "🔥 Summer sale — 25% off all ranks this weekend!", currency: "GBP", accept_money: true, accept_credits: true, test_mode: true, slug: "velated-pvp", invoice_channel_id: "10", invoice_email: "billing@velated.gg", banner_url: null, accent_color: null, checkout_fields: [{ id: "ign", label: "In-game character name", required: true, placeholder: "e.g. RexQueen" }, { id: "tribe", label: "Tribe name", required: false, placeholder: "" }] };
   var DEMO_SERIES = (function () {
     var m = [18, 24, 12, 30, 22, 9.99, 40, 35, 28, 52, 44, 60, 38, 74], cr = [0, 5000, 0, 8000, 2500, 0, 5000, 12000, 0, 8000, 5000, 0, 2500, 12000];
     return m.map(function (v, i) { return { date: "d" + i, money: v, credits: cr[i], orders: Math.round(v / 9) + (cr[i] ? 1 : 0) }; });
@@ -326,7 +326,7 @@
     orders: ["Orders", "Fulfil and refund purchases"],
     customers: ["Customers", "Who buys from your store"],
     reviews: ["Reviews", "Customer ratings — hide anything unfair"],
-    coupons: ["Coupons", "Discount codes for checkout"], settings: ["Settings", "Store name, currency, payment rails, staff"], payments: ["Payments", "Connect a provider to take real money"],
+    coupons: ["Coupons", "Discount codes for checkout"], settings: ["Settings", "Store link, currency, invoices, test mode"], payments: ["Payments", "Connect a provider to take real money"],
   };
   function render() {
     clear(root);
@@ -833,10 +833,9 @@
     var featured = swRow("Featured", "Highlighted and shown first on the storefront", existing ? p.featured : false);
 
     var roleSel = sel([["", "— pick a role —"]].concat(S.roles.map(function (r) { return [r.id, r.name]; })), p.role_id || "");
-    var instr = ta({ value: p.delivery_instructions || "", maxlength: 1000, placeholder: "e.g. Spawn a Giga lvl 150 for the buyer" });
     var roleWrap = field("Role to grant", roleSel, { hint: "Auto-added to the buyer the instant they pay" });
-    var manWrap = field("Delivery instructions (shown to staff)", instr);
-    var ft = segmented([{ value: "role", label: "⚡ Discord role" }, { value: "manual", label: "📦 Manual / in-game" }], p.fulfillment_type === "role" ? "role" : "manual", function (v) { roleWrap.style.display = v === "role" ? "block" : "none"; manWrap.style.display = v === "manual" ? "block" : "none"; });
+    var manWrap = field("In-game / manual item", el("p", { class: "hint", style: { margin: 0 } }, "The buyer gets a redemption code on purchase. They paste it in a ticket; the bot posts what they bought and your team hands it over."));
+    var ft = segmented([{ value: "role", label: "Discord role (instant)" }, { value: "manual", label: "Code in ticket" }], p.fulfillment_type === "role" ? "role" : "manual", function (v) { roleWrap.style.display = v === "role" ? "block" : "none"; manWrap.style.display = v === "manual" ? "block" : "none"; });
 
     // Bundle editor — package other products. Any components → this is a bundle,
     // delivered by handing over each component (the Delivery setting is ignored).
@@ -876,7 +875,6 @@
         sale_price_money: salePm.value === "" ? null : Number(salePm.value),
         sale_ends_at: saleEnds.value ? new Date(saleEnds.value).toISOString() : null,
         fulfillment_type: ft.value(), role_id: ft.value() === "role" ? (roleSel.value || null) : null,
-        delivery_instructions: ft.value() === "manual" ? (instr.value.trim() || null) : null,
         stock: stock.value === "" ? null : Number(stock.value), per_user_limit: lim.value === "" ? null : Number(lim.value), enabled: enabled.input.checked, featured: featured.input.checked,
         bundle_items: bundleRows.filter(function (bi) { return bi.product_id; }).map(function (bi) { return { product_id: bi.product_id, quantity: bi.quantity || 1 }; }) };
       var req = existing ? api(A("/store/products/" + existing.id), { method: "PATCH", body: b }) : api(A("/store/products"), { method: "POST", body: b });
@@ -898,7 +896,7 @@
       el("div", { class: "field" }, el("span", { class: "lab" }, "Bundle components (optional)"),
         el("p", { class: "hint", style: { margin: "0 0 8px" } }, "Package other products and sell them together at the price above."),
         bundleList, addComp, bundleNote),
-      el("div", { class: "field" }, el("span", { class: "lab" }, "Delivery"), ft.node), roleWrap, manWrap,
+      el("div", { class: "field" }, el("span", { class: "lab" }, "How it's delivered"), ft.node), roleWrap, manWrap,
       el("div", { class: "grid2" }, field("Stock", stock, { hint: "Blank = unlimited" }), field("Per-user limit", lim, { hint: "Blank = no limit" })),
       enabled.node, featured.node, errEl);
     roleWrap.style.display = ft.value() === "role" ? "block" : "none"; manWrap.style.display = ft.value() === "manual" ? "block" : "none";
@@ -1376,8 +1374,10 @@
     var banner = inp({ type: "url", value: cfg.banner_url || "", placeholder: "https://…/banner.png" });
     var accentOn = swRow("Custom storefront colour", "Theme the shop with your own accent — off uses your server brand colour", cfg.accent_color != null);
     var accentPick = inp({ type: "color", value: cfg.accent_color || "#2bff9e", style: { width: "60px", height: "40px", padding: "3px", cursor: "pointer", borderRadius: "10px" } });
-    var ordersCh = sel([["", "— none —"]].concat(S.channels.map(function (ch) { return [ch.id, "#" + (ch.name || ch.id)]; })), cfg.orders_channel_id || "");
-    var staff = el("select", { class: "inp", multiple: true, style: { minHeight: "120px" } }, S.roles.map(function (r) { return el("option", { value: r.id, selected: (cfg.staff_role_ids || []).indexOf(r.id) >= 0 }, r.name); }));
+    var testMode = swRow("Test mode", "Checkout completes free (no real charge) so you can test the full purchase → code → ticket flow. Turn OFF before selling.", cfg.test_mode);
+    var slug = inp({ type: "text", value: cfg.slug || "", maxlength: 32, placeholder: "my-store" });
+    var invoiceCh = sel([["", "— none —"]].concat(S.channels.map(function (ch) { return [ch.id, "#" + (ch.name || ch.id)]; })), cfg.invoice_channel_id || "");
+    var invoiceEmail = inp({ type: "email", value: cfg.invoice_email || "", maxlength: 120, placeholder: "billing@yourserver.com" });
 
     // Checkout questions — buyer-supplied delivery details (in-game name etc).
     var cfRows = (cfg.checkout_fields || []).map(function (f) { return { label: f.label || "", required: !!f.required, placeholder: f.placeholder || "" }; });
@@ -1408,17 +1408,20 @@
       api(A("/store/config"), { method: "POST", body: {
         enabled: open.input.checked, accept_money: accM.input.checked, accept_credits: accC.input.checked, currency: currency.value,
         title: title.value.trim() || null, description: desc.value.trim() || null, announcement: announce.value.trim() || null, banner_url: banner.value.trim() || null, accent_color: accentOn.input.checked ? accentPick.value : null,
-        orders_channel_id: ordersCh.value || null, staff_role_ids: Array.prototype.map.call(staff.selectedOptions, function (o) { return o.value; }),
+        test_mode: testMode.input.checked, slug: slug.value.trim() || null,
+        invoice_channel_id: invoiceCh.value || null, invoice_email: invoiceEmail.value.trim() || null,
         checkout_fields: cfRows.filter(function (f) { return (f.label || "").trim(); }).map(function (f) { return { label: f.label.trim(), required: !!f.required, placeholder: (f.placeholder || "").trim() }; }),
       } }).then(function (r) { save.disabled = false; if (!r.ok) { toast((r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save", "err"); return; } S.cfg = r.body.config; toast("Settings saved"); render(); });
     } });
 
-    var storeUrl = location.origin + "/store.html?guild=" + gid;
+    var guidUrl = location.origin + "/store.html?guild=" + gid;
+    var prettyUrl = cfg.slug ? location.origin + "/s/" + cfg.slug : null;
     c.append(panel(panelHead("Share your store", el("span", { class: "pill " + (cfg.enabled ? "on" : "off") }, cfg.enabled ? "Open" : "Closed")),
       el("p", { class: "panel-sub" }, "Send this link to your community — it's where customers browse and buy."),
-      copyField("Public store link", storeUrl, "Anyone with the link can browse; they sign in with Discord to buy."),
+      copyField("Public store link", prettyUrl || guidUrl, prettyUrl ? "Your custom link. Anyone with it can browse; they sign in with Discord to buy." : "Set a custom link below for a cleaner address. Buyers sign in with Discord to buy."),
+      field("Custom link  " + location.origin + "/s/", slug, { hint: "Lowercase letters, numbers and hyphens. Leave blank to use the default link." }),
       el("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
-        btn("Open store", { variant: "btn-outline", icon: "ext", onClick: function () { window.open(storeUrl, "_blank"); } }))));
+        btn("Open store", { variant: "btn-outline", icon: "ext", onClick: function () { window.open(prettyUrl || guidUrl, "_blank"); } }))));
 
     c.append(panel(panelHead("Storefront"),
       el("p", { class: "panel-sub" }, "How the public store looks and what it accepts."),
@@ -1426,12 +1429,18 @@
       el("div", { class: "grid2", style: { marginTop: "14px" } }, field("Currency", currency), field("Title", title)),
       field("Description", desc), field("Announcement banner", announce, { hint: "Optional, a short highlighted message across the top of the store" }), field("Banner image URL", banner, { hint: "Optional, shown across the top of the store" }),
       accentOn.node, field("Storefront accent colour", accentPick, { hint: "Used across the public shop when 'Custom storefront colour' is on" })));
-    c.append(panel(panelHead("Staff & delivery"),
-      el("p", { class: "panel-sub" }, "Where manual orders go and who can fulfil them."),
-      field("Orders channel", ordersCh, { hint: "Manual delivery orders are posted here for staff" }),
-      field("Staff roles", staff, { hint: "These roles can claim, deliver and refund (Ctrl/Cmd-click to select several)" })));
+
+    c.append(panel(panelHead("Testing", el("span", { class: "pill " + (cfg.test_mode ? "on" : "off") }, cfg.test_mode ? "Test mode ON" : "Live")),
+      el("p", { class: "panel-sub" }, "Try a real purchase end-to-end without paying. While test mode is on, checkout completes for free, the order is tagged as a test, and you still get a redemption code to paste in a ticket."),
+      testMode.node));
+
+    c.append(panel(panelHead("Invoices"),
+      el("p", { class: "panel-sub" }, "Get a PDF invoice for every order. Leave both blank to skip invoicing."),
+      field("Invoice channel", invoiceCh, { hint: "A Discord channel the order invoice PDF is posted to" }),
+      field("Invoice email", invoiceEmail, { hint: "An address the invoice PDF is emailed to (needs email set up on the bot)" })));
+
     c.append(panel(panelHead("Checkout questions", addCf),
-      el("p", { class: "panel-sub" }, "Ask buyers for the details you need to deliver in-game — character name, tribe, platform. Answers appear on every order and in the staff notification."),
+      el("p", { class: "panel-sub" }, "Ask buyers for the details you need to deliver — character name, tribe, platform. Answers are saved on the order and shown when they redeem their code."),
       cfList));
     c.append(el("div", { style: { display: "flex", justifyContent: "flex-end" } }, save));
   }

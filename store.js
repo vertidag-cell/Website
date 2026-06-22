@@ -1009,6 +1009,7 @@
       (pc ? '<div class="store-trust">' + trust.join('') + '</div>' : '') +
       '</div>';
 
+    if (s.testMode) html += '<div class="store-test">Test mode — checkout is free and orders are flagged as tests. No real payment is taken.</div>';
     if (s.announcement) html += '<div class="store-announce">📣 ' + esc(s.announcement) + '</div>';
 
     if (!S.products.length) {
