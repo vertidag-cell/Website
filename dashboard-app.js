@@ -100,24 +100,39 @@
     }
     clearTimeout(timer);
     const ct = res.headers.get("content-type") || "";
+    const isJson = ct.includes("application/json");
     let body = null;
+    let rawText = "";
     try {
-      if (ct.includes("application/json")) body = await res.json();
-      else { const t = await res.text(); body = t ? { error: t.slice(0, 200) } : null; }
+      if (isJson) body = await res.json();
+      else rawText = await res.text();
     } catch {}
-    if (DEBUG) console.log(`[dashboard] ${path} → ${res.status}`, body || "");
+    if (DEBUG) console.log(`[dashboard] ${path} → ${res.status}`, body || rawText || "");
     if (res.ok) return body;
     // Stale/missing CSRF token → refresh it once and retry the call.
     if (res.status === 403 && body?.error === "csrf_failed" && !opts._csrfRetry) {
       csrfToken = "";
       return api(path, Object.assign({}, opts, { _csrfRetry: true }));
     }
+    // Build a SAFE, user-displayable message. A non-JSON error body is almost
+    // always an upstream HTML offline page (Square Cloud serves one while the
+    // bot backend restarts) — NEVER surface that raw markup. Only trust string
+    // fields from a parsed JSON payload; otherwise fall back to generic,
+    // status-keyed copy. The raw text is kept on err._raw for DEBUG logging
+    // only and is never rendered. err.data stays null for non-JSON so the ~30
+    // downstream catch blocks that read e.data?.error/message can't leak it.
+    const generic = res.status >= 500
+      ? "The backend is temporarily unavailable. Please try again in a moment."
+      : `Request failed (HTTP ${res.status}).`;
     // Only ever surface STRING candidates — a structured {error:{...}} payload
     // would otherwise coerce into the user-visible "[object Object]".
-    const msg = [body?.error, body?.message, res.statusText].find((v) => typeof v === "string" && v) || `HTTP ${res.status}`;
+    const msg = isJson
+      ? ([body?.error, body?.message, res.statusText].find((v) => typeof v === "string" && v) || generic)
+      : generic;
     const err = new Error(msg);
     err.code = res.status;
-    err.data = body;
+    err.data = isJson ? body : null;
+    err._raw = rawText || null;
     throw err;
   }
 
@@ -7436,6 +7451,9 @@
     if (err.code === 404) {
       return content.append(notice("error", "Route not found", "This route isn't deployed on the backend yet."));
     }
+    if (typeof err.code === "number" && err.code >= 500) {
+      return content.append(notice("error", "Backend unavailable", "Arkoris's backend is temporarily unavailable — it may be restarting. Please try again in a moment."));
+    }
     content.append(notice("error", "Couldn't load", err.message || "Unknown error"));
   }
 
@@ -7849,9 +7867,15 @@
     } catch {}
     try {
       const me = await data.me();
+      // A well-formed identity is always { user: {...} }. If the backend
+      // answered 2xx with a malformed/empty body (e.g. an upstream HTML offline
+      // page served with a 200 the proxy doesn't rewrite), treat it as a backend
+      // outage and show the friendly retry card — never a raw "cannot read
+      // properties of null" dump.
+      if (!me || !me.user) throw Object.assign(new Error("The backend returned an unexpected response."), { code: 502 });
       state.user = me.user;
       const g = await data.guilds();
-      state.guilds = g.guilds || [];
+      state.guilds = (g && g.guilds) || [];
       render();
       maybeShowPaidSuccess();
     } catch (e) {
@@ -7910,6 +7934,8 @@
     ico.appendChild(iconSvg("refresh"));
     const detail = err?.code === "timeout" ? "The backend didn't respond in 8 seconds."
                   : err?.code === "network" ? "Couldn't reach the backend (CORS or network)."
+                  : (typeof err?.code === "number" && err.code >= 500)
+                    ? "Arkoris's backend is temporarily unavailable — it may be restarting. This usually clears within a minute."
                   : (err?.message || "Unknown error");
     card.append(
       ico,

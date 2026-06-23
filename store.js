@@ -131,7 +131,7 @@
         if (r.status === 401) return loginBounce();
         if (!r.ok) {
           var m = { variant_required: 'Choose an option first.', variant_unavailable: 'That option isn\'t available.', product_unavailable: 'That product is no longer available.' };
-          return toast((r.body && m[r.body.error]) || (r.body && r.body.error) || 'Could not add to cart', 'err');
+          return toast((r.body && m[r.body.error]) || 'Could not add to cart', 'err');
         }
         S.cart = r.body; S.coupon = null; renderCartButton(); toast('Added to cart'); if (cartOpen) renderCartPanel();
         var fab = document.getElementById('cart-fab'); if (fab) { fab.classList.remove('bump'); void fab.offsetWidth; fab.classList.add('bump'); }

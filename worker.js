@@ -22,7 +22,7 @@ const ALLOWED_AUTH_PATHS = new Set([
   "/auth/csrf", // session-bound CSRF token for state-changing dashboard calls
 ]);
 
-function proxy(request, url, env) {
+async function proxy(request, url, env) {
   const target = BACKEND + url.pathname + url.search;
   const proxied = new Request(target, request);
   // Never forward browser Authorization headers to the backend — dashboard
@@ -33,7 +33,30 @@ function proxy(request, url, env) {
   // the squareweb.app origin. Set PROXY_SECRET on BOTH this Worker and the
   // backend; until then the backend fails open and nothing changes.
   if (env && env.PROXY_SECRET) proxied.headers.set("X-Arkoris-Proxy", env.PROXY_SECRET);
-  return fetch(proxied, { redirect: "manual" });
+
+  // Normalize upstream failures into JSON so a raw HTML offline page from the
+  // Square Cloud backend never reaches the dashboard. Only error responses
+  // (>=400) with a non-JSON content-type are rewritten; every 2xx and 3xx
+  // (including the OAuth 302s on /auth/discord/{login,callback}) passes through
+  // untouched. A hard fetch failure becomes a 502.
+  let resp;
+  try {
+    resp = await fetch(proxied, { redirect: "manual" });
+  } catch (e) {
+    return backendUnavailable(502);
+  }
+  const ct = resp.headers.get("content-type") || "";
+  if (resp.status >= 400 && !ct.includes("application/json")) {
+    return backendUnavailable(resp.status || 502);
+  }
+  return resp;
+}
+
+function backendUnavailable(status) {
+  return new Response(
+    JSON.stringify({ error: "backend_unavailable", status: status }),
+    { status: status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } }
+  );
 }
 
 export default {

@@ -32,5 +32,31 @@ export async function onRequest(context) {
   // Shared secret proving this request came through the arkoris.net proxy.
   // Set PROXY_SECRET on the Pages project + backend to activate; fails open until then.
   if (context.env && context.env.PROXY_SECRET) proxied.headers.set('X-Arkoris-Proxy', context.env.PROXY_SECRET);
-  return fetch(proxied, { redirect: 'manual' });
+
+  // Normalize upstream failures into JSON so the dashboard never has to render a
+  // raw HTML error page. When the Square Cloud backend is restarting/crashed it
+  // serves an HTML offline page (content-type text/html, 5xx); passing that
+  // through breaks the "/api/* always returns JSON" contract and the dashboard
+  // would dump the raw markup into an error card. Only error responses (>=400)
+  // with a non-JSON content-type are rewritten — every 2xx and 3xx (including
+  // OAuth 302s) passes through untouched so cookies, redirects, and normal JSON
+  // are unaffected. A hard fetch failure (backend unreachable) becomes a 502.
+  let resp;
+  try {
+    resp = await fetch(proxied, { redirect: 'manual' });
+  } catch (e) {
+    return backendUnavailable(502);
+  }
+  const ct = resp.headers.get('content-type') || '';
+  if (resp.status >= 400 && !ct.includes('application/json')) {
+    return backendUnavailable(resp.status || 502);
+  }
+  return resp;
+}
+
+function backendUnavailable(status) {
+  return new Response(
+    JSON.stringify({ error: 'backend_unavailable', status: status }),
+    { status: status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } }
+  );
 }
