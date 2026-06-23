@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="styles.css?v=57" />
     <link rel="stylesheet" href="lx-site.css?v=1" />
     <style>
-      :root { --accent: var(--red, #2bff9e); }
+      :root { --accent: var(--red, #2bff9e); --text-dim: #7c8f86; } /* lift dim text to >=AA on near-black (store-scoped) */
       /* Atmospheric storefront backdrop — a soft, brand-adaptive aurora over a
          deep gradient (uses each store's --accent), fixed while content scrolls.
          Gives the shop real depth instead of a flat near-black page. */
@@ -58,20 +58,21 @@
       /* Browse toolbar: search + sort + category chips */
       .store-tools { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
       .store-search { flex: 1; min-width: 200px; padding: 11px 14px; border-radius: 11px; border: 1px solid var(--border); background: var(--card, rgba(255,255,255,0.05)); color: var(--text); font: inherit; }
-      .store-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+      .store-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent); }
+      .store-search:not(:placeholder-shown) { border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
       .store-sort { padding: 11px 14px; border-radius: 11px; border: 1px solid var(--border); background: var(--card, rgba(255,255,255,0.05)); color: var(--text); font: inherit; cursor: pointer; color-scheme: dark; }
       .store-sort option, .pm-rev-sort option { background: #11161c; color: #e6edf3; }
       .store-cats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
       .store-cat { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-muted, #a1a1aa); font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
       .store-cat:hover { border-color: var(--border-strong, rgba(255,255,255,0.18)); color: var(--text); }
       .store-cat.on { background: var(--accent); color: #06120c; border-color: var(--accent); }
-      .store-count { font-size: 12.5px; color: var(--text-dim, #71717a); margin-bottom: 12px; font-weight: 600; }
+      .store-count { font-size: 12.5px; color: var(--text-muted, #a1a1aa); margin-bottom: 12px; font-weight: 600; }
       .store-more { text-align: center; margin-top: 24px; }
 
       .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
-      .prod { display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; overflow: hidden;
-        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.014));
-        box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 18px 40px -28px rgba(0,0,0,0.95);
+      .prod { display: flex; flex-direction: column; border: 1px solid color-mix(in srgb, var(--accent) 14%, rgba(255,255,255,0.10)); border-radius: 16px; overflow: hidden;
+        background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.028));
+        box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 1px 2px rgba(0,0,0,0.6), 0 14px 30px -18px rgba(0,0,0,0.75);
         transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
       .prod:hover { border-color: color-mix(in srgb, var(--accent) 42%, transparent); transform: translateY(-3px);
         box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 24px 50px -26px color-mix(in srgb, var(--accent) 30%, #000); }
@@ -131,7 +132,7 @@
       .store-note { margin: -8px 0 22px; text-align: center; font-size: 13px; color: var(--text-dim, #71717a); }
       .store-foot { text-align: center; color: var(--text-dim, #71717a); font-size: 13px; margin-top: 28px; }
       .store-foot a { color: var(--text-muted, #a1a1aa); }
-      .skel { background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+      .skel { background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.08), rgba(255,255,255,0.05));
         background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: 16px; }
       @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
@@ -149,13 +150,13 @@
       .cart-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px);
         display: flex; justify-content: flex-end; }
       .cart-panel { width: min(440px, 100%); height: 100%; overflow-y: auto;
-        background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0) 220px), var(--bg, #0b0f1a);
+        background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0) 220px), var(--bg-elev, #0b0f1a);
         border-left: 1px solid rgba(255,255,255,0.10); box-shadow: -30px 0 70px -24px rgba(0,0,0,0.7); padding: 22px 20px 30px; animation: slideIn .2s ease; }
       @keyframes slideIn { from { transform: translateX(24px); opacity: .6; } to { transform: none; opacity: 1; } }
       /* Checkout details dialog (delivery fields) — centered card. */
       .checkout-overlay { justify-content: center; align-items: center; padding: 20px; }
       .checkout-panel { width: min(440px, 100%); max-height: 90vh; overflow-y: auto;
-        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0) 200px), var(--bg, #0b0f1a);
+        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0) 200px), var(--bg-elev, #0b0f1a);
         border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; box-shadow: 0 32px 80px -28px rgba(0,0,0,0.85); padding: 22px 22px 24px; animation: popIn .2s ease; }
       @keyframes popIn { from { transform: scale(.96); opacity: .4; } to { transform: none; opacity: 1; } }
       .co-intro { color: var(--text-muted, #a1a1aa); font-size: 13px; margin: 0 0 16px; }
@@ -236,7 +237,7 @@
       /* Product detail modal */
       .pm-overlay { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 40px 16px; }
       .pm-panel { position: relative; width: min(560px, 100%);
-        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0) 220px), var(--bg, #0b0f1a);
+        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0) 220px), var(--bg-elev, #0b0f1a);
         border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; box-shadow: 0 36px 90px -30px rgba(0,0,0,0.88); overflow: hidden; animation: slideIn .2s ease; }
       .pm-x { position: absolute; top: 12px; right: 12px; z-index: 2; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(0,0,0,0.5); color: #fff; font-size: 15px; cursor: pointer; }
       .pm-share { position: absolute; top: 12px; right: 52px; z-index: 2; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(0,0,0,0.5); color: #fff; font-size: 14px; cursor: pointer; }
@@ -348,7 +349,7 @@
         color: var(--accent);
         background: radial-gradient(120% 120% at 28% 18%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%), var(--bg-elev); }
       .store-sec-text { flex: 1; min-width: 0; }
-      .store-sec-title { margin: 0; font-size: 1.18rem; font-weight: 800; letter-spacing: -0.01em; color: var(--text); }
+      .store-sec-title { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.01em; color: var(--text); }
       .store-sec-desc { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
       .store-sec-count { flex: none; font-size: 12.5px; font-weight: 600; color: var(--text-muted);
         padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); }
@@ -400,8 +401,8 @@
         background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.022) 1px, transparent 0); background-size: 32px 32px; }
       .store-bg-glow { position: absolute; left: 50%; top: -12%; width: 120vw; height: 78vh; transform: translateX(-50%);
         background: radial-gradient(52% 60% at 50% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 72%);
-        animation: bgGlow 8s ease-in-out infinite; }
-      @keyframes bgGlow { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+        animation: bgGlow 11s ease-in-out infinite; }
+      @keyframes bgGlow { 0%, 100% { opacity: .7; } 50% { opacity: .9; } }
       .store-bg-grid { position: absolute; left: -45%; right: -45%; bottom: -12%; height: 62vh;
         background-image:
           linear-gradient(color-mix(in srgb, var(--accent) 17%, transparent) 1px, transparent 1px),
@@ -410,16 +411,16 @@
         transform: perspective(440px) rotateX(64deg); transform-origin: bottom center;
         -webkit-mask-image: linear-gradient(to top, #000 2%, transparent 78%);
         mask-image: linear-gradient(to top, #000 2%, transparent 78%);
-        opacity: .28; animation: gridMove 6.5s linear infinite; }
+        opacity: .18; animation: gridMove 26s linear infinite; }
       @keyframes gridMove { from { background-position: 0 0; } to { background-position: 0 48px; } }
 
       /* Drifting brand-colour orbs (both --accent now — one cohesive colour). */
       .store-wrap::before, .store-wrap::after { content: ""; position: fixed; z-index: -1; pointer-events: none;
-        border-radius: 50%; filter: blur(70px); will-change: transform; }
-      .store-wrap::before { width: 66vw; height: 66vw; max-width: 860px; max-height: 860px; left: -16vw; top: -20vh; opacity: .48;
+        border-radius: 50%; filter: blur(56px); }
+      .store-wrap::before { width: 66vw; height: 66vw; max-width: 860px; max-height: 860px; left: -16vw; top: -20vh; opacity: .40;
         background: radial-gradient(circle, color-mix(in srgb, var(--accent) 40%, transparent), transparent 64%);
         animation: orbA 24s ease-in-out infinite alternate; }
-      .store-wrap::after { width: 56vw; height: 56vw; max-width: 740px; max-height: 740px; right: -18vw; top: 4vh; opacity: .34;
+      .store-wrap::after { width: 56vw; height: 56vw; max-width: 740px; max-height: 740px; right: -18vw; top: 4vh; opacity: .28;
         background: radial-gradient(circle, color-mix(in srgb, var(--accent) 26%, transparent), transparent 66%);
         animation: orbB 29s ease-in-out infinite alternate; }
       @keyframes orbA { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(16%, 10%, 0) scale(1.22); } }
@@ -441,7 +442,7 @@
         background: conic-gradient(from 90deg at 50% 8%, transparent 0deg,
           color-mix(in srgb, var(--accent) 16%, transparent) 55deg, transparent 140deg, transparent 230deg,
           color-mix(in srgb, var(--accent) 10%, transparent) 300deg, transparent 360deg);
-        opacity: .6; animation: heroSweep 20s linear infinite; will-change: transform; mix-blend-mode: screen; }
+        opacity: .42; animation: heroSweep 40s linear infinite; will-change: transform; mix-blend-mode: screen; }
       @keyframes heroSweep { to { transform: rotate(1turn); } }
       .store-hero-inner { position: relative; z-index: 1; flex-direction: column; align-items: center; gap: 15px; padding: 30px 26px; max-width: 720px; }
       .store-trust { position: relative; z-index: 1; padding-bottom: 22px; }
@@ -449,11 +450,12 @@
       .store-title { font-size: clamp(30px, 5.5vw, 52px); line-height: 1.04;
         text-shadow: 0 2px 26px rgba(0,0,0,.85), 0 0 52px color-mix(in srgb, var(--accent) 35%, transparent); }
       .store-desc { color: #d6dee6; text-shadow: 0 1px 12px rgba(0,0,0,.8); }
+      .store-hero .store-desc { font-size: clamp(15px, 1.6vw, 17px); line-height: 1.55; max-width: 56ch; margin-left: auto; margin-right: auto; }
       .store-pays, .store-trust { justify-content: center; }
-      .store-logo { width: 78px; height: 78px; border-radius: 22px; animation: logoPulse 4s ease-in-out infinite; }
+      .store-logo { width: 78px; height: 78px; border-radius: 22px; animation: logoPulse 6s ease-in-out infinite; }
       @keyframes logoPulse {
         0%, 100% { box-shadow: 0 12px 40px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
-        50%      { box-shadow: 0 14px 64px color-mix(in srgb, var(--accent) 58%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); } }
+        50%      { box-shadow: 0 13px 52px color-mix(in srgb, var(--accent) 46%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 44%, transparent); } }
       .store-trust-pill { transition: border-color .15s, color .15s, transform .15s, box-shadow .2s; }
       .store-trust-pill:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, transparent);
         box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 22%, transparent); }
@@ -476,11 +478,11 @@
         transform: translateX(-130%); transition: transform .7s cubic-bezier(.22,.61,.36,1); }
       .prod:hover::after { transform: translateX(130%); }
       .prod:hover { border-color: color-mix(in srgb, var(--c, var(--accent)) 55%, transparent);
-        box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 26px 54px -24px color-mix(in srgb, var(--c, var(--accent)) 38%, #000); }
-      .prod.is-feat { border-color: color-mix(in srgb, var(--accent) 50%, transparent); animation: featGlow 3.2s ease-in-out infinite; }
+        box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 2px 4px rgba(0,0,0,.5), 0 22px 44px -22px color-mix(in srgb, var(--c, var(--accent)) 30%, #000); }
+      .prod.is-feat { border-color: color-mix(in srgb, var(--accent) 50%, transparent); animation: featGlow 5.5s ease-in-out infinite; }
       @keyframes featGlow {
-        0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 14px 34px color-mix(in srgb, var(--accent) 14%, transparent); }
-        50%      { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 18px 48px color-mix(in srgb, var(--accent) 32%, transparent); } }
+        0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent), 0 14px 34px color-mix(in srgb, var(--accent) 18%, transparent); }
+        50%      { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 44%, transparent), 0 18px 48px color-mix(in srgb, var(--accent) 24%, transparent); } }
       .prod-cat { color: var(--c, var(--accent)); }
       .prod-btn { transition: transform .12s ease, box-shadow .22s ease, filter .2s ease; }
       .prod-btn:hover:not(:disabled) { box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 32%, transparent); }
@@ -558,22 +560,32 @@
       .prod-hover { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3;
         opacity: 0; transform: translateY(10px); transition: opacity .22s ease, transform .22s ease; }
       .prod:hover .prod-hover, .prod:focus-visible .prod-hover { opacity: 1; transform: none; }
+      /* Touch devices have no hover — keep the primary CTA permanently visible,
+         with a bottom scrim so it stays legible over the product image. */
+      @media (hover: none) {
+        .prod-hover { opacity: 1 !important; transform: none !important; }
+        .prod-v2 .prod-media::after { content: ""; position: absolute; inset: auto 0 0 0; height: 48%; z-index: 2;
+          pointer-events: none; background: linear-gradient(transparent, rgba(0,0,0,.58)); }
+      }
       .prod-hover .btn.prod-add { width: 100%; justify-content: center; }
       .prod-hover span.prod-add { display: block; text-align: center; padding: 10px 14px; border-radius: 11px;
         font-weight: 800; font-size: 13.5px; color: #06120c;
         background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 74%, #fff), var(--accent)); }
       .prod-v2 .prod-body { padding: 12px 14px 14px; display: block; }
-      .prod-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; min-height: 18px; }
-      .prod-meta .prod-money { font-size: 15px; font-weight: 800; }
+      .prod-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; min-height: 18px; }
+      .prod-meta .prod-price { display: flex; flex-direction: row; align-items: baseline; gap: 6px; flex-wrap: wrap; min-width: 0; }
+      .prod-meta .prod-money { font-size: 16px; font-weight: 800; }
       .prod-meta .prod-credits { font-size: 13px; }
+      .prod-meta .prod-was { font-size: 12px; margin-left: 0; }
+      .prod-meta .prod-or { display: none; }
       .muted-price { color: var(--text-muted); font-weight: 700; }
-      .prod-stock { font-size: 11.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); white-space: nowrap; }
+      .prod-stock { font-size: 11.5px; font-weight: 600; letter-spacing: .01em; display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); white-space: nowrap; }
       .prod-stock::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-      .prod-stock.ok { color: color-mix(in srgb, #34d399 65%, var(--text-muted)); }
-      .prod-stock.ok::before { background: #34d399; box-shadow: 0 0 7px #34d399; }
+      .prod-stock.ok { color: var(--text-muted); }
+      .prod-stock.ok::before { background: #34d399; box-shadow: 0 0 4px color-mix(in srgb, #34d399 70%, transparent); }
       .prod-stock.low { color: #fb923c; } .prod-stock.low::before { background: #fb923c; }
       .prod-stock.out { color: #f87171; } .prod-stock.out::before { background: #f87171; }
-      .prod-v2 .prod-name { font-size: 15.5px; font-weight: 700; margin: 0; line-height: 1.25; }
+      .prod-v2 .prod-name { font-size: 16.5px; font-weight: 700; margin: 0; line-height: 1.3; }
 
       /* Scale the bold hero down on phones. */
       @media (max-width: 560px) {
@@ -615,11 +627,13 @@
     <main>
       <div class="store-wrap">
         <div id="store-root">
-          <div class="skel" style="height:140px;margin-bottom:24px"></div>
+          <div class="skel" style="height:300px;margin-bottom:26px;border-radius:0"></div>
+          <div class="skel" style="height:40px;width:58%;margin-bottom:18px"></div>
           <div class="store-grid">
-            <div class="skel" style="height:280px"></div>
-            <div class="skel" style="height:280px"></div>
-            <div class="skel" style="height:280px"></div>
+            <div class="prod prod-v2"><div class="skel" style="aspect-ratio:4/3;border-radius:0"></div><div style="padding:13px 16px 16px"><div class="skel" style="height:13px;width:52%;margin-bottom:9px"></div><div class="skel" style="height:15px;width:82%"></div></div></div>
+            <div class="prod prod-v2"><div class="skel" style="aspect-ratio:4/3;border-radius:0"></div><div style="padding:13px 16px 16px"><div class="skel" style="height:13px;width:52%;margin-bottom:9px"></div><div class="skel" style="height:15px;width:82%"></div></div></div>
+            <div class="prod prod-v2"><div class="skel" style="aspect-ratio:4/3;border-radius:0"></div><div style="padding:13px 16px 16px"><div class="skel" style="height:13px;width:52%;margin-bottom:9px"></div><div class="skel" style="height:15px;width:82%"></div></div></div>
+            <div class="prod prod-v2"><div class="skel" style="aspect-ratio:4/3;border-radius:0"></div><div style="padding:13px 16px 16px"><div class="skel" style="height:13px;width:52%;margin-bottom:9px"></div><div class="skel" style="height:15px;width:82%"></div></div></div>
           </div>
         </div>
         <p class="store-foot">Powered by <a href="index.html">Arkoris</a> · Secure checkout for your Discord server</p>
@@ -627,6 +641,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=42"></script>
+    <script src="store.js?v=43"></script>
   </body>
 </html>

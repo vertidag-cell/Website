@@ -834,7 +834,7 @@
     }));
 
     if (!list.length) {
-      box.innerHTML = '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>No matches</h2><p>Nothing matches your search or filter.</p><button type="button" class="btn btn-outline" id="store-clear">Clear filters</button></div>';
+      box.innerHTML = '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>No matches</h2><p>Nothing matches your search or filter.</p><button type="button" class="btn btn-primary" id="store-clear">Clear filters</button></div>';
       var cb = document.getElementById('store-clear');
       if (cb) cb.addEventListener('click', clearFiltersHandler);
       return;
@@ -892,7 +892,7 @@
     var other = selected ? [] : sortList(S.products.filter(isUncategorised));
 
     if (!sections.length && !other.length) {
-      box.innerHTML = (selected ? backRowHtml() : '') + '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>Nothing here yet</h2><p>This category has no products yet.</p><button type="button" class="btn btn-outline" id="store-clear">Show all</button></div>';
+      box.innerHTML = (selected ? backRowHtml() : '') + '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>Nothing here yet</h2><p>This category has no products yet.</p><button type="button" class="btn btn-primary" id="store-clear">Show all</button></div>';
       var cb = document.getElementById('store-clear'); if (cb) cb.addEventListener('click', clearFiltersHandler);
       wireBack(box);
       return;
