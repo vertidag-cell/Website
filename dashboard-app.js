@@ -7847,11 +7847,15 @@
     } catch { /* keep current view; banner already shown */ }
   }
 
-  async function boot() {
+  async function boot(attempt) {
+    attempt = attempt || 0;
     clear(root);
     if (maybeRenderMock()) return;
     // Premium skeleton while we fetch identity + guild list.
     root.append(renderPickerBootSkeleton());
+    if (attempt > 0) root.append(h("p", {
+      style: { textAlign: "center", color: "var(--text-muted)", fontSize: "14px", marginTop: "16px" },
+    }, "Reconnecting… the bot may be restarting after an update."));
     await consumeAuthHandoff();
     // Login-to-buy bounce: the storefront stashes its URL before sending the
     // buyer to Discord login (the OAuth callback always lands here on
@@ -7882,7 +7886,17 @@
       console.error("[dashboard] boot failed:", e);
       if (e.code === 401) { state.user = null; return renderLoggedOut(); }
       if (e.code === "no_backend") return renderNoBackend();
-      // Network/timeout/500 — show a friendly retry card, not raw error text.
+      // A deploy restarts the backend for ~30-60s, briefly downing the API
+      // (shows as "backend_unavailable"/5xx/network). Auto-retry transient
+      // failures with backoff so the dashboard self-heals instead of throwing a
+      // scary card; only give up (manual Retry) after ~25s.
+      var transient = e.code === "timeout" || e.code === "network"
+        || (typeof e.code === "number" && e.code >= 500)
+        || /unavailable/i.test(e.message || "");
+      if (transient && attempt < 5) {
+        setTimeout(function () { boot(attempt + 1); }, Math.min(2000 + attempt * 1500, 8000));
+        return;
+      }
       return renderPickerBootError(e);
     }
   }
