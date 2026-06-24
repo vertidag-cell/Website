@@ -260,6 +260,24 @@
       .pm-var:hover:not(:disabled) { border-color: var(--border-strong, rgba(255,255,255,0.18)); }
       .pm-var.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
       .pm-var:disabled { opacity: .45; cursor: not-allowed; text-decoration: line-through; }
+      /* Category picker: each product/tier is a full-width selectable row. */
+      .pm-prows { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 6px; }
+      .pm-prow { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+        padding: 13px 15px; border-radius: 12px; border: 1px solid var(--border); background: var(--card, rgba(255,255,255,0.05));
+        color: var(--text); font: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
+      .pm-prow:hover:not(:disabled) { border-color: var(--border-strong, rgba(255,255,255,0.18)); }
+      .pm-prow.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+      .pm-prow.oos, .pm-prow:disabled { opacity: .5; cursor: not-allowed; }
+      .pm-prow-info { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+      .pm-prow-title { font-weight: 800; font-size: 15px; letter-spacing: -0.01em; }
+      .pm-prow-sub { font-size: 12.5px; color: var(--text-muted, #a1a1aa); line-height: 1.4; white-space: pre-wrap; }
+      .pm-prow-stock { font-size: 11.5px; color: var(--text-dim, #71717a); margin-top: 2px; }
+      .pm-prow-stock.out { color: #f87171; }
+      .pm-prow-price { flex-shrink: 0; font-weight: 800; font-size: 14px; padding: 5px 10px; border-radius: 8px; background: rgba(255,255,255,0.05); white-space: nowrap; }
+      .pm-prow-price .prod-was { margin-left: 6px; font-weight: 600; opacity: .6; }
+      .pm-prow-check { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+        background: var(--accent); color: #0b0f1a; font-size: 13px; font-weight: 900; opacity: 0; transform: scale(.6); transition: opacity .15s, transform .15s; }
+      .pm-prow.on .pm-prow-check { opacity: 1; transform: scale(1); }
       .pm-stock { font-size: 12.5px; color: #fb923c; margin: 8px 0 0; min-height: 1px; }
       .pm-actions { display: flex; align-items: center; gap: 10px; }
       .pm-qty { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
@@ -641,6 +659,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=43"></script>
+    <script src="store.js?v=44"></script>
   </body>
 </html>

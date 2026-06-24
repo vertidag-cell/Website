@@ -977,10 +977,9 @@
     box.querySelectorAll('.cat-tile[data-cat]').forEach(function (tile) {
       var go = function () {
         var key = tile.getAttribute('data-cat');
-        S.view.cat = key;
-        root.querySelectorAll('.store-cat').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-cat') === (key === 'other' ? '__none__' : key)); });
-        renderResults();
-        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+        // Open the category as a variant-style picker of its products. The chip
+        // nav above still drills into the grid browse for anyone who wants it.
+        openCategory(key === 'other' ? 'other' : parseInt(key, 10));
       };
       tile.addEventListener('click', go);
       tile.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
@@ -1118,6 +1117,108 @@
     setProductParam(p.id); // make the open product shareable / deep-linkable
     loadProductReviews(p);
     renderRelated(p);
+  }
+  // Open a CATEGORY as a variant-style picker (reference-style): every product in
+  // the category (and its sub-categories) becomes a selectable row — pick one, set
+  // a quantity, Add to Cart. A product with its own tiers expands into one row per
+  // tier, so everything in the category is directly addable from a single list.
+  function openCategory(catKey) {
+    closeProductModal();
+    var ccy = S.store && S.store.currency;
+    var cat = catKey === 'other'
+      ? { id: 'other', name: 'Other', image_url: null, description: null }
+      : (_catIndex && _catIndex.byId[catKey]) || { id: catKey, name: 'Products', image_url: null, description: null };
+    // Flatten the category's products → addable options (one per tier when tiered).
+    var opts = [];
+    sortList(catProducts(catKey)).forEach(function (p) {
+      if (hasVariants(p)) {
+        p.variants.forEach(function (v) {
+          opts.push({ pid: p.id, vid: v.id, title: v.name, sub: p.name,
+            m: v.price_money != null ? v.price_money : p.price_money, was: null,
+            c: v.price_credits != null ? v.price_credits : p.price_credits,
+            inStock: v.inStock !== false, lowStock: v.lowStock });
+        });
+      } else {
+        var sale = p.sale_price_money != null;
+        opts.push({ pid: p.id, vid: null, title: p.name, sub: p.description || '',
+          m: sale ? p.sale_price_money : p.price_money, was: sale ? p.price_money : null,
+          c: p.price_credits, inStock: p.inStock !== false, lowStock: p.lowStock });
+      }
+    });
+    // Empty category (e.g. only sub-categories with no products) → fall back to the
+    // grouped grid browse so the click still does something useful.
+    if (!opts.length) { S.view.cat = String(cat.id); renderResults(); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} return; }
+
+    function priceHtml(o) {
+      if (o.m != null) return '<span class="prod-money">' + money(o.m, ccy) + '</span>' + (o.was != null ? '<s class="prod-was">' + money(o.was, ccy) + '</s>' : '');
+      if (o.c != null) return '<span class="prod-credits">🪙 ' + fmt(o.c) + '</span>';
+      return '';
+    }
+    var rows = opts.map(function (o, i) {
+      var stock = o.inStock === false ? 'Sold out' : (o.lowStock ? '🔥 ' + o.lowStock + ' left' : '∞ In Stock');
+      return '<button type="button" class="pm-prow' + (o.inStock === false ? ' oos' : '') + '" data-i="' + i + '"' + (o.inStock === false ? ' disabled' : '') + '>' +
+        '<span class="pm-prow-info"><span class="pm-prow-title">' + esc(o.title) + '</span>' +
+        (o.sub ? '<span class="pm-prow-sub">' + esc(o.sub) + '</span>' : '') +
+        '<span class="pm-prow-stock' + (o.inStock === false ? ' out' : '') + '">' + stock + '</span></span>' +
+        '<span class="pm-prow-price">' + priceHtml(o) + '</span>' +
+        '<span class="pm-prow-check" aria-hidden="true">✓</span></button>';
+    }).join('');
+
+    var media = cat.image_url ? '<img class="pm-img" src="' + esc(cat.image_url) + '" alt="">' : '';
+    var ov = document.createElement('div');
+    ov.id = 'prod-overlay'; ov.className = 'pm-overlay';
+    ov.innerHTML = '<div class="pm-panel" role="dialog" aria-label="' + esc(cat.name) + '">' +
+      '<button type="button" class="pm-x" aria-label="Close">✕</button>' + media +
+      '<div class="pm-body">' +
+        '<h2 class="pm-name">' + esc(cat.name) + '</h2>' +
+        (cat.description ? '<p class="pm-desc">' + esc(cat.description) + '</p>' : '') +
+        '<div class="pm-var-label">' + (opts.length === 1 ? 'Option' : 'Choose an option') + '</div>' +
+        '<div class="pm-prows">' + rows + '</div>' +
+        '<div class="pm-buy"><div class="prod-price" id="pm-price"></div>' +
+          '<div class="pm-actions"><div class="pm-qty"><button type="button" class="pm-qd" data-d="-1" aria-label="Less">−</button><span id="pm-qn">1</span><button type="button" class="pm-qd" data-d="1" aria-label="More">+</button></div>' +
+          '<button class="btn btn-primary" id="pm-add" disabled>Choose an option</button></div></div>' +
+      '</div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function (e) { if (e.target === ov) closeProductModal(); });
+    ov.querySelector('.pm-x').addEventListener('click', closeProductModal);
+    _pmKey = function (e) { if (e.key === 'Escape') closeProductModal(); };
+    document.addEventListener('keydown', _pmKey);
+
+    var selected = null, qty = 1;
+    function refresh() {
+      var priceEl = document.getElementById('pm-price'), addEl = document.getElementById('pm-add'), qn = document.getElementById('pm-qn');
+      var max = selected && selected.lowStock && selected.lowStock > 0 ? selected.lowStock : 99;
+      if (qty > max) qty = max; if (qty < 1) qty = 1;
+      if (qn) qn.textContent = qty;
+      if (selected) {
+        priceEl.innerHTML = priceHtml(selected);
+        addEl.disabled = false; addEl.textContent = 'Add to cart';
+      } else {
+        priceEl.innerHTML = '<span class="pm-norate">Choose an option</span>';
+        addEl.disabled = true; addEl.textContent = 'Choose an option';
+      }
+    }
+    var rowBtns = ov.querySelectorAll('.pm-prow');
+    rowBtns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.disabled) return;
+        selected = opts[parseInt(b.getAttribute('data-i'), 10)];
+        rowBtns.forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on'); refresh();
+      });
+    });
+    ov.querySelectorAll('.pm-qd').forEach(function (b) {
+      b.addEventListener('click', function () { qty += parseInt(b.getAttribute('data-d'), 10); refresh(); });
+    });
+    document.getElementById('pm-add').addEventListener('click', function () {
+      if (!selected) return;
+      addToCart(selected.pid, selected.vid, qty);
+      closeProductModal();
+    });
+    // One option → pre-select it so the picker is one tap.
+    if (opts.length === 1 && opts[0].inStock !== false) { selected = opts[0]; rowBtns[0].classList.add('on'); }
+    refresh();
+    wireImgFallbacks(ov);
   }
   // Cross-sell — "You might also like": same category first, then bestsellers/
   // featured, then anything else. In-stock preferred, up to 4.
