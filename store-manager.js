@@ -213,7 +213,11 @@
   function ta(attrs) { return el("textarea", Object.assign({ class: "inp" }, attrs)); }
   function sel(options, selected, attrs) {
     return el("select", Object.assign({ class: "inp" }, attrs || {}), options.map(function (o) {
-      var val = Array.isArray(o) ? o[0] : o.value, lab = Array.isArray(o) ? o[1] : o.label;
+      // Accept three option shapes: a plain string ("GBP"), a [value, label] pair,
+      // or a { value, label } object. A bare string is both the value and label.
+      var isObj = o && typeof o === "object";
+      var val = Array.isArray(o) ? o[0] : (isObj ? o.value : o);
+      var lab = Array.isArray(o) ? o[1] : (isObj ? o.label : o);
       return el("option", { value: val, selected: String(selected) === String(val) }, lab);
     }));
   }
