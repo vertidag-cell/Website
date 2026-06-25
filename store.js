@@ -125,9 +125,10 @@
   // ── cart mutations ─────────────────────────────────────────────────────────
   // Changing the cart invalidates any previewed coupon discount (it was priced
   // against the old subtotal) — drop it so the buyer re-applies against the new total.
-  function addToCart(productId, variantId, qty) {
+  function addToCart(productId, variantId, qty, chosenMoney) {
     var body = { productId: productId, quantity: (qty && qty > 0) ? qty : 1 };
     if (variantId) body.variantId = variantId;
+    if (chosenMoney != null) body.chosenMoney = chosenMoney; // pay-what-you-want
     api('/api/dashboard/store/cart/items?guild=' + encodeURIComponent(guildId), { method: 'POST', body: body })
       .then(function (r) {
         if (r.status === 401) return loginBounce();
@@ -1144,7 +1145,8 @@
         var sale = p.sale_price_money != null;
         opts.push({ pid: p.id, vid: null, title: p.name, sub: p.description || '',
           m: sale ? p.sale_price_money : p.price_money, was: sale ? p.price_money : null,
-          c: p.price_credits, inStock: p.inStock !== false, lowStock: p.lowStock });
+          c: p.pwyw ? null : p.price_credits, inStock: p.inStock !== false, lowStock: p.lowStock,
+          pwyw: !!p.pwyw, pwywMin: p.pwyw_min != null ? p.pwyw_min : 0 });
       }
     });
     // Empty category (e.g. only sub-categories with no products) → fall back to the
@@ -1152,6 +1154,7 @@
     if (!opts.length) { S.view.cat = String(cat.id); renderResults(); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} return; }
 
     function priceHtml(o) {
+      if (o.pwyw) return '<span class="prod-money">Pay what you want</span>' + (o.pwywMin > 0 ? '<span class="prod-or">min ' + money(o.pwywMin, ccy) + '</span>' : '');
       if (o.m != null) return moneyTag(o.m, ccy) + (o.was != null ? '<s class="prod-was">' + money(o.was, ccy) + '</s>' : '');
       if (o.c != null) return '<span class="prod-credits">🪙 ' + fmt(o.c) + '</span>';
       return '';
@@ -1187,6 +1190,7 @@
             '<div class="catp-rows-label">' + (opts.length === 1 ? 'Option' : 'Choose an option') + '</div>' +
             '<div class="pm-prows catp-rows">' + rows + '</div>' +
             '<div class="catp-buy"><div class="prod-price" id="catp-price"></div>' +
+              '<div class="catp-pwyw" id="catp-pwyw" style="display:none"><span class="catp-pwyw-cur">' + esc(CCY[ccy] || '') + '</span><input type="number" id="catp-pwyw-input" min="0" step="0.01" inputmode="decimal" placeholder="Your price"></div>' +
               '<div class="pm-actions"><div class="pm-qty"><button type="button" class="pm-qd" data-d="-1" aria-label="Less">−</button><span id="catp-qn">1</span><button type="button" class="pm-qd" data-d="1" aria-label="More">+</button></div>' +
               '<button class="btn btn-primary" id="catp-add" disabled>Choose an option</button></div></div>' +
           '</div>' +
@@ -1198,10 +1202,14 @@
     var selected = null, qty = 1;
     function refresh() {
       var priceEl = document.getElementById('catp-price'), addEl = document.getElementById('catp-add'), qn = document.getElementById('catp-qn');
+      var pwywBox = document.getElementById('catp-pwyw'), pwywIn = document.getElementById('catp-pwyw-input');
       if (!priceEl || !addEl) return;
       var max = selected && selected.lowStock && selected.lowStock > 0 ? selected.lowStock : 99;
       if (qty > max) qty = max; if (qty < 1) qty = 1;
       if (qn) qn.textContent = qty;
+      var isPwyw = !!(selected && selected.pwyw);
+      if (pwywBox) pwywBox.style.display = isPwyw ? 'flex' : 'none';
+      if (isPwyw && pwywIn) { pwywIn.min = selected.pwywMin || 0; if (!pwywIn.placeholder || pwywIn.placeholder === 'Your price') pwywIn.placeholder = selected.m != null ? selected.m : 'Your price'; }
       if (selected) {
         priceEl.innerHTML = priceHtml(selected);
         addEl.disabled = false; addEl.textContent = 'Add to cart';
@@ -1223,7 +1231,16 @@
       b.addEventListener('click', function () { qty += parseInt(b.getAttribute('data-d'), 10); refresh(); });
     });
     document.getElementById('catp-add').addEventListener('click', function () {
-      if (selected) addToCart(selected.pid, selected.vid, qty); // stay on the page so they can add more
+      if (!selected) return;
+      if (selected.pwyw) {
+        var inp = document.getElementById('catp-pwyw-input');
+        var v = inp ? parseFloat(inp.value) : NaN;
+        var min = selected.pwywMin || 0;
+        if (!isFinite(v) || v < min) { toast('Enter a price of at least ' + money(min, ccy), 'err'); if (inp) inp.focus(); return; }
+        addToCart(selected.pid, null, qty, v);
+      } else {
+        addToCart(selected.pid, selected.vid, qty); // stay on the page so they can add more
+      }
     });
     document.getElementById('catp-back').addEventListener('click', closeCategory);
     // One option → pre-select it so the picker is one tap.

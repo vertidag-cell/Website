@@ -877,6 +877,8 @@
     var pm = inp({ type: "number", step: "0.01", min: "0", value: p.price_money != null ? p.price_money : "", placeholder: "0.00" });
     var pc = inp({ type: "number", step: "1", min: "0", value: p.price_credits != null ? p.price_credits : "", placeholder: "0" });
     var salePm = inp({ type: "number", step: "0.01", min: "0", value: p.sale_price_money != null ? p.sale_price_money : "", placeholder: "e.g. 14.99" });
+    var pwyw = swRow("Pay what you want", "Buyer names their own price (money only). The money price above is the suggested amount.", p.pwyw);
+    var pwywMin = inp({ type: "number", step: "0.01", min: "0", value: p.pwyw_min != null ? p.pwyw_min : "", placeholder: "0.00" });
     // sale_ends_at is stored ISO/UTC; datetime-local wants local "YYYY-MM-DDTHH:MM".
     function toLocalInput(iso) {
       if (!iso) return "";
@@ -934,6 +936,7 @@
         sale_ends_at: saleEnds.value ? new Date(saleEnds.value).toISOString() : null,
         fulfillment_type: ft.value(), role_id: ft.value() === "role" ? (roleSel.value || null) : null,
         stock: stock.value === "" ? null : Number(stock.value), per_user_limit: lim.value === "" ? null : Number(lim.value), enabled: enabled.input.checked, featured: featured.input.checked,
+        pwyw: pwyw.input.checked, pwyw_min: pwywMin.value === "" ? null : Number(pwywMin.value),
         bundle_items: bundleRows.filter(function (bi) { return bi.product_id; }).map(function (bi) { return { product_id: bi.product_id, quantity: bi.quantity || 1 }; }) };
       var req = existing ? api(A("/store/products/" + existing.id), { method: "PATCH", body: b }) : api(A("/store/products"), { method: "POST", body: b });
       req.then(function (r) { if (!r.ok) { errEl.textContent = (r.body && r.body.errors && r.body.errors.join("; ")) || "Couldn't save"; save.disabled = false; return; } closeDrawer(); refreshProducts().then(function () { toast(existing ? "Product saved" : "Product added"); render(); }); });
@@ -941,6 +944,10 @@
 
     var pmWrap = el("div", { class: "inp-prefix" }, el("span", null, CCY[S.cfg.currency] || ""), pm);
     var salePmWrap = el("div", { class: "inp-prefix" }, el("span", null, CCY[S.cfg.currency] || ""), salePm);
+    var pwywMinWrap = el("div", { class: "inp-prefix" }, el("span", null, CCY[S.cfg.currency] || ""), pwywMin);
+    var pwywMinField = field("Minimum price", pwywMinWrap, { hint: "Lowest the buyer can pay. Blank = no minimum." });
+    pwywMinField.style.display = p.pwyw ? "block" : "none";
+    pwyw.input.addEventListener("change", function () { pwywMinField.style.display = pwyw.input.checked ? "block" : "none"; });
     var body = el("div", null,
       field("Name", name), field("Description", desc),
       field("Image", img, { hint: "Paste an https image URL, or upload below" }), prev, el("div", { style: { margin: "8px 0 16px" } }, upBtn, upMsg, file),
@@ -949,6 +956,7 @@
       el("div", { class: "grid2" },
         field("Sale price — money (optional)", salePmWrap, { hint: "Markdown under the money price; must be below it." }),
         field("Sale ends (optional)", saleEnds, { hint: "Blank = no end. Markdown drops automatically after this time." })),
+      el("div", { class: "field" }, pwyw.node, pwywMinField),
       el("div", { class: "field" }, el("span", { class: "lab" }, "Tiers / variants (optional)"),
         existing ? variantManager(existing) : el("p", { class: "hint", style: { margin: 0 } }, "Save this product first, then reopen it to add tiers like 1 month / 3 months / lifetime.")),
       el("div", { class: "field" }, el("span", { class: "lab" }, "Bundle components (optional)"),
