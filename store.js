@@ -1155,7 +1155,7 @@
     }
     var rows = opts.map(function (o, i) {
       var stock = o.inStock === false ? 'Sold out' : (o.lowStock ? '🔥 ' + o.lowStock + ' left' : '∞ In Stock');
-      return '<button type="button" class="pm-prow' + (o.inStock === false ? ' oos' : '') + '" data-i="' + i + '"' + (o.inStock === false ? ' disabled' : '') + '>' +
+      return '<button type="button" class="pm-prow' + (o.inStock === false ? ' oos' : '') + '" data-i="' + i + '" style="animation-delay:' + Math.min(i * 45, 380) + 'ms"' + (o.inStock === false ? ' disabled' : '') + '>' +
         '<span class="pm-prow-info"><span class="pm-prow-title">' + esc(o.title) + '</span>' +
         (o.sub ? '<span class="pm-prow-sub">' + esc(o.sub) + '</span>' : '') +
         '<span class="pm-prow-stock' + (o.inStock === false ? ' out' : '') + '">' + stock + '</span></span>' +
@@ -1163,29 +1163,39 @@
         '<span class="pm-prow-check" aria-hidden="true">✓</span></button>';
     }).join('');
 
-    var media = cat.image_url ? '<img class="pm-img" src="' + esc(cat.image_url) + '" alt="">' : '';
-    var ov = document.createElement('div');
-    ov.id = 'prod-overlay'; ov.className = 'pm-overlay';
-    ov.innerHTML = '<div class="pm-panel" role="dialog" aria-label="' + esc(cat.name) + '">' +
-      '<button type="button" class="pm-x" aria-label="Close">✕</button>' + media +
-      '<div class="pm-body">' +
-        '<h2 class="pm-name">' + esc(cat.name) + '</h2>' +
-        (cat.description ? '<p class="pm-desc">' + esc(cat.description) + '</p>' : '') +
-        '<div class="pm-var-label">' + (opts.length === 1 ? 'Option' : 'Choose an option') + '</div>' +
-        '<div class="pm-prows">' + rows + '</div>' +
-        '<div class="pm-buy"><div class="prod-price" id="pm-price"></div>' +
-          '<div class="pm-actions"><div class="pm-qty"><button type="button" class="pm-qd" data-d="-1" aria-label="Less">−</button><span id="pm-qn">1</span><button type="button" class="pm-qd" data-d="1" aria-label="More">+</button></div>' +
-          '<button class="btn btn-primary" id="pm-add" disabled>Choose an option</button></div></div>' +
-      '</div></div>';
-    document.body.appendChild(ov);
-    ov.addEventListener('click', function (e) { if (e.target === ov) closeProductModal(); });
-    ov.querySelector('.pm-x').addEventListener('click', closeProductModal);
-    _pmKey = function (e) { if (e.key === 'Escape') closeProductModal(); };
-    document.addEventListener('keydown', _pmKey);
+    var media = cat.image_url
+      ? '<img class="catp-img" src="' + esc(cat.image_url) + '" alt="" data-letter="' + initial(cat.name) + '">'
+      : '<div class="catp-img catp-fb">' + glyphSvg(cat.name) + '</div>';
+
+    // Deep-link / share, and hide the landing's toolbar + reviews while open.
+    try { var u = new URL(location.href); u.searchParams.set('cat', String(cat.id)); u.searchParams.delete('product'); history.replaceState(null, '', u); } catch (e) {}
+    S._catOpen = String(cat.id);
+    var tools = document.querySelector('.store-tools'); if (tools) tools.style.display = 'none';
+    var showcase = document.getElementById('store-reviews-showcase'); if (showcase) showcase.style.display = 'none';
+
+    box.innerHTML =
+      '<div class="catp">' +
+        '<button type="button" class="catp-back" id="catp-back">‹ All categories</button>' +
+        '<div class="catp-grid">' +
+          '<div class="catp-media">' + media + '</div>' +
+          '<div class="catp-panel">' +
+            '<h1 class="catp-name">' + esc(cat.name) + '</h1>' +
+            (cat.description ? '<p class="catp-desc">' + esc(cat.description) + '</p>' : '') +
+            '<div class="catp-rows-label">' + (opts.length === 1 ? 'Option' : 'Choose an option') + '</div>' +
+            '<div class="pm-prows catp-rows">' + rows + '</div>' +
+            '<div class="catp-buy"><div class="prod-price" id="catp-price"></div>' +
+              '<div class="pm-actions"><div class="pm-qty"><button type="button" class="pm-qd" data-d="-1" aria-label="Less">−</button><span id="catp-qn">1</span><button type="button" class="pm-qd" data-d="1" aria-label="More">+</button></div>' +
+              '<button class="btn btn-primary" id="catp-add" disabled>Choose an option</button></div></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    wireImgFallbacks(box);
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
 
     var selected = null, qty = 1;
     function refresh() {
-      var priceEl = document.getElementById('pm-price'), addEl = document.getElementById('pm-add'), qn = document.getElementById('pm-qn');
+      var priceEl = document.getElementById('catp-price'), addEl = document.getElementById('catp-add'), qn = document.getElementById('catp-qn');
+      if (!priceEl || !addEl) return;
       var max = selected && selected.lowStock && selected.lowStock > 0 ? selected.lowStock : 99;
       if (qty > max) qty = max; if (qty < 1) qty = 1;
       if (qn) qn.textContent = qty;
@@ -1197,7 +1207,7 @@
         addEl.disabled = true; addEl.textContent = 'Choose an option';
       }
     }
-    var rowBtns = ov.querySelectorAll('.pm-prow');
+    var rowBtns = box.querySelectorAll('.pm-prow');
     rowBtns.forEach(function (b) {
       b.addEventListener('click', function () {
         if (b.disabled) return;
@@ -1206,18 +1216,27 @@
         b.classList.add('on'); refresh();
       });
     });
-    ov.querySelectorAll('.pm-qd').forEach(function (b) {
+    box.querySelectorAll('.pm-qd').forEach(function (b) {
       b.addEventListener('click', function () { qty += parseInt(b.getAttribute('data-d'), 10); refresh(); });
     });
-    document.getElementById('pm-add').addEventListener('click', function () {
-      if (!selected) return;
-      addToCart(selected.pid, selected.vid, qty);
-      closeProductModal();
+    document.getElementById('catp-add').addEventListener('click', function () {
+      if (selected) addToCart(selected.pid, selected.vid, qty); // stay on the page so they can add more
     });
+    document.getElementById('catp-back').addEventListener('click', closeCategory);
     // One option → pre-select it so the picker is one tap.
     if (opts.length === 1 && opts[0].inStock !== false) { selected = opts[0]; rowBtns[0].classList.add('on'); }
     refresh();
-    wireImgFallbacks(ov);
+  }
+
+  // Leave the category page → restore the landing (tiles) + toolbar + reviews.
+  function closeCategory() {
+    S._catOpen = null;
+    try { var u = new URL(location.href); u.searchParams.delete('cat'); history.replaceState(null, '', u); } catch (e) {}
+    var tools = document.querySelector('.store-tools'); if (tools) tools.style.display = '';
+    var showcase = document.getElementById('store-reviews-showcase'); if (showcase) showcase.style.display = '';
+    S.view.cat = '';
+    renderResults();
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
   }
   // Cross-sell — "You might also like": same category first, then bestsellers/
   // featured, then anything else. In-stock preferred, up to 4.
@@ -1390,10 +1409,9 @@
       return;
     }
 
-    // Toolbar: search + sort, then category chips.
-    var cats = distinctCategories();
+    // Sort-only toolbar — search + category chips removed. Sort sets the order
+    // products appear in when a category page is opened.
     html += '<div class="store-tools">' +
-      '<input type="search" id="store-search" class="store-search" placeholder="Search products…" autocomplete="off">' +
       '<select id="store-sort" class="store-sort" aria-label="Sort products">' +
       '<option value="featured">Featured first</option>' +
       '<option value="sales">Best selling</option>' +
@@ -1401,21 +1419,19 @@
       '<option value="price_asc">Price: low to high</option>' +
       '<option value="price_desc">Price: high to low</option>' +
       '<option value="name">Name A–Z</option></select></div>';
-    // Category chip nav removed — the landing shows tappable category tiles (each
-    // opens a product picker), so a separate chip row was redundant. Search + sort stay.
     html += '<div id="store-results"></div>';
     html += '<div id="store-reviews-showcase" class="store-reviews-showcase"></div>';
     root.innerHTML = html;
     wireImgFallbacks(root); // hero logo
 
-    var search = document.getElementById('store-search');
-    if (search) { search.value = S.view.q; search.addEventListener('input', function () { S.view.q = search.value; renderResults(); }); }
     var sort = document.getElementById('store-sort');
     if (sort) { sort.value = S.view.sort; sort.addEventListener('change', function () { S.view.sort = sort.value; renderResults(); }); }
     renderResults();
     renderCartButton();
     loadStoreReviews(); // "What buyers say" showcase at the bottom
-    // Deep-link: ?product=<id> opens that product's detail modal on load.
+    // Deep-link: ?cat=<id> opens that category page; ?product=<id> opens a product.
+    var dlc = params.get('cat');
+    if (dlc) { openCategory(dlc === 'other' ? 'other' : parseInt(dlc, 10)); }
     var dlp = parseInt(params.get('product'), 10);
     if (dlp) { var dp = productById(dlp); if (dp) openProduct(dp); }
   }
