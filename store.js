@@ -1125,6 +1125,7 @@
   // tier, so everything in the category is directly addable from a single list.
   function openCategory(catKey) {
     closeProductModal();
+    var box = document.getElementById('store-results'); if (!box) return;
     var ccy = S.store && S.store.currency;
     var cat = catKey === 'other'
       ? { id: 'other', name: 'Other', image_url: null, description: null }

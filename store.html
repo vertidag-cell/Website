@@ -355,6 +355,9 @@
 
       /* Price tags — a touch see-through so they sit back from the product name. */
       .prod-money, .prod-credits { opacity: 0.62; }
+      /* Category tile meta (price range + item count) — a bit transparent. */
+      .cat-tile .prod-meta { opacity: 0.6; }
+      .cat-tile .prod-meta .prod-money { opacity: 1; } /* row opacity already dims it — no double-dim */
 
       /* Category page — big image on the left, pickable options on the right. */
       @keyframes catpRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -716,6 +719,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=48"></script>
+    <script src="store.js?v=49"></script>
   </body>
 </html>
