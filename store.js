@@ -1411,23 +1411,13 @@
       return;
     }
 
-    // Sort-only toolbar — search + category chips removed. Sort sets the order
-    // products appear in when a category page is opened.
-    html += '<div class="store-tools">' +
-      '<select id="store-sort" class="store-sort" aria-label="Sort products">' +
-      '<option value="featured">Featured first</option>' +
-      '<option value="sales">Best selling</option>' +
-      '<option value="newest">Newest</option>' +
-      '<option value="price_asc">Price: low to high</option>' +
-      '<option value="price_desc">Price: high to low</option>' +
-      '<option value="name">Name A–Z</option></select></div>';
+    // Toolbar removed entirely — no search, no chips, no sort. The landing is just
+    // the category tiles; category pages list options in catalog (featured) order.
     html += '<div id="store-results"></div>';
     html += '<div id="store-reviews-showcase" class="store-reviews-showcase"></div>';
     root.innerHTML = html;
     wireImgFallbacks(root); // hero logo
 
-    var sort = document.getElementById('store-sort');
-    if (sort) { sort.value = S.view.sort; sort.addEventListener('change', function () { S.view.sort = sort.value; renderResults(); }); }
     renderResults();
     renderCartButton();
     loadStoreReviews(); // "What buyers say" showcase at the bottom
