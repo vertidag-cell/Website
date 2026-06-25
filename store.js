@@ -28,6 +28,8 @@
   function initial(s) { return esc((String(s || '?').trim().charAt(0) || '?').toUpperCase()); }
   var CCY = { GBP: '£', USD: '$', EUR: '€' };
   function money(n, currency) { return (CCY[currency] || '') + (Number(n) || 0).toFixed(2); }
+  // Product price tag: a real "Free" label for £0 items, else the formatted price.
+  function moneyTag(m, ccy) { return '<span class="prod-money">' + (Number(m) === 0 ? 'Free' : money(m, ccy)) + '</span>'; }
   function fmt(n) { return (Number(n) || 0).toLocaleString(); }
   function productById(id) { id = parseInt(id, 10); for (var i = 0; i < S.products.length; i++) if (S.products[i].id === id) return S.products[i]; return null; }
   function starDisplay(rating) {
@@ -690,8 +692,8 @@
       return '';
     }
     var price = '';
-    if (p.sale_price_money != null && p.price_money != null) price += '<span class="prod-money">' + money(p.sale_price_money, s.currency) + '</span><s class="prod-was">' + money(p.price_money, s.currency) + '</s>';
-    else if (p.price_money != null) price += '<span class="prod-money">' + money(p.price_money, s.currency) + '</span>';
+    if (p.sale_price_money != null && p.price_money != null) price += moneyTag(p.sale_price_money, s.currency) + '<s class="prod-was">' + money(p.price_money, s.currency) + '</s>';
+    else if (p.price_money != null) price += moneyTag(p.price_money, s.currency);
     if (p.price_money != null && p.price_credits != null) price += '<span class="prod-or">or</span>';
     if (p.price_credits != null) price += '<span class="prod-credits">🪙 ' + fmt(p.price_credits) + '</span>';
     return price;
@@ -1060,7 +1062,7 @@
       else m = p.price_money;
       var c = v && v.price_credits != null ? v.price_credits : p.price_credits;
       var out = '';
-      if (m != null) out += '<span class="prod-money">' + money(m, ccy) + '</span>' + (was != null ? '<s class="prod-was">' + money(was, ccy) + '</s>' : '');
+      if (m != null) out += moneyTag(m, ccy) + (was != null ? '<s class="prod-was">' + money(was, ccy) + '</s>' : '');
       if (m != null && c != null) out += '<span class="prod-or">or</span>';
       if (c != null) out += '<span class="prod-credits">🪙 ' + fmt(c) + '</span>';
       return out;
@@ -1149,7 +1151,7 @@
     if (!opts.length) { S.view.cat = String(cat.id); renderResults(); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} return; }
 
     function priceHtml(o) {
-      if (o.m != null) return '<span class="prod-money">' + money(o.m, ccy) + '</span>' + (o.was != null ? '<s class="prod-was">' + money(o.was, ccy) + '</s>' : '');
+      if (o.m != null) return moneyTag(o.m, ccy) + (o.was != null ? '<s class="prod-was">' + money(o.was, ccy) + '</s>' : '');
       if (o.c != null) return '<span class="prod-credits">🪙 ' + fmt(o.c) + '</span>';
       return '';
     }
