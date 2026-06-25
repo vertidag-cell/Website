@@ -969,8 +969,7 @@
     if (otherCount) tiles.push(categoryTileHtml('other', 'Other', null, otherCount, null, tiles.length));
     // No category tiles at all → just show the products (drill into "Other").
     if (!tiles.length) { S.view.cat = 'other'; return renderGrouped(box); }
-    box.innerHTML = '<div class="store-count">' + tops.length + ' ' + (tops.length === 1 ? 'category' : 'categories') + ' — tap to browse</div>' +
-      '<div class="store-grid">' + tiles.join('') + '</div>';
+    box.innerHTML = '<div class="store-grid">' + tiles.join('') + '</div>';
     S._revealed = true;
     wireImgFallbacks(box);
     animateGrid(box);
@@ -1402,19 +1401,10 @@
       '<option value="price_asc">Price: low to high</option>' +
       '<option value="price_desc">Price: high to low</option>' +
       '<option value="name">Name A–Z</option></select></div>';
-    if (treeCats()) {
-      // Real categories: a nav of top-level categories (with their icon), each
-      // drilling into that section. "All" shows the full grouped browse.
-      html += '<div class="store-cats"><button type="button" class="store-cat" data-cat="">All</button>' +
-        S.categories.map(function (t) {
-          var ico = t.image_url ? '<img class="store-cat-ico" src="' + esc(t.image_url) + '" alt="">' : '<span class="store-cat-dot"></span>';
-          return '<button type="button" class="store-cat" data-cat="' + t.id + '" style="' + colorVar(t.id) + '">' + ico + esc(t.name) + '</button>';
-        }).join('') + '</div>';
-    } else if (cats.length) {
-      html += '<div class="store-cats"><button type="button" class="store-cat" data-cat="">All</button>' +
-        cats.map(function (c) { return '<button type="button" class="store-cat" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>';
-    }
+    // Category chip nav removed — the landing shows tappable category tiles (each
+    // opens a product picker), so a separate chip row was redundant. Search + sort stay.
     html += '<div id="store-results"></div>';
+    html += '<div id="store-reviews-showcase" class="store-reviews-showcase"></div>';
     root.innerHTML = html;
     wireImgFallbacks(root); // hero logo
 
@@ -1422,20 +1412,38 @@
     if (search) { search.value = S.view.q; search.addEventListener('input', function () { S.view.q = search.value; renderResults(); }); }
     var sort = document.getElementById('store-sort');
     if (sort) { sort.value = S.view.sort; sort.addEventListener('change', function () { S.view.sort = sort.value; renderResults(); }); }
-    root.querySelectorAll('.store-cat').forEach(function (b) {
-      if (b.getAttribute('data-cat') === (S.view.cat || '')) b.classList.add('on');
-      b.addEventListener('click', function () {
-        S.view.cat = b.getAttribute('data-cat');
-        root.querySelectorAll('.store-cat').forEach(function (x) { x.classList.remove('on'); });
-        b.classList.add('on');
-        renderResults();
-      });
-    });
     renderResults();
     renderCartButton();
+    loadStoreReviews(); // "What buyers say" showcase at the bottom
     // Deep-link: ?product=<id> opens that product's detail modal on load.
     var dlp = parseInt(params.get('product'), 10);
     if (dlp) { var dp = productById(dlp); if (dp) openProduct(dp); }
+  }
+
+  // Store-wide reviews showcase — a "What buyers say" section at the very bottom
+  // of the shop. Verified-buyer reviews only; the section hides itself when there
+  // are none, so a brand-new store shows nothing rather than an empty shell.
+  function loadStoreReviews() {
+    var box = document.getElementById('store-reviews-showcase'); if (!box) return;
+    api('/api/dashboard/store/reviews/recent?guild=' + encodeURIComponent(guildId)).then(function (r) {
+      var data = (r && r.ok && r.body) || { reviews: [], summary: { rating: 0, reviewCount: 0 } };
+      var revs = data.reviews || [];
+      if (!revs.length) { box.innerHTML = ''; return; }
+      var sum = data.summary || { rating: 0, reviewCount: 0 };
+      var head = '<div class="sr-head"><h2 class="sr-title">What buyers say</h2>' +
+        (sum.reviewCount ? '<div class="sr-overall">' + starDisplay(sum.rating) + '<span class="sr-overall-n"><b>' + Number(sum.rating).toFixed(1) + '</b> · ' + sum.reviewCount + ' review' + (sum.reviewCount === 1 ? '' : 's') + '</span></div>' : '') +
+        '</div>';
+      var cards = revs.map(function (rv) {
+        return '<figure class="sr-card">' +
+          '<div class="sr-stars">' + starDisplay(rv.rating) + '</div>' +
+          (rv.comment ? '<blockquote class="sr-quote">“' + esc(rv.comment) + '”</blockquote>' : '<blockquote class="sr-quote sr-noquote">Rated ' + rv.rating + '/5</blockquote>') +
+          '<figcaption class="sr-by"><span class="sr-who"><b>' + esc(rv.username || 'Buyer') + '</b><span class="sr-verified" title="Reviews are only from verified buyers">✓ Verified</span></span>' +
+          (rv.product_name ? '<span class="sr-prod">' + esc(rv.product_name) + '</span>' : '') + '</figcaption>' +
+          (rv.reply ? '<div class="sr-reply"><b>↳ Store reply:</b> ' + esc(rv.reply) + '</div>' : '') +
+          '</figure>';
+      }).join('');
+      box.innerHTML = '<section class="sr-wrap">' + head + '<div class="sr-grid">' + cards + '</div></section>';
+    });
   }
 
   // ── boot ──────────────────────────────────────────────────────────────────────
