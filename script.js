@@ -179,7 +179,7 @@
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         const el = entry.target;
-        const target = parseInt(el.getAttribute("data-count"), 10);
+        const target = parseInt(el.getAttribute("data-count") || el.getAttribute("data-count-to"), 10);
         if (Number.isNaN(target)) return;
         if (reducedMotion) {
           el.textContent = target;
@@ -205,7 +205,7 @@
     },
     { threshold: 0.5 }
   );
-  document.querySelectorAll(".count-up[data-count]").forEach((el) => countObserver.observe(el));
+  document.querySelectorAll(".count-up[data-count], [data-count-to]").forEach((el) => countObserver.observe(el));
 
   /* -------- Hero command typing (cinematic stage 3) -------- */
   document.querySelectorAll("[data-typer]").forEach((el) => {
