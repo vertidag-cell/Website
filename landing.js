@@ -197,7 +197,7 @@
             var img = document.createElement("img");
             img.className = "srv-av";
             img.src = String(s.icon).replace(/["'<>]/g, "");
-            img.alt = "";
+            img.alt = (s.name || "Discord server") + " logo";
             img.loading = "lazy";
             img.width = 54;
             img.height = 54;
