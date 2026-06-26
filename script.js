@@ -1839,6 +1839,12 @@
     const close = () => { try { modal.close(); } catch {} };
     document.querySelectorAll("[data-video-open]").forEach((t) => {
       t.addEventListener("click", (e) => { e.preventDefault(); open(); });
+      t.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          open();
+        }
+      });
     });
     modal.querySelectorAll("[data-video-close]").forEach((c) => c.addEventListener("click", close));
     // Click on the backdrop (the dialog element itself, outside the inner card) closes.
