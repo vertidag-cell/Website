@@ -334,7 +334,9 @@
         if (i.lineMoney != null) unit = money(i.lineMoney / i.quantity, ccy) + ' each';
         else if (i.lineCredits != null) unit = '🪙' + fmt(Math.round(i.lineCredits / i.quantity)) + ' each';
       }
-      var thumb = p.image_url ? '<img class="cart-thumb" src="' + esc(p.image_url) + '" alt="" data-letter="' + initial(p.name) + '">' : '<div class="cart-thumb cart-thumb-fb">' + initial(p.name || '?') + '</div>';
+      // No image → no thumbnail at all (rather than a letter placeholder). A real
+      // image still falls back to the letter only if its URL is broken.
+      var thumb = p.image_url ? '<img class="cart-thumb" src="' + esc(p.image_url) + '" alt="" data-letter="' + initial(p.name) + '">' : '';
       var issue = i.issue ? '<span class="cart-issue">' + (i.issue === 'out_of_stock' ? 'out of stock' : 'unavailable') + '</span>' : '';
       html += '<li class="cart-line' + (i.issue ? ' bad' : '') + '" data-pid="' + i.productId + '">' + thumb +
         '<div class="cart-line-info">' +
