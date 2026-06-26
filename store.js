@@ -1156,7 +1156,7 @@
     if (!opts.length) { S.view.cat = String(cat.id); renderResults(); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} return; }
 
     function priceHtml(o) {
-      if (o.pwyw) return '<span class="prod-money">Pay what you want</span>' + (o.pwywMin > 0 ? '<span class="prod-or">min ' + money(o.pwywMin, ccy) + '</span>' : '');
+      if (o.pwyw) return '<span class="prod-money">Pay what you want</span>';
       if (o.m != null) return moneyTag(o.m, ccy) + (o.was != null ? '<s class="prod-was">' + money(o.was, ccy) + '</s>' : '');
       if (o.c != null) return '<span class="prod-credits">🪙 ' + fmt(o.c) + '</span>';
       return '';
@@ -1192,9 +1192,11 @@
             '<div class="catp-rows-label">' + (opts.length === 1 ? 'Option' : 'Choose an option') + '</div>' +
             '<div class="pm-prows catp-rows">' + rows + '</div>' +
             '<div class="catp-buy"><div class="prod-price" id="catp-price"></div>' +
-              '<div class="catp-pwyw" id="catp-pwyw" style="display:none"><span class="catp-pwyw-cur">' + esc(CCY[ccy] || '') + '</span><input type="number" id="catp-pwyw-input" min="0" step="0.01" inputmode="decimal" placeholder="Your price"></div>' +
-              '<div class="pm-actions"><div class="pm-qty"><button type="button" class="pm-qd" data-d="-1" aria-label="Less">−</button><span id="catp-qn">1</span><button type="button" class="pm-qd" data-d="1" aria-label="More">+</button></div>' +
-              '<button class="btn btn-primary" id="catp-add" disabled>Choose an option</button></div></div>' +
+              '<div class="pm-actions">' +
+                '<div class="catp-pwyw" id="catp-pwyw" style="display:none"><span class="catp-pwyw-cur">' + esc(CCY[ccy] || '') + '</span><input type="number" id="catp-pwyw-input" min="0" step="0.01" inputmode="decimal" placeholder="Your price"></div>' +
+                '<div class="pm-qty" id="catp-qty"><button type="button" class="pm-qd" data-d="-1" aria-label="Less">−</button><span id="catp-qn">1</span><button type="button" class="pm-qd" data-d="1" aria-label="More">+</button></div>' +
+                '<button class="btn btn-primary" id="catp-add" disabled>Choose an option</button>' +
+              '</div></div>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -1204,16 +1206,21 @@
     var selected = null, qty = 1;
     function refresh() {
       var priceEl = document.getElementById('catp-price'), addEl = document.getElementById('catp-add'), qn = document.getElementById('catp-qn');
-      var pwywBox = document.getElementById('catp-pwyw'), pwywIn = document.getElementById('catp-pwyw-input');
+      var pwywBox = document.getElementById('catp-pwyw'), pwywIn = document.getElementById('catp-pwyw-input'), qtyEl = document.getElementById('catp-qty');
       if (!priceEl || !addEl) return;
       var max = selected && selected.lowStock && selected.lowStock > 0 ? selected.lowStock : 99;
       if (qty > max) qty = max; if (qty < 1) qty = 1;
       if (qn) qn.textContent = qty;
       var isPwyw = !!(selected && selected.pwyw);
-      if (pwywBox) pwywBox.style.display = isPwyw ? 'flex' : 'none';
-      if (isPwyw && pwywIn) { pwywIn.min = selected.pwywMin || 0; if (!pwywIn.placeholder || pwywIn.placeholder === 'Your price') pwywIn.placeholder = selected.m != null ? selected.m : 'Your price'; }
+      // Name-your-price: show the £ input, hide the quantity stepper (it's a single
+      // named amount, not a multiple).
+      if (pwywBox) pwywBox.style.display = isPwyw ? 'inline-flex' : 'none';
+      if (qtyEl) qtyEl.style.display = isPwyw ? 'none' : '';
+      if (isPwyw && pwywIn) { pwywIn.min = selected.pwywMin || 0; if (!pwywIn.placeholder || pwywIn.placeholder === 'Your price') pwywIn.placeholder = selected.m != null ? String(selected.m) : 'Your price'; }
       if (selected) {
-        priceEl.innerHTML = priceHtml(selected);
+        priceEl.innerHTML = isPwyw
+          ? '<span class="prod-money">Pay what you want</span>' + (selected.pwywMin > 0 ? '<span class="catp-min">minimum ' + money(selected.pwywMin, ccy) + '</span>' : '')
+          : priceHtml(selected);
         addEl.disabled = false; addEl.textContent = 'Add to cart';
       } else {
         priceEl.innerHTML = '<span class="pm-norate">Choose an option</span>';
