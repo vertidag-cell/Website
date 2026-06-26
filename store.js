@@ -734,7 +734,7 @@
     var style = ' style="animation-delay:' + Math.min((idx || 0) * 45, 360) + 'ms"';
     var media = p.image_url
       ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">'
-      : '<div class="prod-img prod-fb">' + productGlyph(p) + '</div>';
+      : '<div class="prod-img prod-fb"></div>'; // no image → clean blank tile, no letter/glyph
     var ob = '';
     if (p.sale_price_money != null) ob += '<span class="prod-badge sale">Sale</span>';
     if (p.featured) ob += '<span class="prod-badge feat">★ Featured</span>';
@@ -761,7 +761,7 @@
         var d = document.createElement('div');
         var fb = img.classList.contains('prod-img') ? ' prod-fb' : img.classList.contains('cart-thumb') ? ' cart-thumb-fb' : ' store-fb';
         d.className = img.className + fb;
-        d.textContent = img.getAttribute('data-letter') || '';
+        d.textContent = ''; // broken image → clean blank box, no letter placeholder
         if (img.parentNode) img.parentNode.replaceChild(d, img);
       });
     });
@@ -954,7 +954,7 @@
   function categoryTileHtml(catKey, name, image, count, desc, idx) {
     var media = image
       ? '<img class="prod-img" src="' + esc(image) + '" alt="" loading="lazy" data-letter="' + initial(name) + '">'
-      : '<div class="prod-img prod-fb">' + glyphSvg(name) + '</div>';
+      : '<div class="prod-img prod-fb"></div>'; // no image → clean blank tile
     var range = priceRangeHtml(catProducts(catKey));
     var style = ' style="animation-delay:' + Math.min((idx || 0) * 50, 400) + 'ms"';
     return '<div class="prod prod-v2 cat-tile reveal-up" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button"' + style + '>'
@@ -1173,7 +1173,7 @@
 
     var media = cat.image_url
       ? '<img class="catp-img" src="' + esc(cat.image_url) + '" alt="" data-letter="' + initial(cat.name) + '">'
-      : '<div class="catp-img catp-fb">' + glyphSvg(cat.name) + '</div>';
+      : '<div class="catp-img catp-fb"></div>'; // no image → clean blank panel
 
     // Deep-link / share, and hide the landing's toolbar + reviews while open.
     try { var u = new URL(location.href); u.searchParams.set('cat', String(cat.id)); u.searchParams.delete('product'); history.replaceState(null, '', u); } catch (e) {}
@@ -1283,7 +1283,7 @@
     if (!rel.length) { box.innerHTML = ''; return; }
     box.innerHTML = '<h3 class="pm-rel-title">You might also like</h3><div class="pm-rel-grid">' +
       rel.map(function (x) {
-        var thumb = x.image_url ? '<img class="pm-rel-img" src="' + esc(x.image_url) + '" alt="" loading="lazy" data-letter="' + initial(x.name) + '">' : '<div class="pm-rel-img pm-rel-fb">' + initial(x.name) + '</div>';
+        var thumb = x.image_url ? '<img class="pm-rel-img" src="' + esc(x.image_url) + '" alt="" loading="lazy" data-letter="' + initial(x.name) + '">' : '';
         var tags = (x.bestseller ? '<span class="pm-rel-tag best">🔥</span>' : '') + (x.sale_price_money != null ? '<span class="pm-rel-tag sale">Sale</span>' : '');
         return '<button type="button" class="pm-rel-card" data-pid="' + x.id + '">' + thumb + tags +
           '<div class="pm-rel-info"><span class="pm-rel-name">' + esc(x.name) + '</span>' +
