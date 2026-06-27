@@ -183,7 +183,7 @@
     if (/\/store\/orders/.test(path)) { var st = (path.match(/status=(\w+)/) || [])[1]; return { orders: st ? DEMO_ORDERS.filter(function (o) { return o.status === st; }) : DEMO_ORDERS }; }
     if (/\/discord\/roles/.test(path)) return { roles: DEMO_ROLES };
     if (/\/discord\/channels/.test(path)) return { channels: DEMO_CHANNELS };
-    if (/\/payments\/stripe/.test(path)) return { brandName: "Velated PVP Store", secretKey: { configured: true, source: "guild", last4: "9aF2" }, webhookSecret: { configured: true }, mode: "live", webhookUrl: location.origin + "/webhooks/stripe", isConfigured: true };
+    if (/\/payments\/stripe/.test(path)) return { brandName: "Velated PVP Store", secretKey: { configured: true, source: "guild", last4: "9aF2" }, webhookSecret: { configured: true }, mode: "live", webhookUrl: location.origin + "/webhooks/stripe", isConfigured: true, cashApp: true };
     if (/\/payments\/paypal/.test(path)) return { mode: "live", prefer: "orders", brandName: "Velated PVP Store", clientId: { configured: false, source: "unset" }, clientSecret: { configured: false }, webhookId: { configured: false }, webhookUrl: location.origin + "/webhooks/paypal", isConfigured: false };
     return {};
   }
@@ -1541,7 +1541,7 @@
     var isStripe = kind === "stripe";
     var name = isStripe ? "Stripe" : "PayPal";
     var ic = isStripe ? "💠" : "🅿️";
-    var blurb = isStripe ? "Cards, Apple Pay & Google Pay" : "Cards + PayPal balance";
+    var blurb = isStripe ? "Cards, Cash App Pay, Apple Pay & Google Pay" : "Cards + PayPal balance";
     var box = el("div", { class: "panel", style: { margin: 0 } });
     if (!resp || !resp.ok) {
       box.append(
@@ -1564,7 +1564,8 @@
       box.append(el("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "14px" } },
         badge(live ? "Live mode" : (isStripe ? "Test mode" : "Sandbox"), live ? "ok" : "warn"),
         (fp && fp.last4) ? badge("key ••" + fp.last4, "dim") : null,
-        hookSet ? badge("Webhook set", "ok") : badge("No webhook yet", "warn")));
+        hookSet ? badge("Webhook set", "ok") : badge("No webhook yet", "warn"),
+        (isStripe && b.cashApp !== false) ? badge("Cash App Pay", "ok") : null));
     } else {
       box.append(el("p", { class: "muted", style: { fontSize: "13px", margin: "0 0 14px", lineHeight: "1.5" } },
         isStripe ? "Paste your Stripe secret key to accept card payments." : "Add your PayPal API credentials to accept card & PayPal payments."));
@@ -1622,6 +1623,7 @@
       var whSaved = data.webhookSecret && data.webhookSecret.configured;
       var wh = inp({ type: "password", placeholder: whSaved ? "Saved — leave blank to keep" : "whsec_…", autocomplete: "off" });
       var brand = inp({ type: "text", value: data.brandName || "", maxlength: 128, placeholder: "Shown on the Stripe checkout page" });
+      var caRow = swRow("Accept Cash App Pay", "Shown next to card at USD checkout — included free with Stripe, no extra setup. Falls back to card if your Stripe account hasn’t enabled it.", data.cashApp !== false);
       body = el("div", null,
         steps([
           "Open dashboard.stripe.com → Developers → API keys.",
@@ -1632,10 +1634,11 @@
         copyField("Webhook endpoint URL", hookUrl),
         field("Webhook signing secret", wh, { hint: "The whsec_… value — this is what auto-confirms paid orders." }),
         field("Brand name (optional)", brand),
+        caRow.node,
         errEl);
       save = btn("Save Stripe keys", { onClick: function () {
         errEl.textContent = ""; save.disabled = true;
-        var payload = { brandName: brand.value.trim() };
+        var payload = { brandName: brand.value.trim(), cashApp: caRow.input.checked };
         if (sk.value.trim()) payload.secretKey = sk.value.trim();
         if (wh.value.trim()) payload.webhookSecret = wh.value.trim();
         api(A("/payments/stripe"), { method: "POST", body: payload }).then(function (r) {
