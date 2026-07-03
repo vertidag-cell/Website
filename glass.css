@@ -1,0 +1,263 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ARKORIS GLASS — shared design system for the per-guild app pages
+   (leaderboards hub, XP leaderboard, Cluster Alpha leaderboard).
+   Mirrors the storefront (store.html): one dynamic brand colour (--accent,
+   set per-guild at runtime), everything derived via color-mix.
+   Load AFTER styles.css. Pages add the backdrop markup:
+     <div class="glass-bg" aria-hidden="true"><i class="glass-aurora"></i><i class="glass-noise"></i></div>
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --accent: var(--red, #2bff9e);
+  --accent-2: color-mix(in srgb, var(--accent) 55%, #5ea2ff);
+  --on-accent: #04120b;
+  --bg0: #04060a;
+  --ink: #edf3f0;
+  --ink-mut: #a7b5ae;
+  --ink-dim: #7d8d85;
+  --line: rgba(255, 255, 255, 0.085);
+  --line-hi: rgba(255, 255, 255, 0.16);
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-hi: rgba(255, 255, 255, 0.07);
+  --disp: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --shadow-card: 0 1px 0 rgba(255,255,255,.06) inset, 0 1px 2px rgba(0,0,0,.55), 0 18px 40px -22px rgba(0,0,0,.8);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Neutralise the marketing site's green-tinted structural tokens here — the
+   accent is per-guild, so lines and cards stay neutral white-alpha. */
+body {
+  --border: var(--line); --border-strong: var(--line-hi); --card: var(--glass);
+  --text: var(--ink); --text-muted: var(--ink-mut); --text-dim: var(--ink-dim);
+  background-color: var(--bg0);
+  background-image: linear-gradient(180deg, #070b11 0%, var(--bg0) 46%);
+  color: var(--ink);
+  overflow-x: hidden;
+}
+html { overflow-x: hidden; }
+::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+
+/* ── Living backdrop: aurora + grain ──────────────────────────────────────── */
+.glass-bg { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+.glass-bg i { display: block; position: absolute; }
+.glass-aurora { left: 50%; top: -16%; width: 130vw; height: 80vh; transform: translateX(-50%);
+  background:
+    radial-gradient(46% 58% at 38% 6%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 68%),
+    radial-gradient(40% 52% at 68% 0%, color-mix(in srgb, var(--accent-2) 13%, transparent), transparent 66%);
+  animation: glassGlow 13s ease-in-out infinite; }
+@keyframes glassGlow { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+.glass-bg::before { content: ""; position: absolute; inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,.03) 1px, transparent 0);
+  background-size: 30px 30px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 72%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 72%); }
+.glass-noise { inset: 0; opacity: .05; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* ── Buttons + focus (over styles.css) ────────────────────────────────────── */
+.btn { border-radius: 12px; }
+.btn:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 85%, #fff); outline-offset: 2px; }
+.btn.btn-primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 72%, #fff), var(--accent) 58%, color-mix(in srgb, var(--accent) 84%, #000));
+  color: var(--on-accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 10px 26px -8px color-mix(in srgb, var(--accent) 45%, transparent); font-weight: 800; }
+.btn.btn-primary:hover { transform: translateY(-1px);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent) 62%, color-mix(in srgb, var(--accent) 88%, #000));
+  box-shadow: 0 1px 0 rgba(255,255,255,.4) inset, 0 14px 34px -8px color-mix(in srgb, var(--accent) 55%, transparent); }
+.btn.btn-outline { background: var(--glass); border-color: var(--line-hi); color: var(--ink); }
+.btn.btn-outline:hover { border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: var(--glass-hi); }
+
+/* ── Page shells ──────────────────────────────────────────────────────────── */
+/* lx-site.css turns .xplb-wrap into a boxed panel — flatten it back: on these
+   pages the wrap is a plain layout container, the glass lives on the cards. */
+.xplb-wrap, .lbhub-wrap { background: none; border: 0; border-radius: 0; box-shadow: none; }
+.xplb-wrap { max-width: 920px; margin: 0 auto; padding: 28px 22px 90px; }
+.lbhub-wrap { max-width: 960px; margin: 0 auto; padding: 28px 22px 90px; }
+
+/* ── Full-bleed cinematic hero (JS renders children; flex centres them) ───── */
+.xplb-hero, .lbhub-hero {
+  position: relative; width: 100vw; margin: -28px calc(50% - 50vw) 34px;
+  min-height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 64px 24px 46px; text-align: center; isolation: isolate; overflow: hidden;
+  border: 0; border-radius: 0; border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
+  background-image:
+    linear-gradient(180deg, rgba(4,6,10,.1) 0%, rgba(4,6,10,.5) 58%, var(--bg0) 100%),
+    radial-gradient(85% 120% at 18% -22%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 56%),
+    radial-gradient(75% 110% at 84% -14%, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 55%),
+    linear-gradient(180deg, #0a1017, var(--bg0)); }
+.xplb-hero::before, .lbhub-hero::before { content: ""; position: absolute; inset: -55%; z-index: -1; pointer-events: none;
+  background: conic-gradient(from 90deg at 50% 10%, transparent 0deg,
+    color-mix(in srgb, var(--accent) 13%, transparent) 55deg, transparent 135deg, transparent 230deg,
+    color-mix(in srgb, var(--accent-2) 9%, transparent) 300deg, transparent 360deg);
+  opacity: .5; animation: glassSweep 44s linear infinite; will-change: transform; mix-blend-mode: screen; }
+@keyframes glassSweep { to { transform: rotate(1turn); } }
+.xplb-hero::after { display: none; }
+.xplb-hero > *, .lbhub-hero > * { animation: glassRise .7s cubic-bezier(.22,.61,.36,1) both; }
+@keyframes glassRise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+.xplb-badge, .lbhub-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent) 80%, #fff);
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, rgba(0,0,0,.35));
+  backdrop-filter: blur(6px); margin-bottom: 16px; }
+
+/* Logo with a rotating conic ring (the ring lives in the img's own padding). */
+@property --glass-ring { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.xplb-logo, .lbhub-logo { width: 88px; height: 88px; border-radius: 25px; object-fit: cover;
+  margin: 0 auto 16px; display: block; border: 0; padding: 3px;
+  background: conic-gradient(from var(--glass-ring, 0deg),
+    color-mix(in srgb, var(--accent) 85%, #fff), color-mix(in srgb, var(--accent) 25%, transparent) 30%,
+    color-mix(in srgb, var(--accent-2) 70%, transparent) 52%, color-mix(in srgb, var(--accent) 25%, transparent) 74%,
+    color-mix(in srgb, var(--accent) 85%, #fff));
+  box-shadow: 0 14px 44px color-mix(in srgb, var(--accent) 32%, transparent);
+  animation: glassRingSpin 9s linear infinite; }
+@keyframes glassRingSpin { to { --glass-ring: 360deg; } }
+.xplb-logo.xplb-avfb, .lbhub-logo.lbhub-fb { display: flex; align-items: center; justify-content: center;
+  font-family: var(--disp); font-weight: 700; font-size: 32px; color: color-mix(in srgb, var(--accent) 75%, #fff);
+  background: radial-gradient(120% 120% at 30% 20%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 62%), #0b1016;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent), 0 14px 44px color-mix(in srgb, var(--accent) 32%, transparent);
+  animation: none; padding: 0; }
+
+.xplb-title, .lbhub-title { font-family: var(--disp); font-weight: 700; letter-spacing: -0.03em; line-height: 1.04;
+  font-size: clamp(30px, 5vw, 50px); margin: 0 0 6px;
+  background: linear-gradient(180deg, #fff 30%, color-mix(in srgb, var(--accent) 26%, #cfd8d3));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 22px rgba(0,0,0,.85)) drop-shadow(0 0 44px color-mix(in srgb, var(--accent) 26%, transparent)); }
+.xplb-sub, .lbhub-sub { color: #d9e1e6; font-size: 15px; margin: 0; text-shadow: 0 1px 14px rgba(0,0,0,.8); }
+
+/* Hero totals — one glass stat bar with dividers (matches the store). */
+.xplb-totals { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 0;
+  margin-top: 22px; padding: 4px 8px; border-radius: 18px;
+  border: 1px solid var(--line); background: rgba(5,8,12,.55); backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 18px 44px -22px rgba(0,0,0,.9); }
+.xplb-totals span { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600;
+  color: var(--ink-mut); padding: 10px 18px; position: relative; border: 0; background: none; white-space: nowrap; }
+.xplb-totals span + span::before { content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 1px; height: 22px; background: var(--line); }
+
+/* ── Podium (top 3) ───────────────────────────────────────────────────────── */
+.xplb-podium { display: grid; grid-template-columns: 1fr 1.18fr 1fr; gap: 14px; align-items: end; margin-bottom: 24px; }
+.pod { text-align: center; border: 1px solid var(--line); border-radius: 20px; padding: 20px 12px 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.022));
+  box-shadow: var(--shadow-card); position: relative; overflow: hidden;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.pod:hover { transform: translateY(-4px); border-color: var(--line-hi); }
+.pod::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(90% 60% at 50% -10%, var(--pod-tint, transparent), transparent 70%); }
+.pod.gold   { --pod-tint: rgba(255,196,0,.2);  border-color: color-mix(in srgb, #ffd66b 55%, transparent); transform: translateY(-12px); padding-top: 26px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 24px 54px -22px rgba(255,196,0,.4); }
+.pod.gold:hover { transform: translateY(-16px); }
+.pod.silver { --pod-tint: rgba(216,225,235,.13); border-color: rgba(220,225,235,.35); }
+.pod.bronze { --pod-tint: rgba(214,158,110,.15); border-color: rgba(214,158,110,.4); }
+.pod-medal { font-size: 27px; line-height: 1; margin-bottom: 10px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.6)); }
+.pod-av { width: 66px; height: 66px; border-radius: 50%; object-fit: cover; margin: 0 auto 10px; display: block;
+  border: 0; padding: 2px; background: linear-gradient(180deg, rgba(255,255,255,.3), rgba(255,255,255,.08)); }
+.pod.gold .pod-av { width: 82px; height: 82px; padding: 3px;
+  background: linear-gradient(180deg, #ffe9a8, #d9a514); box-shadow: 0 10px 34px rgba(255,196,0,.4); }
+.pod.silver .pod-av { background: linear-gradient(180deg, #eef2f8, #97a2b4); }
+.pod.bronze .pod-av { background: linear-gradient(180deg, #ecc39c, #a5683a); }
+.pod-av.xplb-avfb { padding: 0; box-shadow: 0 0 0 2px rgba(255,255,255,.22) inset; }
+.pod-name { font-family: var(--disp); font-weight: 700; font-size: 14.5px; margin: 0 0 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod.gold .pod-name { font-size: 16px; }
+.pod-lvl { font-size: 13px; color: color-mix(in srgb, var(--accent) 88%, #fff); font-weight: 800; }
+.pod-xp { font-size: 12px; color: var(--ink-mut); margin-top: 2px; }
+.pod-meta { font-size: 11px; color: var(--ink-dim); margin-top: 6px; }
+
+/* ── Ranked rows ──────────────────────────────────────────────────────────── */
+.xplb-list { display: flex; flex-direction: column; gap: 9px; }
+.xprow { display: grid; grid-template-columns: 40px 46px 1fr auto; align-items: center; gap: 14px;
+  padding: 12px 16px; border: 1px solid var(--line); border-radius: 15px;
+  background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+  transition: background .15s, border-color .15s, transform .15s, box-shadow .2s; }
+.xprow:hover { background: var(--glass-hi); border-color: color-mix(in srgb, var(--accent) 35%, var(--line-hi));
+  transform: translateX(4px); box-shadow: 0 10px 30px -18px color-mix(in srgb, var(--accent) 30%, #000); }
+.xprow-rank { font-family: var(--disp); font-weight: 700; font-size: 15px; color: var(--ink-dim); text-align: center; }
+.xprow-av { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; background: #10151c; border: 1px solid var(--line-hi); }
+.xprow-main { min-width: 0; }
+.xprow-name { font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xprow-meta { font-size: 11.5px; color: var(--ink-dim); margin-top: 3px; }
+.xprow-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.07); margin-top: 8px; overflow: hidden;
+  box-shadow: 0 1px 0 rgba(255,255,255,.05); }
+.xprow-bar > i { display: block; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 70%, #000), var(--accent), color-mix(in srgb, var(--accent) 55%, #fff));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 55%, transparent); }
+.xprow-stats { text-align: right; white-space: nowrap; }
+.xprow-lvl { font-family: var(--disp); font-weight: 700; font-size: 15px; }
+.xprow-xp { font-size: 12px; color: var(--ink-mut); }
+
+/* Initial-letter avatar fallback (JS swaps broken images for this). */
+.xplb-avfb { display: flex; align-items: center; justify-content: center; font-weight: 800;
+  color: var(--ink); background: color-mix(in srgb, var(--accent) 22%, rgba(255,255,255,0.06)); }
+.pod-av.xplb-avfb { font-size: 24px; }
+.xprow-av.xplb-avfb { font-size: 17px; }
+
+/* ── Hub cards (leaderboards.html) ────────────────────────────────────────── */
+.lbhub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.lbhub-card { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.022));
+  box-shadow: var(--shadow-card); padding: 22px 20px 20px;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.lbhub-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 40%, var(--line-hi));
+  box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 24px 50px -26px color-mix(in srgb, var(--accent) 30%, #000); }
+.lbhub-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+.lbhub-ico { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center;
+  color: var(--on-accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 75%, #fff), var(--accent));
+  border: 0; box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 35%, transparent); }
+.lbhub-ico svg { width: 22px; height: 22px; }
+.lbhub-card h2 { font-family: var(--disp); font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+.lbhub-card .lbhub-kind { font-size: 12px; color: var(--ink-dim); margin-top: 1px; }
+.lbhub-rows { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.lbhub-row { display: grid; grid-template-columns: 22px 28px 1fr auto; align-items: center; gap: 10px;
+  padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--glass);
+  transition: border-color .15s, background .15s; }
+.lbhub-row:hover { border-color: var(--line-hi); background: var(--glass-hi); }
+.lbhub-rk { font-family: var(--disp); font-weight: 700; font-size: 13px; color: var(--ink-dim); text-align: center; }
+.lbhub-crest { width: 28px; height: 28px; border-radius: 50%; font-size: 12px; }
+.lbhub-crest img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.lbhub-crest.lbhub-fb { display: flex; align-items: center; justify-content: center; font-weight: 800;
+  color: var(--ink); background: color-mix(in srgb, var(--accent) 22%, rgba(255,255,255,0.06)); font-size: 12px;
+  box-shadow: none; animation: none; padding: 0; }
+.lbhub-nm { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lbhub-val { font-weight: 800; font-size: 13px; color: color-mix(in srgb, var(--accent) 88%, #fff); white-space: nowrap; }
+.lbhub-empty { color: var(--ink-mut); font-size: 13.5px; padding: 14px 2px; flex: 1; }
+.lbhub-card .btn { width: 100%; justify-content: center; }
+
+/* ── States, skeletons, footers ───────────────────────────────────────────── */
+.xplb-state, .lbhub-state { text-align: center; padding: 60px 28px; border: 1px solid var(--line); border-radius: 26px;
+  background: radial-gradient(520px 200px at 50% -24px, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%), var(--glass); }
+.xplb-state-ico { width: 62px; height: 62px; margin: 0 auto 18px; display: grid; place-items: center; border-radius: 19px;
+  color: color-mix(in srgb, var(--accent) 85%, #fff); background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
+.xplb-state-ico svg { width: 28px; height: 28px; }
+.xplb-state h2, .lbhub-state h2 { font-family: var(--disp); font-size: 23px; margin: 0 0 10px; }
+.xplb-state p, .lbhub-state p { color: var(--ink-mut); max-width: 460px; margin: 0 auto 22px; line-height: 1.55; }
+.xplb-foot, .lbhub-foot { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+  text-align: center; color: var(--ink-dim); font-size: 13px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); }
+.xplb-foot a, .lbhub-foot a { color: var(--ink-mut); font-weight: 700; }
+.xplb-foot a:hover, .lbhub-foot a:hover { color: color-mix(in srgb, var(--accent) 85%, #fff); }
+.skel { background: linear-gradient(90deg, rgba(255,255,255,0.045), rgba(255,255,255,0.085), rgba(255,255,255,0.045));
+  background-size: 200% 100%; animation: glassShimmer 1.3s infinite; border-radius: 16px; }
+@keyframes glassShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) { .lbhub-grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .xplb-wrap, .lbhub-wrap { padding: 16px 14px 80px; }
+  .xplb-hero, .lbhub-hero { min-height: 330px; padding: 52px 18px 38px; margin-bottom: 26px; }
+  .xplb-logo, .lbhub-logo { width: 76px; height: 76px; border-radius: 22px; }
+  .xplb-totals { padding: 2px 4px; border-radius: 16px; }
+  .xplb-totals span { padding: 9px 12px; font-size: 12px; }
+  .xplb-podium { grid-template-columns: 1fr; gap: 12px; }
+  .pod.gold { transform: none; order: -1; }
+  .pod.gold:hover { transform: translateY(-3px); }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .glass-aurora, .xplb-hero::before, .lbhub-hero::before, .xplb-logo, .lbhub-logo { animation: none !important; }
+  .xplb-hero > *, .lbhub-hero > * { animation: none !important; }
+  .pod, .xprow, .lbhub-card, .lbhub-row { transition: none !important; }
+}
