@@ -92,7 +92,15 @@
   var ICON = {
     bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>',
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
-    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+    bolt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 11-12h-7l1-8z"/></svg>',
+    card: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
+    coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c.6-.9 1.5-1.4 2.5-1.4 1.7 0 3 1 3 2.2 0 2.6-5.6 1.6-5.6 4.1 0 1.2 1.3 2.2 3 2.2 1 0 1.9-.5 2.5-1.4"/></svg>',
+    spark: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c.6 4.8 2.2 6.4 7 7-4.8.6-6.4 2.2-7 7-.6-4.8-2.2-6.4-7-7 4.8-.6 6.4-2.2 7-7z"/><path d="M19 14c.3 2.4 1.1 3.2 3.5 3.5-2.4.3-3.2 1.1-3.5 3.5-.3-2.4-1.1-3.2-3.5-3.5 2.4-.3 3.2-1.1 3.5-3.5z" opacity=".7"/></svg>',
+    horn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-7-4 14-6.5-4.5z"/><path d="M9.5 13.5 8 21l3.2-4.7"/></svg>',
+    grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>'
   };
   function state(html, icon) {
     root.innerHTML = '<div class="store-state"><div class="store-state-ico">' + (icon || ICON.bag) + '</div>' + html + '</div>';
@@ -345,7 +353,7 @@
           '<div class="cart-qty"><button type="button" class="qbtn" data-act="dec">−</button>' +
           '<span class="qn">' + i.quantity + '</span>' +
           '<button type="button" class="qbtn" data-act="inc">+</button>' +
-          '<button type="button" class="qbtn rm" data-act="rm" aria-label="Remove">🗑</button></div>' +
+          '<button type="button" class="qbtn rm" data-act="rm" aria-label="Remove">' + ICON.trash + '</button></div>' +
         '</div>' +
         '<span class="cart-line-price">' + line + '</span></li>';
     });
@@ -565,7 +573,8 @@
     els.forEach(function (e) { io.observe(e); });
     setTimeout(function () { els.forEach(function (e) { if (e.classList.contains('reveal-up')) e.classList.remove('reveal-up', 'in'); }); }, 1500);
   }
-  // Pointer-tilt: cards lean toward the cursor (mouse only) for a tactile, 3D feel.
+  // Pointer-tilt + cursor spotlight: cards lean toward the cursor (mouse only)
+  // and a soft radial highlight follows it (--mx/--my drive .prod::before).
   function enableTilt(box) {
     if (REDUCED) return;
     box.querySelectorAll('.prod').forEach(function (card) {
@@ -573,8 +582,11 @@
       card.addEventListener('pointermove', function (e) {
         if (e.pointerType !== 'mouse') return;
         var r = card.getBoundingClientRect();
-        var px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5;
-        card.style.transform = 'perspective(820px) rotateX(' + (-py * 4.5).toFixed(2) + 'deg) rotateY(' + (px * 5.5).toFixed(2) + 'deg) translateY(-5px)';
+        var x = e.clientX - r.left, y = e.clientY - r.top;
+        var px = x / r.width - 0.5, py = y / r.height - 0.5;
+        card.style.transform = 'perspective(860px) rotateX(' + (-py * 3.6).toFixed(2) + 'deg) rotateY(' + (px * 4.4).toFixed(2) + 'deg) translateY(-4px)';
+        card.style.setProperty('--mx', x.toFixed(0) + 'px');
+        card.style.setProperty('--my', y.toFixed(0) + 'px');
       });
       card.addEventListener('pointerleave', function () { card.style.transition = ''; card.style.transform = ''; });
     });
@@ -720,27 +732,38 @@
     return '<div class="prod-bundle"><span class="prod-bundle-h">🎁 Includes</span>' +
       p.bundle.map(function (c) { return '<span class="prod-bundle-item">' + c.quantity + '× ' + esc(c.name) + '</span>'; }).join('') + '</div>';
   }
-  // Stock pill (matches the reference: a coloured dot + short label).
-  function stockHtml(p) {
+  // Stock flag over the art — shown only when it matters (low / sold out).
+  function stockFlagHtml(p) {
     var varianty = hasVariants(p);
-    if (!p.inStock && !varianty) return '<span class="prod-stock out">Sold out</span>';
-    if (p.lowStock && !varianty) return '<span class="prod-stock low">' + p.lowStock + ' left</span>';
-    return '<span class="prod-stock ok">In stock</span>';
+    if (!p.inStock && !varianty) return '<span class="prod-flag out">Sold out</span>';
+    if (p.lowStock && !varianty) return '<span class="prod-flag low">Only ' + p.lowStock + ' left</span>';
+    return '';
   }
-  // Image-forward product card (reference-style): a big media tile carries the
-  // image/glyph + overlay badges + a hover "add" button; below sits a tight
-  // price + stock row, then the name. Click opens the full product modal.
+  // "-37%" when a sale price is set against a regular price; 'Sale' otherwise.
+  function saleBadgeText(p) {
+    if (p.price_money > 0 && p.sale_price_money != null && p.sale_price_money < p.price_money) {
+      var pct = Math.round((1 - p.sale_price_money / p.price_money) * 100);
+      if (pct >= 1 && pct < 100) return '-' + pct + '%';
+    }
+    return 'Sale';
+  }
+  // Image-forward product card: a big media tile carries the image/glyph +
+  // overlay badges + stock flag + a hover "add" button; below sits the name,
+  // rating, then the price row. Click opens the full product modal.
   function productCardHtml(p, idx) {
     var style = ' style="animation-delay:' + Math.min((idx || 0) * 45, 360) + 'ms"';
     var media = p.image_url
       ? '<img class="prod-img" src="' + esc(p.image_url) + '" alt="" loading="lazy" data-letter="' + initial(p.name) + '">'
-      : '<div class="prod-img prod-fb"></div>'; // no image → clean blank tile, no letter/glyph
+      : '<div class="prod-img prod-fb">' + productGlyph(p) + '</div>';
     var ob = '';
-    if (p.sale_price_money != null) ob += '<span class="prod-badge sale">Sale</span>';
+    if (p.sale_price_money != null) ob += '<span class="prod-badge sale">' + saleBadgeText(p) + '</span>';
     if (p.featured) ob += '<span class="prod-badge feat">★ Featured</span>';
-    else if (p.bestseller) ob += '<span class="prod-badge best">🔥 Bestseller</span>';
-    if (p.isBundle) ob += '<span class="prod-badge bundle">🎁 Bundle</span>';
+    else if (p.bestseller) ob += '<span class="prod-badge best">Bestseller</span>';
+    if (p.isBundle) ob += '<span class="prod-badge bundle">Bundle</span>';
     if (S.cart && S.cart.items && S.cart.items.some(function (it) { return it.productId === p.id; })) ob += '<span class="prod-badge incart">✓ In cart</span>';
+    var rate = (p.reviewCount > 0)
+      ? '<div class="prod-rate">' + starDisplay(p.rating) + '<span class="prod-rate-n">' + Number(p.rating).toFixed(1) + ' (' + fmt(p.reviewCount) + ')</span></div>'
+      : '';
     var varianty = hasVariants(p);
     var disabled = !varianty && !p.inStock;
     var btn = '<button class="btn btn-primary prod-add" type="button" data-pid="' + p.id + '"' + (disabled ? ' disabled' : '') + '>'
@@ -748,11 +771,13 @@
     return '<div class="prod prod-v2 reveal-up' + (p.featured ? ' is-feat' : '') + '" data-pid="' + p.id + '" tabindex="0" role="button"' + style + '>'
       + '<div class="prod-media">' + media
         + (ob ? '<div class="prod-badges">' + ob + '</div>' : '')
+        + stockFlagHtml(p)
         + '<div class="prod-hover">' + btn + '</div>'
       + '</div>'
       + '<div class="prod-body">'
-        + '<div class="prod-meta"><div class="prod-price">' + cardPriceHtml(p) + '</div>' + stockHtml(p) + '</div>'
         + '<h3 class="prod-name">' + esc(p.name) + '</h3>'
+        + rate
+        + '<div class="prod-meta"><div class="prod-price">' + cardPriceHtml(p) + '</div></div>'
       + '</div></div>';
   }
   function wireImgFallbacks(container) {
@@ -949,20 +974,33 @@
     if (cs.length) { var c0 = Math.min.apply(null, cs), c1 = Math.max.apply(null, cs); return '<span class="prod-credits">🪙 ' + fmt(c0) + (c1 !== c0 ? ' – ' + fmt(c1) : '') + '</span>'; }
     return '';
   }
-  // Image-forward category tile (reference-style): big media + a price range and
-  // product count, then the category name. Click drills into the category.
+  // Editorial category tile: full-bleed art, the name overlaid on a scrim,
+  // count chip top-right, price range + "Browse" cue below the name.
   function categoryTileHtml(catKey, name, image, count, desc, idx) {
     var media = image
       ? '<img class="prod-img" src="' + esc(image) + '" alt="" loading="lazy" data-letter="' + initial(name) + '">'
-      : '<div class="prod-img prod-fb"></div>'; // no image → clean blank tile
+      : '<div class="prod-img prod-fb">' + glyphSvg(name) + '</div>';
     var range = priceRangeHtml(catProducts(catKey));
     var style = ' style="animation-delay:' + Math.min((idx || 0) * 50, 400) + 'ms"';
-    return '<div class="prod prod-v2 cat-tile reveal-up" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button"' + style + '>'
-      + '<div class="prod-media">' + media + '<div class="prod-hover"><span class="prod-add">Browse →</span></div></div>'
-      + '<div class="prod-body">'
-        + '<div class="prod-meta">' + (range || '<span class="prod-money muted-price">View</span>') + '<span class="prod-stock ok">' + count + ' item' + (count === 1 ? '' : 's') + '</span></div>'
-        + '<h3 class="prod-name">' + esc(name) + '</h3>'
+    return '<div class="prod cat-tile reveal-up" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button"' + style + '>'
+      + '<div class="ct3-media">' + media + '</div>'
+      + '<div class="ct3-scrim" aria-hidden="true"></div>'
+      + '<span class="ct3-count">' + count + ' item' + (count === 1 ? '' : 's') + '</span>'
+      + '<div class="ct3-info">'
+        + '<h3 class="ct3-name">' + esc(name) + '</h3>'
+        + '<div class="ct3-meta"><span class="ct3-range">' + (range || 'Browse the range') + '</span><span class="ct3-go">Browse <span aria-hidden="true">→</span></span></div>'
       + '</div></div>';
+  }
+  // Featured rail — a horizontal showcase of featured/bestselling products at
+  // the top of the landing. Hidden when the store has nothing to spotlight.
+  function featuredRailHtml() {
+    var picks = S.products.filter(function (p) { return (p.featured || p.bestseller) && (p.inStock !== false || hasVariants(p)); });
+    if (picks.length < 2) return '';
+    picks = sortList(picks).slice(0, 8);
+    return '<div class="store-sec2 reveal-up"><span class="store-sec2-kick">' + ICON.spark + 'Featured</span>' +
+      '<h2 class="store-sec2-title">Hot right now</h2>' +
+      (picks.length > 4 ? '<span class="store-sec2-hint">Scroll for more →</span>' : '') + '</div>' +
+      '<div class="feat-rail">' + picks.map(productCardHtml).join('') + '</div>';
   }
   function renderCategoryTiles(box) {
     var tops = _catIndex.tops || [];
@@ -974,9 +1012,14 @@
     if (otherCount) tiles.push(categoryTileHtml('other', 'Other', null, otherCount, null, tiles.length));
     // No category tiles at all → just show the products (drill into "Other").
     if (!tiles.length) { S.view.cat = 'other'; return renderGrouped(box); }
-    box.innerHTML = '<div class="store-grid">' + tiles.join('') + '</div>';
+    var rail = featuredRailHtml();
+    box.innerHTML = rail +
+      '<div class="store-sec2 reveal-up"><span class="store-sec2-kick">' + ICON.grid + 'Categories</span>' +
+      '<h2 class="store-sec2-title">Browse the store</h2></div>' +
+      '<div class="cat-grid">' + tiles.join('') + '</div>';
     S._revealed = true;
     wireImgFallbacks(box);
+    wireGridEvents(box); // featured-rail cards: add-to-cart + open modal
     animateGrid(box);
     box.querySelectorAll('.cat-tile[data-cat]').forEach(function (tile) {
       var go = function () {
@@ -1162,7 +1205,7 @@
       return '';
     }
     var rows = opts.map(function (o, i) {
-      var stock = o.inStock === false ? 'Sold out' : (o.lowStock ? '🔥 ' + o.lowStock + ' left' : '∞ In Stock');
+      var stock = o.inStock === false ? 'Sold out' : (o.lowStock ? 'Only ' + o.lowStock + ' left' : 'In stock');
       return '<button type="button" class="pm-prow' + (o.inStock === false ? ' oos' : '') + '" data-i="' + i + '" style="animation-delay:' + Math.min(i * 45, 380) + 'ms"' + (o.inStock === false ? ' disabled' : '') + '>' +
         '<span class="pm-prow-info"><span class="pm-prow-title">' + esc(o.title) + '</span>' +
         (o.sub ? '<span class="pm-prow-sub">' + esc(o.sub) + '</span>' : '') +
@@ -1400,36 +1443,41 @@
 
     var logo = s.logo || s.guildIcon;
     var pays = [];
-    if (s.acceptMoney) pays.push('💳 Card / PayPal');
-    if (s.acceptCredits) pays.push('🪙 Server credits');
+    if (s.acceptMoney) pays.push(ICON.card + 'Card / PayPal');
+    if (s.acceptCredits) pays.push(ICON.coin + 'Server credits');
 
     // Live trust signals from the catalogue.
-    var pc = S.products.length, totalReviews = 0, ratingSum = 0;
-    S.products.forEach(function (pp) { if (pp.reviewCount) { totalReviews += pp.reviewCount; ratingSum += pp.rating * pp.reviewCount; } });
+    var pc = S.products.length, totalReviews = 0, ratingSum = 0, delivered = 0;
+    S.products.forEach(function (pp) {
+      if (pp.reviewCount) { totalReviews += pp.reviewCount; ratingSum += pp.rating * pp.reviewCount; }
+      delivered += pp.soldCount || 0;
+    });
     var avgRating = totalReviews ? ratingSum / totalReviews : 0;
     var trust = [];
-    if (pc) trust.push('<span class="store-trust-pill">' + pc + ' product' + (pc === 1 ? '' : 's') + '</span>');
-    if (totalReviews) trust.push('<span class="store-trust-pill">' + starDisplay(avgRating) + '<b>' + avgRating.toFixed(1) + '</b> · ' + totalReviews + ' review' + (totalReviews === 1 ? '' : 's') + '</span>');
-    if (S.products.some(function (pp) { return pp.fulfillment_type === 'role'; })) trust.push('<span class="store-trust-pill">⚡ Instant delivery</span>');
-    trust.push('<span class="store-trust-pill">🔒 Secure checkout</span>');
+    if (pc) trust.push('<span class="store-trust-pill"><b>' + pc + '</b> product' + (pc === 1 ? '' : 's') + '</span>');
+    if (totalReviews) trust.push('<span class="store-trust-pill">' + starDisplay(avgRating) + '<b>' + avgRating.toFixed(1) + '</b> · ' + fmt(totalReviews) + ' review' + (totalReviews === 1 ? '' : 's') + '</span>');
+    if (delivered >= 25) trust.push('<span class="store-trust-pill"><b>' + fmt(delivered) + '+</b> orders delivered</span>');
+    if (S.products.some(function (pp) { return pp.fulfillment_type === 'role'; })) trust.push('<span class="store-trust-pill">' + ICON.bolt + 'Instant delivery</span>');
+    trust.push('<span class="store-trust-pill">' + ICON.shield + 'Secure checkout</span>');
 
     // Full-bleed cinematic hero: the banner image (if a clean https URL) becomes
     // the background, else a brand-coloured gradient. Legibility overlay is in CSS.
-    var heroImg = (s.banner && /^https:\/\/[^\s"'()<>]+$/.test(s.banner))
-      ? "url('" + s.banner + "')"
-      : 'radial-gradient(120% 130% at 50% -10%, color-mix(in srgb, var(--accent) 34%, transparent), transparent 58%)';
+    var heroImg = (s.banner && /^https:\/\/[^\s"'()<>]+$/.test(s.banner)) ? "url('" + s.banner + "')" : 'none';
     var html = '<div class="store-hero" style="--hero-img:' + heroImg + '">';
     html += '<div class="store-hero-inner">';
-    html += logo ? '<img class="store-logo" src="' + esc(logo) + '" alt="" data-letter="' + initial(name) + '">' : '<div class="store-logo store-fb">' + initial(name) + '</div>';
+    html += '<span class="store-eyebrow">' + ICON.bag + 'Official server store</span>';
+    html += '<span class="store-logo-ring">' + (logo
+      ? '<img class="store-logo" src="' + esc(logo) + '" alt="" data-letter="' + initial(name) + '">'
+      : '<div class="store-logo store-fb">' + initial(name) + '</div>') + '</span>';
     html += '<div class="store-htext"><h1 class="store-title">' + esc(name) + '</h1>' +
       (s.description ? '<p class="store-desc">' + esc(s.description) + '</p>' : '') +
       (pays.length ? '<div class="store-pays">' + pays.map(function (p) { return '<span class="store-pay">' + p + '</span>'; }).join('') + '</div>' : '') +
-      '</div></div>' +
+      '</div>' +
       (pc ? '<div class="store-trust">' + trust.join('') + '</div>' : '') +
-      '</div>';
+      '</div></div>';
 
     if (s.testMode) html += '<div class="store-test">Test mode — checkout is free and orders are flagged as tests. No real payment is taken.</div>';
-    if (s.announcement) html += '<div class="store-announce">📣 ' + esc(s.announcement) + '</div>';
+    if (s.announcement) html += '<div class="store-announce"><span class="store-announce-ico">' + ICON.horn + '</span>' + esc(s.announcement) + '</div>';
 
     if (!S.products.length) {
       html += '<div class="store-state"><div class="store-state-ico">' + ICON.bag + '</div><h2>No products yet</h2><p>This store hasn\'t added any products yet. Check back soon!</p></div>';
@@ -1472,7 +1520,7 @@
         return '<figure class="sr-card">' +
           '<div class="sr-stars">' + starDisplay(rv.rating) + '</div>' +
           (rv.comment ? '<blockquote class="sr-quote">“' + esc(rv.comment) + '”</blockquote>' : '<blockquote class="sr-quote sr-noquote">Rated ' + rv.rating + '/5</blockquote>') +
-          '<figcaption class="sr-by"><span class="sr-who"><b>' + esc(rv.username || 'Buyer') + '</b><span class="sr-verified" title="Reviews are only from verified buyers">✓ Verified</span></span>' +
+          '<figcaption class="sr-by"><span class="sr-who"><span class="sr-ava" aria-hidden="true">' + initial(rv.username || 'B') + '</span><b>' + esc(rv.username || 'Buyer') + '</b><span class="sr-verified" title="Reviews are only from verified buyers">✓ Verified</span></span>' +
           (rv.product_name ? '<span class="sr-prod">' + esc(rv.product_name) + '</span>' : '') + '</figcaption>' +
           (rv.reply ? '<div class="sr-reply"><b>↳ Store reply:</b> ' + esc(rv.reply) + '</div>' : '') +
           '</figure>';
