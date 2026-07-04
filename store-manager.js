@@ -166,7 +166,10 @@
     { userId: "115", username: "DodoWrangler", orders: 2, money: 0, credits: 16000, lastOrderAt: "2026-06-10 11:15:00", firstOrderAt: "2026-06-01 11:15:00" },
   ];
   function demoResp(path, opts) {
-    if (opts && opts.method && opts.method !== "GET") return { ok: true };
+    if (opts && opts.method && opts.method !== "GET") {
+      if (/\/payments\/paypal\/connect/.test(path)) return { ok: false, message: "Demo mode — PayPal connect is disabled here" };
+      return { ok: true };
+    }
     if (/\/me$/.test(path)) return { user: { id: "0", username: "previewowner", globalName: "Preview Owner" } };
     if (/\/store\/overview/.test(path)) {
       if (params.get("new") === "1") return { config: Object.assign({}, DEMO_CFG, { title: "My New Store", enabled: false }), recentOrders: [], series: [], topProducts: [], topCustomers: [], paymentsConnected: false, stats: { revenueMoney: 0, revenueCredits: 0, paidOrders: 0, needsDelivery: 0, products: 0, enabledProducts: 0, customers: 0, activeCoupons: 0 } };
@@ -184,7 +187,7 @@
     if (/\/discord\/roles/.test(path)) return { roles: DEMO_ROLES };
     if (/\/discord\/channels/.test(path)) return { channels: DEMO_CHANNELS };
     if (/\/payments\/stripe/.test(path)) return { brandName: "Velated PVP Store", secretKey: { configured: true, source: "guild", last4: "9aF2" }, webhookSecret: { configured: true }, mode: "live", webhookUrl: location.origin + "/webhooks/stripe", isConfigured: true, cashApp: true };
-    if (/\/payments\/paypal/.test(path)) return { mode: "live", prefer: "orders", brandName: "Velated PVP Store", clientId: { configured: false, source: "unset" }, clientSecret: { configured: false }, webhookId: { configured: false }, webhookUrl: location.origin + "/webhooks/paypal", isConfigured: false };
+    if (/\/payments\/paypal/.test(path)) return { mode: "live", prefer: "orders", brandName: "Velated PVP Store", clientId: { configured: false, source: "unset" }, clientSecret: { configured: false }, webhookId: { configured: false }, webhookUrl: location.origin + "/webhooks/paypal", isConfigured: false, connect: { available: true, connected: false, merchantId: null, paymentsReceivable: null, emailConfirmed: null, usingOwnKeys: false, mode: "live" } };
     return {};
   }
 
@@ -281,6 +284,16 @@
   // ── state ───────────────────────────────────────────────────────────────────
   var S = { cfg: null, products: [], categories: [], roles: [], channels: [], stats: {}, recent: [], series: [], top: [], section: "overview", range: 14 };
 
+  // Returning from the PayPal "Connect" flow? Land on the Payments tab and
+  // auto-verify the connection (PayPal appends merchantIdInPayPal on the way
+  // back). The query params are stripped so a refresh doesn't re-fire it.
+  var ppReturn = params.get("paypal_return") === "1";
+  var ppMerchantHint = (params.get("merchantIdInPayPal") || "").trim();
+  if (ppReturn) {
+    S.section = "payments";
+    try { history.replaceState(null, "", location.pathname + "?guild=" + encodeURIComponent(gid)); } catch (e) {}
+  }
+
   // ── boot ──────────────────────────────────────────────────────────────────
   if (!gid || !/^\d{5,25}$/.test(gid)) { fullState("store", "No server selected", "Open the Store Manager from your dashboard.", btn("Go to dashboard", { onClick: function () { location.href = "dashboard.html"; } })); return; }
 
@@ -299,6 +312,15 @@
     S.channels = (res[3].body && res[3].body.channels) || [];
     S.categories = (res[4] && res[4].body && res[4].body.categories) || [];
     render();
+    // Back from PayPal → verify + save the connection, then re-paint Payments.
+    if (ppReturn) {
+      api(A("/payments/paypal/connect/refresh"), { method: "POST", body: ppMerchantHint ? { merchantId: ppMerchantHint } : {} }).then(function (r) {
+        var c = r.body && r.body.connect;
+        if (r.ok && c && c.connected) toast(r.body.justLinked ? "PayPal connected — payments go straight to your account 🎉" : "PayPal connection verified");
+        else toast((r.body && r.body.message) || "Couldn't verify the PayPal connection yet — click Check status in a moment", "err");
+        if (S.section === "payments") render();
+      });
+    }
   }).catch(function (e) { if (e !== "redirect") fullState("store", "Couldn't reach the backend", "Please try again shortly.", btn("Retry", { onClick: function () { location.reload(); } })); });
 
   function refreshOverview() { return api(A("/store/overview" + (S.range && S.range !== 14 ? "?days=" + S.range : ""))).then(function (r) { if (r.ok) { S.stats = r.body.stats || {}; S.recent = r.body.recentOrders || []; S.series = r.body.series || []; S.top = r.body.topProducts || []; S.topCustomers = r.body.topCustomers || []; S.inventory = r.body.inventory || { outOfStock: [], lowStock: [] }; S.paymentsConnected = !!r.body.paymentsConnected; S.kpis = r.body.kpis || null; } }); }
@@ -1528,8 +1550,10 @@
     Promise.all([api(A("/payments/stripe")), api(A("/payments/paypal"))]).then(function (res) {
       clear(holder);
       holder.append(el("div", { class: "ov-cols" }, providerCard("stripe", res[0]), providerCard("paypal", res[1])));
-      holder.append(el("p", { class: "hint", style: { marginTop: "14px" } },
-        "Coming soon: one-tap “Connect with Stripe” and PayPal login linking, so there are no keys to copy. The setup below works today and takes about two minutes."));
+      var ppConnect = res[1] && res[1].ok && res[1].body && res[1].body.connect && res[1].body.connect.available;
+      holder.append(el("p", { class: "hint", style: { marginTop: "14px" } }, ppConnect
+        ? "PayPal links with just a login — no keys to copy. One-tap “Connect with Stripe” is coming soon; its key setup takes about two minutes."
+        : "Coming soon: one-tap “Connect with Stripe” and PayPal login linking, so there are no keys to copy. The setup below works today and takes about two minutes."));
     });
   }
   function payRail(ic, title, desc, on) {
@@ -1551,6 +1575,10 @@
       return box;
     }
     var b = resp.body, on = b.isConfigured, fp = isStripe ? b.secretKey : b.clientId;
+    // One-click "Connect with PayPal" is the primary PayPal UX whenever the
+    // platform supports it and the owner hasn't pasted their own keys.
+    var cn = (!isStripe && b.connect) || null;
+    if (cn && cn.available && !cn.usingOwnKeys) return paypalConnectCard(box, b, cn);
     box.append(el("div", { style: { display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" } },
       el("span", { style: { fontSize: "24px" } }, ic),
       el("div", { class: "grow" },
@@ -1565,7 +1593,8 @@
         badge(live ? "Live mode" : (isStripe ? "Test mode" : "Sandbox"), live ? "ok" : "warn"),
         (fp && fp.last4) ? badge("key ••" + fp.last4, "dim") : null,
         hookSet ? badge("Webhook set", "ok") : badge("No webhook yet", "warn"),
-        (isStripe && b.cashApp !== false) ? badge("Cash App Pay", "ok") : null));
+        (isStripe && b.cashApp !== false) ? badge("Cash App Pay", "ok") : null,
+        (cn && cn.available && cn.usingOwnKeys) ? badge("Using your own keys", "dim") : null));
     } else {
       box.append(el("p", { class: "muted", style: { fontSize: "13px", margin: "0 0 14px", lineHeight: "1.5" } },
         isStripe ? "Paste your Stripe secret key to accept card payments." : "Add your PayPal API credentials to accept card & PayPal payments."));
@@ -1576,6 +1605,78 @@
     if (on) actions.append(btn("Test", { variant: "btn-outline", onClick: function (e) { testProvider(kind, e.currentTarget); } }));
     box.append(actions);
     return box;
+  }
+
+  // ── "Connect with PayPal" card (one-click onboarding, no keys) ─────────────
+  function paypalConnectCard(box, b, cn) {
+    var connected = cn.connected;
+    box.append(el("div", { style: { display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" } },
+      el("span", { style: { fontSize: "24px" } }, "🅿️"),
+      el("div", { class: "grow" },
+        el("div", { class: "t", style: { fontWeight: "800", fontSize: "16px" } }, "PayPal"),
+        el("div", { class: "d", style: { fontSize: "12.5px", color: "var(--text-muted)" } }, "Cards + PayPal balance")),
+      connected ? badge("Connected", "ok") : badge("Not connected", "dim")));
+
+    if (connected) {
+      box.append(el("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "14px" } },
+        badge("Linked with PayPal login", "ok"),
+        cn.merchantId ? badge("ID ••" + String(cn.merchantId).slice(-4), "dim") : null,
+        cn.paymentsReceivable === false ? badge("Can’t receive yet", "warn") : (cn.paymentsReceivable === true ? badge("Payments receivable", "ok") : null),
+        cn.emailConfirmed === false ? badge("Confirm your PayPal email", "warn") : null,
+        cn.mode === "sandbox" ? badge("Sandbox", "warn") : null));
+      box.append(el("p", { class: "muted", style: { fontSize: "13px", margin: "0 0 14px", lineHeight: "1.5" } },
+        (cn.paymentsReceivable === false || cn.emailConfirmed === false)
+          ? "Almost there — finish the steps PayPal emailed you (confirm your email / complete signup), then click Check status."
+          : "Payments go straight to your PayPal account. Nothing else to set up — no keys, no webhooks."));
+    } else {
+      box.append(el("p", { class: "muted", style: { fontSize: "13px", margin: "0 0 14px", lineHeight: "1.5" } },
+        "Log into PayPal once and you’re done — no keys to copy, no webhooks. Money from every sale lands directly in your PayPal account."));
+    }
+
+    var actions = el("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" } });
+    if (connected) {
+      actions.append(
+        btn("Check status", { variant: "btn-outline", onClick: function (e) { refreshPayPalConnect(e.currentTarget); } }),
+        btn("Disconnect", { variant: "btn-outline", onClick: function () { disconnectPayPalConnect(); } }),
+      );
+    } else {
+      actions.append(
+        btn("Connect with PayPal", { icon: "plus", onClick: function (e) { startPayPalConnect(e.currentTarget); } }),
+        btn("Check status", { variant: "btn-outline", onClick: function (e) { refreshPayPalConnect(e.currentTarget); } }),
+      );
+    }
+    actions.append(el("button", { type: "button", class: "linklike", onclick: function () { paymentDrawer("paypal", b); } }, "Advanced: use your own API keys"));
+    box.append(actions);
+    return box;
+  }
+  function startPayPalConnect(btnEl) {
+    var orig = btnEl.textContent;
+    btnEl.disabled = true; btnEl.textContent = "Opening PayPal…";
+    api(A("/payments/paypal/connect"), { method: "POST", body: {} }).then(function (r) {
+      btnEl.disabled = false; btnEl.textContent = orig;
+      var url = r.ok && r.body && r.body.actionUrl;
+      if (!url) return toast((r.body && r.body.message) || "Couldn’t start PayPal connect", "err");
+      var w = window.open(url, "_blank", "noopener");
+      if (!w) location.href = url; // popup blocked → same-tab (PayPal returns here after)
+      else toast("Finish connecting in the PayPal tab — you’ll land back here when it’s done");
+    });
+  }
+  function refreshPayPalConnect(btnEl) {
+    var orig = btnEl.textContent;
+    btnEl.disabled = true; btnEl.textContent = "Checking…";
+    api(A("/payments/paypal/connect/refresh"), { method: "POST", body: {} }).then(function (r) {
+      btnEl.disabled = false; btnEl.textContent = orig;
+      var c = r.body && r.body.connect;
+      if (r.ok && c && c.connected) { toast(r.body.justLinked ? "PayPal connected 🎉" : "Connection looks good"); render(); }
+      else toast((r.body && r.body.message) || "Not connected yet — finish the PayPal flow first", "err");
+    });
+  }
+  function disconnectPayPalConnect() {
+    if (!confirm("Disconnect PayPal? Money checkout via PayPal stops working until you reconnect.")) return;
+    api(A("/payments/paypal/connect/disconnect"), { method: "POST", body: {} }).then(function (r) {
+      if (!r.ok) return toast("Couldn’t disconnect", "err");
+      toast("PayPal disconnected"); render();
+    });
   }
   function testProvider(kind, b) {
     var name = kind === "stripe" ? "Stripe" : "PayPal", orig = b.textContent;
