@@ -1762,7 +1762,7 @@
     function ebOptActionInline(act) {
       const out = [];
       const eph = () => h("label", { class: "eb-cv-check" }, h("input", { type: "checkbox", checked: act.ephemeral !== false ? true : null, onchange: (ev) => { act.ephemeral = ev.target.checked; cvSync(); } }), h("span", null, "Only the clicker sees it"));
-      if (act.type === "text") out.push(h("label", { class: "eb-cv-lbl" }, "Reply text", h("input", { class: "eb-cv-in", type: "text", value: act.text || "", oninput: (ev) => { act.text = ev.target.value; cvSync(); } })), eph());
+      if (act.type === "text") out.push(h("label", { class: "eb-cv-lbl" }, "Reply text", h("textarea", { class: "eb-cv-in", rows: 4, placeholder: "Line breaks supported — write rules, rates, configs…", oninput: (ev) => { act.text = ev.target.value; cvSync(); } }, act.text || "")), eph());
       else if (act.type === "give_role" || act.type === "remove_role" || act.type === "toggle_role") out.push(h("label", { class: "eb-cv-lbl" }, "Role", h("select", { class: "eb-cv-sel", onchange: (ev) => { act.roleId = ev.target.value; cvSync(); } }, h("option", { value: "" }, "Select a role…"), ...roles.map((rl) => h("option", { value: rl.id, selected: act.roleId === rl.id ? true : null }, rl.name)))), eph());
       else if (act.type === "info_embed") {
         // Edit the reply embed right here (no detour to Advanced settings).

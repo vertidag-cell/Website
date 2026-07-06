@@ -908,6 +908,7 @@
 .dash-app .eb-cv-lbl { display: flex; flex-direction: column; gap: 3px; font-size: 0.71rem; color: #b5bac1; margin-bottom: 9px; }
 .dash-app .eb-cv-in, .dash-app .eb-cv-sel { font: inherit; font-size: 0.82rem; color: #dbdee1; background: #2b2d31; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 5px; padding: 6px 8px; width: 100%; }
 .dash-app .eb-cv-in:focus, .dash-app .eb-cv-sel:focus { outline: none; border-color: #5865f2; }
+.dash-app textarea.eb-cv-in { resize: vertical; min-height: 84px; line-height: 1.45; }
 .dash-app .eb-cv-color { width: 52px; height: 30px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 5px; background: none; cursor: pointer; }
 .dash-app .eb-cv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .dash-app .eb-cv-check { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: #b5bac1; margin-bottom: 9px; cursor: pointer; }
