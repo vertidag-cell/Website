@@ -1060,6 +1060,15 @@
 .dash-app .mc-select { width: 100%; font: inherit; font-size: 0.9rem; color: var(--dsc-text); background: var(--dsc-bg); border: 1px solid var(--dsc-line); border-radius: 8px; padding: 9px 11px; }
 .dash-app .mc-num:focus,
 .dash-app .mc-select:focus { outline: none; border-color: var(--dsc-blurple); }
+/* Text/textarea/colour inputs for the mc-* editor forms (ticket panel editor). */
+.dash-app .mc-in { width: 100%; font: inherit; font-size: 0.9rem; color: var(--dsc-text); background: var(--dsc-bg); border: 1px solid var(--dsc-line); border-radius: 8px; padding: 9px 11px; }
+.dash-app .mc-in:focus { outline: none; border-color: var(--dsc-blurple); }
+.dash-app textarea.mc-in { resize: vertical; min-height: 104px; line-height: 1.45; }
+.dash-app .mc-color { width: 52px; height: 38px; padding: 2px; border: 1px solid var(--dsc-line); border-radius: 8px; background: var(--dsc-bg); cursor: pointer; }
+.dash-app .tk-ed-warn { color: #f0b232; font-weight: 700; font-size: 0.86rem; margin-bottom: 8px; }
+.dash-app .tk-ed-drop { display: inline-block; width: 100%; box-sizing: border-box; background: var(--dsc-bg); color: #b5bac1; border: 1px solid var(--dsc-line); border-radius: 8px; padding: 9px 12px; font-size: 0.9rem; }
+.dash-app .tk-ed-thumb { max-width: 72px; max-height: 72px; border-radius: 8px; margin-top: 8px; }
+.dash-app .tk-ed-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
 .dash-app .mc-switch-row { margin-top: 14px; }
 .dash-app .mc-chips { padding: 4px 0; }
 .dash-app .mc-chip-hash { color: var(--dsc-text-faint); font-weight: 700; }

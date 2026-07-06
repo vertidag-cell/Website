@@ -4761,6 +4761,127 @@
       h("div", { class: "w-canvas-head" }, h("span", { class: "w-canvas-label" }, "Live preview"), h("span", { class: "w-canvas-hint" }, "The panel members use to get help")),
       device, topbar, catSection, staffSection, lifeSection, tip, statusBox,
       mcSaveBar(mod, content, () => mv, saveBtn, statusBox)));
+
+    // Rich editor for the POSTED panel's appearance (like the Embed Builder).
+    renderTicketPanelEditor(content);
+  }
+
+  // Edit the appearance of an already-posted ticket panel — embed
+  // title/description/warning/colour/thumbnail/footer + dropdown placeholder —
+  // with a live preview, and push the change to the live Discord message. The
+  // dropdown OPTIONS (ticket categories) are still managed in /setup.
+  function renderTicketPanelEditor(content) {
+    const gid = state.selectedGuildId;
+    const A = (p) => `/api/dashboard/guilds/${gid}/tickets${p}`;
+    const head = () => h("div", { class: "w-canvas-head" },
+      h("span", { class: "w-canvas-label" }, "Edit posted panel"),
+      h("span", { class: "w-canvas-hint" }, "Change what members see — updates the live message"));
+    const host = h("div", { class: "dash-card w-canvas", style: { marginTop: "18px" } },
+      head(), h("div", { class: "sk", style: { height: "220px", borderRadius: "12px" } }));
+    content.append(host);
+
+    api(A("/panels")).then((body) => {
+      clear(host); host.append(head());
+      const panels = (body && body.panels) || [];
+      if (!panels.length) {
+        host.append(notice("info", "No ticket panel yet",
+          "Create one in Discord with /setup → Tickets. Once it's posted, come back here to restyle it."));
+        return;
+      }
+      let idx = 0;
+      const bodyBox = h("div");
+      host.append(bodyBox);
+
+      function paint() {
+        clear(bodyBox);
+        const p = panels[idx];
+        const mv = p._mv || (p._mv = Object.assign({}, p)); // working copy per panel
+
+        if (panels.length > 1) {
+          const sel = h("select", { class: "mc-select", onchange: (e) => { idx = Number(e.target.value); paint(); } },
+            ...panels.map((pp, i) => h("option", { value: i, selected: i === idx ? true : null },
+              (pp.internal_name || pp.title || `Panel ${pp.id}`) + (pp.posted ? "" : " (not posted)"))));
+          bodyBox.append(mcField("Which panel", sel));
+        }
+
+        // ---- live preview (reflects the real fields) ----
+        const preview = h("div", { class: "eb-discord ticket-preview" });
+        function draw() {
+          clear(preview);
+          const colour = /^#[0-9a-f]{6}$/i.test(mv.embed_color || "") ? mv.embed_color : "#5865f2";
+          const inner = [
+            h("div", { class: "ticket-head" }, h("span", { class: "ticket-emoji", "aria-hidden": "true" }, "🎫"),
+              h("span", null, mv.embed_title || "Support")),
+          ];
+          if (mv.embed_warning) inner.push(h("div", { class: "tk-ed-warn" }, "⚠️ " + mv.embed_warning));
+          inner.push(h("div", { class: "ticket-desc", style: { whiteSpace: "pre-wrap" } },
+            mv.embed_description || "How to open a ticket…"));
+          inner.push(h("div", { class: "tk-ed-drop" }, (mv.dropdown_placeholder || "Select a category…") + "  ▾"));
+          inner.push(h("div", { class: "eb-e-footer" }, h("span", null, mv.embed_footer || "Arkoris")));
+          const card = h("div", { class: "eb-embed ticket-card", style: { borderColor: colour } },
+            h("div", { class: "eb-embed-inner" }, ...inner));
+          if (mv.embed_thumbnail && /^https?:\/\//i.test(mv.embed_thumbnail)) {
+            card.querySelector(".eb-embed-inner").append(
+              h("img", { class: "tk-ed-thumb", src: mv.embed_thumbnail, alt: "", onerror: (e) => { e.target.style.display = "none"; } }));
+          }
+          preview.append(card);
+        }
+        draw();
+
+        const tin = (key, ph, max) => h("input", { class: "mc-in", type: "text", value: mv[key] || "", maxlength: max || 256, placeholder: ph || "", oninput: (e) => { mv[key] = e.target.value; draw(); } });
+        const titleIn = tin("embed_title", "Support", 256);
+        const descTa = h("textarea", { class: "mc-in", rows: 5, maxlength: 2000, placeholder: "What members read above the dropdown. Line breaks supported.", oninput: (e) => { mv.embed_description = e.target.value; draw(); } }, mv.embed_description || "");
+        const warnIn = tin("embed_warning", "e.g. Do not share your password", 256);
+        const phIn = tin("dropdown_placeholder", "Select a category…", 150);
+        const footIn = tin("embed_footer", "Arkoris", 256);
+        const thumbIn = h("input", { class: "mc-in", type: "url", value: mv.embed_thumbnail || "", placeholder: "https://…", oninput: (e) => { mv.embed_thumbnail = e.target.value; draw(); } });
+        const colourIn = h("input", { class: "mc-color", type: "color", value: /^#[0-9a-f]{6}$/i.test(mv.embed_color || "") ? mv.embed_color : "#5865f2", oninput: (e) => { mv.embed_color = e.target.value; draw(); } });
+
+        const saveBtn = btn("Save & update panel", { kind: "btn-primary" });
+        saveBtn.addEventListener("click", () => {
+          saveBtn.disabled = true; const orig = saveBtn.textContent; saveBtn.textContent = "Saving…";
+          api(A("/panels/" + p.id), { method: "PATCH", body: {
+            embed_title: mv.embed_title, embed_description: mv.embed_description, embed_warning: mv.embed_warning,
+            embed_footer: mv.embed_footer, embed_thumbnail: mv.embed_thumbnail, embed_color: mv.embed_color,
+            dropdown_placeholder: mv.dropdown_placeholder,
+          } }).then((r) => {
+            saveBtn.disabled = false; saveBtn.textContent = orig;
+            Object.assign(p, mv); // commit working copy
+            if (r && r.reposted) toast("Saved — the posted panel was updated ✓");
+            else if (r && r.repostError) toast(r.repostError, "err");
+            else toast("Saved");
+          }).catch((err) => {
+            saveBtn.disabled = false; saveBtn.textContent = orig;
+            toast((err.data && (err.data.message || err.data.error)) || err.message || "Couldn't save", "err");
+          });
+        });
+        const statusLine = h("div", { class: "mc-hint", style: { margin: 0 } },
+          p.posted ? ("Posted in #" + (p.channel_name || "?") + " — saving edits that message.")
+            : (p.channel_id ? "Not posted yet — saving posts it now." : "No channel set — post it once via /setup → Tickets, then it updates live from here."));
+
+        bodyBox.append(
+          preview,
+          mcSection("What members see",
+            mcField("Title", titleIn),
+            mcField("Description", descTa, "Shown above the dropdown"),
+            mcField("Warning line (optional)", warnIn, "Bold ⚠️ line at the very top"),
+            h("div", { class: "mc-grid" },
+              mcField("Colour", colourIn),
+              mcField("Dropdown placeholder", phIn)),
+            h("div", { class: "mc-grid" },
+              mcField("Footer (optional)", footIn),
+              mcField("Thumbnail image URL (optional)", thumbIn))),
+          h("div", { class: "tk-ed-actions" }, saveBtn, statusLine));
+      }
+      paint();
+    }).catch((err) => {
+      clear(host); host.append(head());
+      if (err.code === 403 && err.data && err.data.error === "premium_required") {
+        host.append(notice("warn", "Premium feature", "Editing the ticket panel is part of the Premium Tickets module. Unlock it with /subscribe."));
+      } else {
+        host.append(notice("warn", "Couldn't load your ticket panel", err.message || "Try again in a moment."));
+      }
+    });
   }
 
   // Staff Pay as a live-preview canvas: a monthly staff-earnings summary embed.
