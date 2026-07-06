@@ -4766,19 +4766,40 @@
     renderTicketPanelEditor(content);
   }
 
-  // Edit the appearance of an already-posted ticket panel — embed
-  // title/description/warning/colour/thumbnail/footer + dropdown placeholder —
-  // with a live preview, and push the change to the live Discord message. The
-  // dropdown OPTIONS (ticket categories) are still managed in /setup.
+  // Edit an already-posted ticket panel by typing DIRECTLY IN THE PREVIEW
+  // (WYSIWYG): the title/warning/description/placeholder/footer are inline
+  // contentEditable, colour is a swatch on the card. Saving pushes the change to
+  // the live Discord message. Categories (dropdown options) stay in /setup.
   function renderTicketPanelEditor(content) {
     const gid = state.selectedGuildId;
     const A = (p) => `/api/dashboard/guilds/${gid}/tickets${p}`;
     const head = () => h("div", { class: "w-canvas-head" },
       h("span", { class: "w-canvas-label" }, "Edit posted panel"),
-      h("span", { class: "w-canvas-hint" }, "Change what members see — updates the live message"));
+      h("span", { class: "w-canvas-hint" }, "Click any text in the preview to edit it — then Save to update the live message"));
     const host = h("div", { class: "dash-card w-canvas", style: { marginTop: "18px" } },
       head(), h("div", { class: "sk", style: { height: "220px", borderRadius: "12px" } }));
     content.append(host);
+
+    // contentEditable that binds to mv[key]. plaintext-only where supported so
+    // paste is clean and Enter inserts a real newline (multiline fields only).
+    const PLAINTEXT_OK = (() => { try { const d = document.createElement("div"); d.contentEditable = "plaintext-only"; return d.contentEditable === "plaintext-only"; } catch { return false; } })();
+    function tkEditable(tag, cls, getV, setV, opts) {
+      opts = opts || {};
+      const el = h(tag, { class: "tk-edit " + (cls || "") });
+      el.contentEditable = PLAINTEXT_OK ? "plaintext-only" : "true";
+      el.spellcheck = false;
+      el.setAttribute("role", "textbox");
+      el.setAttribute("aria-label", opts.label || opts.ph || "Edit");
+      if (opts.multiline) el.setAttribute("aria-multiline", "true");
+      if (opts.ph) el.setAttribute("data-ph", opts.ph);
+      el.textContent = getV() || "";
+      el.addEventListener("beforeinput", (ev) => {
+        if (opts.max && (el.textContent || "").length >= opts.max && /^insert/.test(ev.inputType || "")) ev.preventDefault();
+      });
+      el.addEventListener("input", () => setV(el.textContent || ""));
+      if (!opts.multiline) el.addEventListener("keydown", (ev) => { if (ev.key === "Enter") ev.preventDefault(); });
+      return el;
+    }
 
     api(A("/panels")).then((body) => {
       clear(host); host.append(head());
@@ -4796,46 +4817,42 @@
         clear(bodyBox);
         const p = panels[idx];
         const mv = p._mv || (p._mv = Object.assign({}, p)); // working copy per panel
+        const colour = () => /^#[0-9a-f]{6}$/i.test(mv.embed_color || "") ? mv.embed_color : "#5865f2";
 
         if (panels.length > 1) {
-          const sel = h("select", { class: "mc-select", onchange: (e) => { idx = Number(e.target.value); paint(); } },
+          const sel = h("select", { class: "mc-select", style: { maxWidth: "300px", marginBottom: "12px" }, onchange: (e) => { idx = Number(e.target.value); paint(); } },
             ...panels.map((pp, i) => h("option", { value: i, selected: i === idx ? true : null },
               (pp.internal_name || pp.title || `Panel ${pp.id}`) + (pp.posted ? "" : " (not posted)"))));
           bodyBox.append(mcField("Which panel", sel));
         }
 
-        // ---- live preview (reflects the real fields) ----
-        const preview = h("div", { class: "eb-discord ticket-preview" });
-        function draw() {
-          clear(preview);
-          const colour = /^#[0-9a-f]{6}$/i.test(mv.embed_color || "") ? mv.embed_color : "#5865f2";
-          const inner = [
-            h("div", { class: "ticket-head" }, h("span", { class: "ticket-emoji", "aria-hidden": "true" }, "🎫"),
-              h("span", null, mv.embed_title || "Support")),
-          ];
-          if (mv.embed_warning) inner.push(h("div", { class: "tk-ed-warn" }, "⚠️ " + mv.embed_warning));
-          inner.push(h("div", { class: "ticket-desc", style: { whiteSpace: "pre-wrap" } },
-            mv.embed_description || "How to open a ticket…"));
-          inner.push(h("div", { class: "tk-ed-drop" }, (mv.dropdown_placeholder || "Select a category…") + "  ▾"));
-          inner.push(h("div", { class: "eb-e-footer" }, h("span", null, mv.embed_footer || "Arkoris")));
-          const card = h("div", { class: "eb-embed ticket-card", style: { borderColor: colour } },
-            h("div", { class: "eb-embed-inner" }, ...inner));
-          if (mv.embed_thumbnail && /^https?:\/\//i.test(mv.embed_thumbnail)) {
-            card.querySelector(".eb-embed-inner").append(
-              h("img", { class: "tk-ed-thumb", src: mv.embed_thumbnail, alt: "", onerror: (e) => { e.target.style.display = "none"; } }));
-          }
-          preview.append(card);
-        }
-        draw();
+        // ---- the preview IS the editor (build once; no destructive redraw) ----
+        const colourIn = h("input", { class: "tk-ed-swatch", type: "color", title: "Panel colour", value: colour() });
+        const thumbImg = h("img", { class: "tk-ed-thumb", alt: "" });
+        const syncThumb = () => {
+          const u = (mv.embed_thumbnail || "").trim();
+          if (u && /^https?:\/\//i.test(u)) { thumbImg.src = u; thumbImg.style.display = ""; } else { thumbImg.style.display = "none"; }
+        };
+        const inner = h("div", { class: "eb-embed-inner" },
+          h("div", { class: "ticket-head" },
+            h("span", { class: "ticket-emoji", "aria-hidden": "true" }, "🎫"),
+            tkEditable("span", "tk-ed-title", () => mv.embed_title, (v) => { mv.embed_title = v; }, { ph: "Panel title", max: 256, label: "Panel title" })),
+          tkEditable("div", "tk-ed-warn", () => mv.embed_warning, (v) => { mv.embed_warning = v; }, { ph: "＋ Warning line (optional)", max: 256, label: "Warning line" }),
+          tkEditable("div", "ticket-desc tk-ed-desc", () => mv.embed_description, (v) => { mv.embed_description = v; }, { ph: "Describe how to open a ticket…", max: 2000, multiline: true, label: "Description" }),
+          h("div", { class: "tk-ed-drop" },
+            tkEditable("span", "tk-ed-ph", () => mv.dropdown_placeholder, (v) => { mv.dropdown_placeholder = v; }, { ph: "Select a category…", max: 150, label: "Dropdown placeholder" }),
+            h("span", { class: "tk-ed-caret", "aria-hidden": "true" }, "▾")),
+          thumbImg,
+          h("div", { class: "eb-e-footer" },
+            tkEditable("span", "tk-ed-foot", () => mv.embed_footer, (v) => { mv.embed_footer = v; }, { ph: "Footer (optional)", max: 256, label: "Footer" })));
+        const card = h("div", { class: "eb-embed ticket-card tk-ed-card" }, colourIn, inner);
+        card.style.borderColor = colour();
+        colourIn.addEventListener("input", () => { mv.embed_color = colourIn.value; card.style.borderColor = colourIn.value; });
+        syncThumb();
+        const preview = h("div", { class: "eb-discord ticket-preview" }, card);
 
-        const tin = (key, ph, max) => h("input", { class: "mc-in", type: "text", value: mv[key] || "", maxlength: max || 256, placeholder: ph || "", oninput: (e) => { mv[key] = e.target.value; draw(); } });
-        const titleIn = tin("embed_title", "Support", 256);
-        const descTa = h("textarea", { class: "mc-in", rows: 5, maxlength: 2000, placeholder: "What members read above the dropdown. Line breaks supported.", oninput: (e) => { mv.embed_description = e.target.value; draw(); } }, mv.embed_description || "");
-        const warnIn = tin("embed_warning", "e.g. Do not share your password", 256);
-        const phIn = tin("dropdown_placeholder", "Select a category…", 150);
-        const footIn = tin("embed_footer", "Arkoris", 256);
-        const thumbIn = h("input", { class: "mc-in", type: "url", value: mv.embed_thumbnail || "", placeholder: "https://…", oninput: (e) => { mv.embed_thumbnail = e.target.value; draw(); } });
-        const colourIn = h("input", { class: "mc-color", type: "color", value: /^#[0-9a-f]{6}$/i.test(mv.embed_color || "") ? mv.embed_color : "#5865f2", oninput: (e) => { mv.embed_color = e.target.value; draw(); } });
+        // Thumbnail is the one thing you can't type inline — a slim URL field.
+        const thumbIn = h("input", { class: "mc-in", type: "url", value: mv.embed_thumbnail || "", placeholder: "https://… (optional panel thumbnail)", oninput: (e) => { mv.embed_thumbnail = e.target.value; syncThumb(); } });
 
         const saveBtn = btn("Save & update panel", { kind: "btn-primary" });
         saveBtn.addEventListener("click", () => {
@@ -4860,17 +4877,9 @@
             : (p.channel_id ? "Not posted yet — saving posts it now." : "No channel set — post it once via /setup → Tickets, then it updates live from here."));
 
         bodyBox.append(
+          h("div", { class: "tk-ed-hint" }, "✏️ Click the title, warning, description, dropdown text or footer above to edit them directly. Use the swatch for colour."),
           preview,
-          mcSection("What members see",
-            mcField("Title", titleIn),
-            mcField("Description", descTa, "Shown above the dropdown"),
-            mcField("Warning line (optional)", warnIn, "Bold ⚠️ line at the very top"),
-            h("div", { class: "mc-grid" },
-              mcField("Colour", colourIn),
-              mcField("Dropdown placeholder", phIn)),
-            h("div", { class: "mc-grid" },
-              mcField("Footer (optional)", footIn),
-              mcField("Thumbnail image URL (optional)", thumbIn))),
+          mcField("Thumbnail image URL (optional)", thumbIn),
           h("div", { class: "tk-ed-actions" }, saveBtn, statusLine));
       }
       paint();
