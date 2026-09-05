@@ -108,6 +108,63 @@
       });
     });
   }
+  // ── Image upload ─────────────────────────────────────────────────────────────
+  // Pictures go to /api/store-upload (bot-hosted by default, R2 when bound) and
+  // come back as a permanent same-origin URL — never a Discord link, which
+  // expires. Big photos are downsized in the browser first (max 1600px, WebP
+  // where the browser can encode it) so uploads are ~100-300 KB, not 5 MB.
+  var IMG_MAX_EDGE = 1600, IMG_SEND_MAX = 2 * 1024 * 1024, IMG_PASS_THROUGH = 600 * 1024;
+  function canEncodeWebp() {
+    try { return document.createElement("canvas").toDataURL("image/webp").indexOf("data:image/webp") === 0; } catch (e) { return false; }
+  }
+  function shrinkImage(file) {
+    // GIFs keep their animation (no re-encode); unknown types pass through.
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return Promise.resolve(file);
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(file);
+      var im = new Image();
+      im.onload = function () {
+        URL.revokeObjectURL(url);
+        var w = im.naturalWidth, h = im.naturalHeight;
+        if (!w || !h) return resolve(file);
+        var scale = Math.min(1, IMG_MAX_EDGE / Math.max(w, h));
+        if (scale === 1 && file.size <= IMG_PASS_THROUGH) return resolve(file);
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(w * scale)); c.height = Math.max(1, Math.round(h * scale));
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        var type = canEncodeWebp() ? "image/webp" : (file.type === "image/png" ? "image/png" : "image/jpeg");
+        c.toBlob(function (b) {
+          if (!b || b.type !== type || b.size >= file.size) return resolve(file);
+          resolve(new File([b], (file.name || "image").replace(/\.[^.]+$/, "") + "." + (type === "image/webp" ? "webp" : type === "image/png" ? "png" : "jpg"), { type: type }));
+        }, type, 0.86);
+      };
+      im.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+      im.src = url;
+    });
+  }
+  // Resolves { ok:true, url } or { ok:false, msg }.
+  function uploadStoreImage(file) {
+    if (!file) return Promise.resolve({ ok: false, msg: "No file." });
+    if (file.size > 5 * 1024 * 1024) return Promise.resolve({ ok: false, msg: "Max 5 MB." });
+    return shrinkImage(file).then(function (f) {
+      if (f.size > IMG_SEND_MAX) return { ok: false, msg: "Still over 2 MB after resizing — use a smaller image." };
+      return getCsrf().then(function (tok) {
+        var headers = { "content-type": f.type };
+        if (tok) headers["X-Arkoris-CSRF"] = tok;
+        return fetch("/api/store-upload?guild=" + encodeURIComponent(gid), { method: "POST", credentials: "include", headers: headers, body: f })
+          .then(function (r) { return r.json().catch(function () { return null; }).then(function (b) { return { s: r.status, b: b }; }); })
+          .then(function (o) {
+            if (o.s === 401) return { ok: false, msg: "Re-login to upload." };
+            if (o.s === 403 && o.b && o.b.error === "csrf_failed") { _csrf = ""; return { ok: false, msg: "Session refreshed — try the upload again." }; }
+            if (o.s === 403) return { ok: false, msg: (o.b && (o.b.detail || o.b.message)) || "Premium is required for uploads." };
+            if (o.s === 501) return { ok: false, msg: "Uploads aren't available right now — paste a URL instead." };
+            if (!o.b || !o.b.url) return { ok: false, msg: (o.b && (o.b.detail || o.b.message)) || "Upload failed." };
+            return { ok: true, url: o.b.url };
+          });
+      });
+    }).catch(function () { return { ok: false, msg: "Upload failed." }; });
+  }
+
   // Sample data for ?demo=1 preview mode.
   var DEMO_ROLES = [{ id: "1", name: "VIP" }, { id: "2", name: "Supporter" }, { id: "3", name: "MVP" }, { id: "4", name: "Founder" }];
   var DEMO_CHANNELS = [{ id: "10", name: "orders" }, { id: "11", name: "staff-fulfilment" }, { id: "12", name: "general" }];
@@ -883,12 +940,12 @@
     var upBtn = btn("⬆ Upload image", { variant: "btn-outline", style: { fontSize: "13px", padding: "7px 13px" }, onClick: function () { file.click(); } });
     file.addEventListener("change", function () {
       var f = file.files && file.files[0]; if (!f) return;
-      if (f.size > 5 * 1024 * 1024) { upMsg.textContent = "Max 5 MB."; return; }
       upBtn.disabled = true; upMsg.textContent = "Uploading…";
-      fetch("/api/store-upload", { method: "POST", credentials: "include", headers: { "content-type": f.type }, body: f })
-        .then(function (r) { return r.json().catch(function () { return null; }).then(function (b) { return { s: r.status, b: b }; }); })
-        .then(function (o) { if (o.s === 501) upMsg.textContent = "Uploads not set up — paste a URL instead."; else if (!o.b || !o.b.url) upMsg.textContent = (o.b && o.b.detail) || "Upload failed."; else { img.value = o.b.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; } })
-        .catch(function () { upMsg.textContent = "Upload failed."; }).then(function () { upBtn.disabled = false; file.value = ""; });
+      uploadStoreImage(f).then(function (o) {
+        if (o.ok) { img.value = o.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; }
+        else upMsg.textContent = o.msg;
+        upBtn.disabled = false; file.value = "";
+      });
     });
     var catSel = sel(categoryOptions(), p.category_id != null ? String(p.category_id) : "");
     var catManage = el("button", { type: "button", class: "linklike", onclick: function () { closeDrawer(); S.section = "categories"; render(); } }, "Manage categories →");
@@ -1126,12 +1183,12 @@
     var upBtn = btn("⬆ Upload image", { variant: "btn-outline", style: { fontSize: "13px", padding: "7px 13px" }, onClick: function () { file.click(); } });
     file.addEventListener("change", function () {
       var f = file.files && file.files[0]; if (!f) return;
-      if (f.size > 5 * 1024 * 1024) { upMsg.textContent = "Max 5 MB."; return; }
       upBtn.disabled = true; upMsg.textContent = "Uploading…";
-      fetch("/api/store-upload", { method: "POST", credentials: "include", headers: { "content-type": f.type }, body: f })
-        .then(function (r) { return r.json().catch(function () { return null; }).then(function (b) { return { s: r.status, b: b }; }); })
-        .then(function (o) { if (o.s === 501) upMsg.textContent = "Uploads not set up — paste a URL instead."; else if (!o.b || !o.b.url) upMsg.textContent = (o.b && o.b.detail) || "Upload failed."; else { img.value = o.b.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; } })
-        .catch(function () { upMsg.textContent = "Upload failed."; }).then(function () { upBtn.disabled = false; file.value = ""; });
+      uploadStoreImage(f).then(function (o) {
+        if (o.ok) { img.value = o.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; }
+        else upMsg.textContent = o.msg;
+        upBtn.disabled = false; file.value = "";
+      });
     });
 
     // Parent options: top level + every top-level category except this one.

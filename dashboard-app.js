@@ -68,6 +68,63 @@
     }
   }
 
+  // ── Store image upload ──────────────────────────────────────────────────────
+  // Pictures go to /api/store-upload (bot-hosted by default, R2 when bound) and
+  // come back as a permanent same-origin URL — never a Discord link, which
+  // expires. Big photos are downsized in the browser first (max 1600px, WebP
+  // where the browser can encode it) so uploads are ~100-300 KB, not 5 MB.
+  const IMG_MAX_EDGE = 1600, IMG_SEND_MAX = 2 * 1024 * 1024, IMG_PASS_THROUGH = 600 * 1024;
+  function canEncodeWebp() {
+    try { return document.createElement("canvas").toDataURL("image/webp").indexOf("data:image/webp") === 0; } catch { return false; }
+  }
+  function shrinkImage(file) {
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return Promise.resolve(file); // GIFs keep animation
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload = () => {
+        URL.revokeObjectURL(url);
+        const w = im.naturalWidth, h = im.naturalHeight;
+        if (!w || !h) return resolve(file);
+        const scale = Math.min(1, IMG_MAX_EDGE / Math.max(w, h));
+        if (scale === 1 && file.size <= IMG_PASS_THROUGH) return resolve(file);
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(w * scale)); c.height = Math.max(1, Math.round(h * scale));
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        const type = canEncodeWebp() ? "image/webp" : (file.type === "image/png" ? "image/png" : "image/jpeg");
+        c.toBlob((b) => {
+          if (!b || b.type !== type || b.size >= file.size) return resolve(file);
+          const ext = type === "image/webp" ? "webp" : type === "image/png" ? "png" : "jpg";
+          resolve(new File([b], (file.name || "image").replace(/\.[^.]+$/, "") + "." + ext, { type }));
+        }, type, 0.86);
+      };
+      im.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      im.src = url;
+    });
+  }
+  // Resolves { ok:true, url } or { ok:false, msg }.
+  async function uploadStoreImage(file, guildId) {
+    if (!file) return { ok: false, msg: "No file." };
+    if (file.size > 5 * 1024 * 1024) return { ok: false, msg: "Max 5 MB." };
+    try {
+      const f = await shrinkImage(file);
+      if (f.size > IMG_SEND_MAX) return { ok: false, msg: "Still over 2 MB after resizing — use a smaller image." };
+      const headers = { "content-type": f.type };
+      const tok = await getCsrfToken();
+      if (tok) headers["X-Arkoris-CSRF"] = tok;
+      const res = await fetch(API_BASE + "/api/store-upload?guild=" + encodeURIComponent(guildId || ""), { method: "POST", credentials: "include", headers, body: f });
+      const body = await res.json().catch(() => null);
+      if (res.status === 401) return { ok: false, msg: "Re-login to upload." };
+      if (res.status === 403 && body?.error === "csrf_failed") { csrfToken = ""; return { ok: false, msg: "Session refreshed — try the upload again." }; }
+      if (res.status === 403) return { ok: false, msg: body?.detail || body?.message || "Premium is required for uploads." };
+      if (res.status === 501) return { ok: false, msg: "Uploads aren't available right now — paste a URL instead." };
+      if (!res.ok || !body || !body.url) return { ok: false, msg: body?.detail || body?.message || "Upload failed." };
+      return { ok: true, url: body.url };
+    } catch {
+      return { ok: false, msg: "Upload failed." };
+    }
+  }
+
   async function api(path, opts) {
     opts = opts || {};
     // API_BASE is empty in production — requests go to this origin's
@@ -7403,17 +7460,11 @@
       fileInput.addEventListener("change", async () => {
         const f = fileInput.files && fileInput.files[0];
         if (!f) return;
-        if (f.size > 5 * 1024 * 1024) { upMsg.textContent = "Max 5 MB."; return; }
         upBtn.disabled = true; upMsg.textContent = "Uploading…";
-        try {
-          const res = await fetch("/api/store-upload", { method: "POST", credentials: "include", headers: { "content-type": f.type }, body: f });
-          const body = await res.json().catch(() => null);
-          if (res.status === 501) upMsg.textContent = "Uploads aren't set up — paste a URL instead.";
-          else if (res.status === 401) upMsg.textContent = "Re-login to upload.";
-          else if (!res.ok || !body || !body.url) upMsg.textContent = (body && body.detail) || "Upload failed.";
-          else { img.value = body.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; }
-        } catch { upMsg.textContent = "Upload failed."; }
-        finally { upBtn.disabled = false; fileInput.value = ""; }
+        const o = await uploadStoreImage(f, gid);
+        if (o.ok) { img.value = o.url; img.dispatchEvent(new Event("input")); upMsg.textContent = "Uploaded ✓"; }
+        else upMsg.textContent = o.msg;
+        upBtn.disabled = false; fileInput.value = "";
       });
       const uploadRow = h("div", { style: { margin: "2px 0 10px" } }, upBtn, upMsg, fileInput);
       const cat = inputEl({ type: "text", value: p.category || "", maxlength: 60, placeholder: "Category (optional)" });
