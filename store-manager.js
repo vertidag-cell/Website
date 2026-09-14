@@ -403,7 +403,7 @@
   }
 
   // ── shell render ──────────────────────────────────────────────────────────
-  var NAV = [["overview", "Overview", "overview"], ["products", "Products", "products"], ["categories", "Categories", "categories"], ["orders", "Orders", "orders"], ["customers", "Customers", "customers"], ["reviews", "Reviews", "star"], ["coupons", "Coupons", "coupons"], ["settings", "Settings", "settings"], ["payments", "Payments", "payments"]];
+  var NAV = [["overview", "Overview", "overview"], ["products", "Products", "products"], ["categories", "Categories", "categories"], ["orders", "Orders", "orders"], ["customers", "Customers", "customers"], ["reviews", "Reviews", "star"], ["coupons", "Coupons", "coupons"], ["settings", "Settings", "settings"], ["payments", "Payments", "payments"], ["finance", "Finance", "chart"]];
   var SECTION_META = {
     overview: ["Overview", "Your store at a glance"], products: ["Products", "What you sell"],
     categories: ["Categories", "Group products into sections and sub-sections"],
@@ -456,6 +456,7 @@
     else if (S.section === "reviews") renderReviews(content);
     else if (S.section === "coupons") renderCoupons(content);
     else if (S.section === "settings") renderSettings(content);
+    else if (S.section === "finance") renderFinance(content);
     else renderPayments(content);
   }
   function closeMobileNav() { var app = document.querySelector(".sm-app"); if (app) { app.classList.remove("nav-open"); var sc = app.querySelector(".sm-nav-scrim"); if (sc) sc.remove(); } }
@@ -1591,6 +1592,142 @@
       el("p", { class: "panel-sub" }, "Ask buyers for the details you need to deliver — character name, tribe, platform. Answers are saved on the order and shown when they redeem their code."),
       cfList));
     c.append(el("div", { style: { display: "flex", justifyContent: "flex-end" } }, save));
+  }
+
+
+  // ── FINANCE ────────────────────────────────────────────────────────────────
+  // The running costs and the profit split. Saved here, then the Download
+  // button hands back an .xlsx whose costs are these numbers and whose gross,
+  // profit and split are live Excel formulas over them.
+  function renderFinance(c) {
+    var box = el("div");
+    c.append(box);
+    box.append(el("p", { class: "panel-sub" }, "Loading…"));
+
+    var period = S.financePeriod || defaultPeriod();
+    function defaultPeriod() {
+      var now = new Date();
+      var y = now.getUTCFullYear(), m = now.getUTCMonth();
+      var pad = function (n) { return String(n).padStart(2, "0"); };
+      var last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      return { from: y + "-" + pad(m + 1) + "-01", to: y + "-" + pad(m + 1) + "-" + pad(last) };
+    }
+
+    api(A("/store/finance?from=" + period.from + "&to=" + period.to)).then(function (r) {
+      clear(box);
+      if (!r.ok) { box.append(emptyState("settings", "Finance is unavailable", (r.body && r.body.message) || "Could not load the finance model.")); return; }
+      var d = r.body;
+      var st = d.settings;
+      var ccy = (d.revenue && d.revenue.currency) || "USD";
+      var sym = ({ GBP: "£", USD: "$", EUR: "€" })[ccy] || "";
+      var money = function (n) { return sym + (Number(n) || 0).toFixed(2); };
+
+      var from = inp({ type: "date", value: period.from });
+      var to = inp({ type: "date", value: period.to });
+
+      // Cost inputs, built from what the bot says the model contains.
+      var inputs = {};
+      var costFields = d.fields.map(function (f) {
+        inputs[f.key] = prefixInp(sym, { type: "number", step: "0.01", min: "0", value: st[f.key] != null ? st[f.key] : 0 });
+        return field(f.label, inputs[f.key], { hint: f.note });
+      });
+      inputs.otherIncome = prefixInp(sym, { type: "number", step: "0.01", min: "0", value: st.otherIncome || 0 });
+      inputs.creatorSharePct = inp({ type: "number", step: "0.5", min: "0", max: "100", value: st.creatorSharePct });
+
+      // Live preview so the numbers make sense before downloading.
+      var preview = el("div", { class: "fin-preview" });
+      function recalc() {
+        var rev = d.revenue && d.revenue.totals ? d.revenue.totals : { money: 0, paymentMoney: 0 };
+        var otherIncome = Number(inputs.otherIncome.querySelector("input").value) || 0;
+        var gross = (rev.money || 0) + (rev.paymentMoney || 0) + otherIncome;
+        var costs = d.fields.reduce(function (sum, f) {
+          return sum + (Number(inputs[f.key].querySelector("input").value) || 0);
+        }, 0);
+        var profit = gross - costs;
+        var pct = Math.min(100, Math.max(0, Number(inputs.creatorSharePct.value) || 0));
+        var creator = Math.round(profit * (pct / 100) * 100) / 100;
+        clear(preview);
+        [["Gross revenue", money(gross), ""],
+         ["Total costs", money(costs), ""],
+         ["Net profit", money(profit), profit < 0 ? "neg" : "pos"],
+         ["Creator paid (" + pct + "%)", money(creator), ""],
+         ["Owner paid", money(profit - creator), ""]].forEach(function (row) {
+          preview.append(el("div", { class: "fin-row" + (row[2] ? " " + row[2] : "") },
+            el("span", null, row[0]), el("b", null, row[1])));
+        });
+      }
+      Object.keys(inputs).forEach(function (k) {
+        var node = inputs[k];
+        var input = node.querySelector ? (node.querySelector("input") || node) : node;
+        input.addEventListener("input", recalc);
+      });
+
+      var save = btn("Save figures", { variant: "btn-primary", onClick: function () {
+        save.disabled = true;
+        var body = { otherIncome: Number(inputs.otherIncome.querySelector("input").value) || 0, creatorSharePct: Number(inputs.creatorSharePct.value) || 0 };
+        d.fields.forEach(function (f) { body[f.key] = Number(inputs[f.key].querySelector("input").value) || 0; });
+        api(A("/store/finance"), { method: "POST", body: body }).then(function (res) {
+          save.disabled = false;
+          if (!res.ok) { toast((res.body && res.body.message) || "Couldn't save", "err"); return; }
+          st = res.body.settings;
+          toast("Figures saved");
+        });
+      } });
+
+      var download = btn("Download Excel", { variant: "btn-outline", icon: "ext", onClick: function () {
+        var f = from.value || period.from, t = to.value || period.to;
+        S.financePeriod = { from: f, to: t };
+        // Save first so the sheet carries what is on screen, then download.
+        download.disabled = true;
+        var body = { otherIncome: Number(inputs.otherIncome.querySelector("input").value) || 0, creatorSharePct: Number(inputs.creatorSharePct.value) || 0 };
+        d.fields.forEach(function (fd) { body[fd.key] = Number(inputs[fd.key].querySelector("input").value) || 0; });
+        api(A("/store/finance"), { method: "POST", body: body }).then(function () {
+          download.disabled = false;
+          window.location.href = A("/store/finance.xlsx?from=" + encodeURIComponent(f) + "&to=" + encodeURIComponent(t));
+        });
+      } });
+
+      var reload = btn("Apply period", { variant: "btn-ghost", onClick: function () {
+        S.financePeriod = { from: from.value, to: to.value };
+        render();
+      } });
+
+      box.append(panel(panelHead("Period"),
+        el("p", { class: "panel-sub" }, "Which dates the revenue is counted over. Defaults to this month."),
+        el("div", { class: "grid2" }, field("From", from), field("To", to)),
+        el("div", { style: { display: "flex", gap: "8px" } }, reload)));
+
+      var rows = (d.revenue && d.revenue.servers ? d.revenue.servers : []).slice().sort(function (a, b) {
+        return (b.money + b.paymentMoney) - (a.money + a.paymentMoney);
+      });
+      var revBox = el("div", { class: "fin-preview" });
+      rows.forEach(function (s) {
+        revBox.append(el("div", { class: "fin-row" }, el("span", null, s.name || s.guildId),
+          el("b", null, money(s.money + s.paymentMoney))));
+      });
+      if (!rows.length) revBox.append(el("p", { class: "hint" }, "No servers found."));
+      box.append(panel(panelHead("Money in", el("span", { class: "pill on" }, money(((d.revenue || {}).totals || {}).money + ((d.revenue || {}).totals || {}).paymentMoney))),
+        el("p", { class: "panel-sub" }, "Straight from the bot: paid store orders plus paid staff payment links, for this period. Credits spent in-game are not counted as money."),
+        revBox));
+
+      box.append(panel(panelHead("Costs"),
+        el("p", { class: "panel-sub" }, "What running the servers costs you this period. Saved here and pre-filled into the spreadsheet."),
+        el("div", { class: "grid2" }, costFields[0], costFields[1]),
+        el("div", { class: "grid2" }, costFields[2], costFields[3]),
+        el("div", { class: "grid2" }, costFields[4], costFields[5])));
+
+      box.append(panel(panelHead("Income outside the bot"),
+        el("p", { class: "panel-sub" }, "Cash, direct PayPal, anything the bot never saw. Added on top of the figures above."),
+        field(d.otherIncome.label, inputs.otherIncome, { hint: d.otherIncome.note })));
+
+      box.append(panel(panelHead("Profit split"),
+        el("p", { class: "panel-sub" }, "How the net profit is shared. The owner gets whatever is left."),
+        field("Creator share (%)", inputs.creatorSharePct, { hint: "Percentage of net profit paid to the creator" }),
+        preview));
+
+      box.append(el("div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" } }, save, download));
+      recalc();
+    });
   }
 
   // ── PAYMENTS ───────────────────────────────────────────────────────────────

@@ -435,13 +435,21 @@
       .pcard-drag:active { cursor: grabbing; }
       .pcard-drag svg { width: 16px; height: 16px; }
       .pcard.dragging { opacity: 0.5; box-shadow: 0 0 0 1px var(--accent), 0 24px 50px -22px rgba(0,0,0,0.85); }
-    </style>
+    
+    /* Finance — the live P&L preview rows */
+    .fin-preview{margin-top:10px;border:1px solid var(--line,#2a2f3a);border-radius:10px;overflow:hidden}
+    .fin-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 14px;font-size:14px}
+    .fin-row + .fin-row{border-top:1px solid var(--line,#2a2f3a)}
+    .fin-row b{font-variant-numeric:tabular-nums}
+    .fin-row.pos b{color:#37d27f}
+    .fin-row.neg b{color:#ff6b6b}
+</style>
   </head>
   <body>
     <div id="sm-root">
       <div class="state-full"><div class="sk" style="width:min(900px,90vw);height:60vh"></div></div>
     </div>
     <script src="config.js"></script>
-    <script src="store-manager.js?v=48"></script>
+    <script src="store-manager.js?v=49"></script>
   </body>
 </html>
