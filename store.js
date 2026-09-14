@@ -760,14 +760,19 @@
     if (p.featured) ob += '<span class="prod-badge feat">★ Featured</span>';
     else if (p.bestseller) ob += '<span class="prod-badge best">Bestseller</span>';
     if (p.isBundle) ob += '<span class="prod-badge bundle">Bundle</span>';
+    if (p.enquiryOnly) ob += '<span class="prod-badge ticket">Ticket only</span>';
     if (S.cart && S.cart.items && S.cart.items.some(function (it) { return it.productId === p.id; })) ob += '<span class="prod-badge incart">✓ In cart</span>';
     var rate = (p.reviewCount > 0)
       ? '<div class="prod-rate">' + starDisplay(p.rating) + '<span class="prod-rate-n">' + Number(p.rating).toFixed(1) + ' (' + fmt(p.reviewCount) + ')</span></div>'
       : '';
     var varianty = hasVariants(p);
     var disabled = !varianty && !p.inStock;
-    var btn = '<button class="btn btn-primary prod-add" type="button" data-pid="' + p.id + '"' + (disabled ? ' disabled' : '') + '>'
-      + (disabled ? 'Sold out' : (varianty ? 'Choose options' : 'Add to cart')) + '</button>';
+    // Ticket-only tiers (ranks) are browsed here and bought in Discord, so the
+    // card sells the next step rather than offering a cart button that fails.
+    var btn = p.enquiryOnly
+      ? '<button class="btn btn-primary prod-add" type="button" data-pid="' + p.id + '">Buy in Discord</button>'
+      : '<button class="btn btn-primary prod-add" type="button" data-pid="' + p.id + '"' + (disabled ? ' disabled' : '') + '>'
+        + (disabled ? 'Sold out' : (varianty ? 'Choose options' : 'Add to cart')) + '</button>';
     return '<div class="prod prod-v2 reveal-up' + (p.featured ? ' is-feat' : '') + '" data-pid="' + p.id + '" tabindex="0" role="button"' + style + '>'
       + '<div class="prod-media">' + media
         + (ob ? '<div class="prod-badges">' + ob + '</div>' : '')
@@ -811,7 +816,9 @@
         e.stopPropagation();
         if (btn.disabled) return;
         var p = productById(btn.getAttribute('data-pid'));
-        if (p && hasVariants(p)) openProduct(p); // must pick a tier
+        // Ticket-only tiers open so the buyer can read what is included and how
+        // to buy; they never go through the cart.
+        if (p && (p.enquiryOnly || hasVariants(p))) openProduct(p);
         else addToCart(parseInt(btn.getAttribute('data-pid'), 10));
       });
     });
@@ -1125,11 +1132,21 @@
       var max = maxQty();
       if (qty > max) qty = max; if (qty < 1) qty = 1;
       if (qn) qn.textContent = qty;
-      if (varianty) {
+      if (varianty && p.enquiryOnly) {
+        priceEl.innerHTML = selected ? priceForVariant(selected) : '<span class="pm-norate">Pick a length to see the price</span>';
+        addEl.disabled = true;
+        addEl.textContent = 'Buy in Discord';
+        stockEl.innerHTML = 'Open a ticket in the Discord server to buy this. Staff go through what is included, take the payment, and hand the rank over.';
+      } else if (varianty) {
         priceEl.innerHTML = selected ? priceForVariant(selected) : '<span class="pm-norate">Choose an option</span>';
         var oos = selected && selected.inStock === false;
         addEl.disabled = !selected || oos;
         addEl.textContent = oos ? 'Out of stock' : 'Add to cart';
+      } else if (p.enquiryOnly) {
+        priceEl.innerHTML = priceForVariant(null);
+        addEl.disabled = true;
+        addEl.textContent = 'Buy in Discord';
+        stockEl.innerHTML = 'Open a ticket in the Discord server to buy this. Staff go through what is included, take the payment, and hand the rank over.';
       } else {
         priceEl.innerHTML = priceForVariant(null);
         addEl.disabled = soldOut; addEl.textContent = soldOut ? 'Out of stock' : 'Add to cart';
@@ -1157,6 +1174,7 @@
     }
     refreshBuy();
     document.getElementById('pm-add').addEventListener('click', function () {
+      if (p.enquiryOnly) return; // bought in a ticket, never through the cart
       if (varianty) { if (selected) { addToCart(p.id, selected.id, qty); closeProductModal(); } }
       else { addToCart(p.id, null, qty); closeProductModal(); }
     });

@@ -794,7 +794,10 @@
         .prod:hover .prod-img, .catp-media:hover .catp-img { transform: none !important; }
         .prod::after { display: none !important; }
       }
-    </style>
+    
+    /* Ticket-only tiers (ranks): browsed here, bought in Discord */
+    .prod-badge.ticket{background:linear-gradient(180deg,#5865f2,#4450d8);color:#fff;border-color:rgba(255,255,255,.18)}
+</style>
   </head>
   <body>
     <!-- Living backdrop: aurora + grain (brand-coloured via --accent). -->
@@ -834,6 +837,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=54"></script>
+    <script src="store.js?v=55"></script>
   </body>
 </html>
