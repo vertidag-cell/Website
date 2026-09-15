@@ -800,14 +800,20 @@
 
     /* ── Rank tiers ── a price ladder, not products: tier, what each length
        costs, what is included, and the one action that buys it. ── */
-    .rank-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin:0 0 42px}
-    .rank-card{display:flex;flex-direction:column;gap:14px;padding:22px 20px 20px;cursor:pointer;
+        /* One row: every tier side by side so the ladder reads left to right. On
+       narrow screens it scrolls horizontally rather than stacking into a wall. */
+    .rank-grid{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(200px,1fr);gap:14px;margin:0 0 42px;
+      overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+    .rank-grid::-webkit-scrollbar{height:8px}
+    .rank-grid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:99px}
+    @media (max-width:900px){.rank-grid{grid-auto-columns:minmax(178px,78vw)}}
+    .rank-card{display:flex;flex-direction:column;gap:12px;padding:18px 16px 16px;cursor:pointer;
       border:1px solid rgba(255,255,255,.10);border-radius:16px;
       background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012));
       box-shadow:0 22px 46px -32px rgba(0,0,0,.95);transition:border-color .18s,transform .18s,box-shadow .18s}
     .rank-card:hover,.rank-card:focus-visible{border-color:color-mix(in srgb,var(--accent) 55%,transparent);
       transform:translateY(-3px);box-shadow:0 26px 54px -30px color-mix(in srgb,var(--accent) 45%,transparent);outline:none}
-    .rank-name{margin:0;font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-size:21px;font-weight:800;
+    .rank-name{margin:0;font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-size:18px;font-weight:800;
       letter-spacing:-.01em;text-align:center;color:var(--text)}
     .rank-prices{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08)}
     .rank-price{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
@@ -815,7 +821,7 @@
     .rank-price-val{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent)}
     .rank-price:not(:first-child) .rank-price-val{font-size:15px;color:var(--text)}
     .rank-perks{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;flex:1}
-    .rank-perks li{position:relative;padding-left:16px;font-size:13px;line-height:1.45;color:var(--text-muted)}
+    .rank-perks li{position:relative;padding-left:14px;font-size:12.5px;line-height:1.4;color:var(--text-muted)}
     .rank-perks li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;
       background:color-mix(in srgb,var(--accent) 80%,transparent)}
     .rank-ask{margin:0;flex:1;font-size:13px;line-height:1.5;color:var(--text-muted)}
@@ -883,6 +889,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=56"></script>
+    <script src="store.js?v=57"></script>
   </body>
 </html>
