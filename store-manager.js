@@ -411,6 +411,7 @@
     customers: ["Customers", "Who buys from your store"],
     reviews: ["Reviews", "Customer ratings — hide anything unfair"],
     coupons: ["Coupons", "Discount codes for checkout"], settings: ["Settings", "Store link, currency, invoices, test mode"], payments: ["Payments", "Connect a provider to take real money"],
+    finance: ["Finance", "Income by server and source, costs, and the profit split"],
   };
   function render() {
     clear(root);
@@ -435,7 +436,7 @@
         el("a", { href: "dashboard.html" }, "← Back to dashboard")));
 
     // Main
-    var meta = SECTION_META[S.section];
+    var meta = SECTION_META[S.section] || ["Store Manager", ""];
     var content = el("div", { class: "sm-content" });
     var burger = el("button", { class: "sm-burger", "aria-label": "Menu", onclick: function () { app.classList.add("nav-open"); var sc = el("div", { class: "sm-nav-scrim", onclick: closeMobileNav }); app.append(sc); } }, "☰");
     var topbar = el("div", { class: "sm-topbar" }, burger,
