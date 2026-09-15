@@ -849,6 +849,23 @@
     .cat-tile.ct4:hover .ct4-go{border-color:color-mix(in srgb,var(--accent) 60%,transparent);
       background:color-mix(in srgb,var(--accent) 16%,transparent)}
     @media (prefers-reduced-motion:reduce){.rank-card,.ct4-media .prod-img{transition:none}}
+
+    /* ── Closing sections: earned numbers, what buying here gets you, footer ── */
+    .store-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:44px 0 10px;text-align:center}
+    .store-stat b{display:block;font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-size:clamp(30px,5vw,44px);
+      font-weight:800;line-height:1;letter-spacing:-.02em;color:var(--text)}
+    .store-stat span{display:block;margin-top:6px;font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-muted)}
+    .store-assure{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:34px 0 0}
+    .store-assure-card{padding:22px 20px;border:1px solid rgba(255,255,255,.09);border-radius:14px;text-align:center;
+      background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012))}
+    .store-assure-card svg{width:26px;height:26px;color:var(--accent);margin-bottom:10px}
+    .store-assure-card h3{margin:0 0 6px;font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--text)}
+    .store-assure-card p{margin:0;font-size:13px;line-height:1.55;color:var(--text-muted)}
+    .store-foot{margin:34px 0 10px;border:1px solid rgba(255,255,255,.09);border-radius:14px;
+      background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01))}
+    .store-foot-in{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:18px 22px}
+    .store-foot-name{font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-size:16px;font-weight:800;color:var(--text)}
+    .store-foot-meta{font-size:12.5px;color:var(--text-dim)}
 </style>
   </head>
   <body>
@@ -889,6 +906,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=57"></script>
+    <script src="store.js?v=58"></script>
   </body>
 </html>

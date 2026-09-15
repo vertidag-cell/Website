@@ -1590,6 +1590,36 @@
     // the category tiles; category pages list options in catalog (featured) order.
     html += '<div id="store-results"></div>';
     html += '<div id="store-reviews-showcase" class="store-reviews-showcase"></div>';
+
+    // Earned numbers — only the ones that actually exist. A row of zeroes on a
+    // new shop says "nobody buys here", so each tile appears on its own merit.
+    var statTiles = [];
+    if (delivered > 0) statTiles.push(['products sold', fmt(delivered)]);
+    if (totalReviews > 0) statTiles.push(['reviews received', fmt(totalReviews)]);
+    if (totalReviews > 0) statTiles.push(['average rating', avgRating.toFixed(2)]);
+    if (pc > 0) statTiles.push(['products available', fmt(pc)]);
+    if (statTiles.length) {
+      html += '<div class="store-stats">' + statTiles.map(function (t) {
+        return '<div class="store-stat"><b>' + t[1] + '</b><span>' + t[0] + '</span></div>';
+      }).join('') + '</div>';
+    }
+
+    // What buying here actually gets you. Static, but true for every store on
+    // the platform — and the reference store the owner matched leads with it.
+    html += '<div class="store-assure">'
+      + '<div class="store-assure-card">' + ICON.bolt + '<h3>Fast in-game delivery</h3>'
+        + '<p>Instant items land the moment you pay. Anything an admin hands over is queued for staff the same minute.</p></div>'
+      + '<div class="store-assure-card">' + ICON.shield + '<h3>Secure payments</h3>'
+        + '<p>Checkout runs on ' + (s.acceptMoney ? 'PayPal and Stripe' : 'server credits') + '. Card details never touch this site.</p></div>'
+      + '<div class="store-assure-card">' + ICON.bag + '<h3>Support in Discord</h3>'
+        + '<p>Every order comes with a code you redeem in a ticket, so there is always a staff member on the other end.</p></div>'
+      + '</div>';
+
+    html += '<footer class="store-foot"><div class="store-foot-in">'
+      + '<span class="store-foot-name">' + esc(name) + '</span>'
+      + '<span class="store-foot-meta">Store powered by Arkoris</span>'
+      + '</div></footer>';
+
     root.innerHTML = html;
     wireImgFallbacks(root); // hero logo
 
