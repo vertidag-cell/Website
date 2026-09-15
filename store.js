@@ -989,15 +989,96 @@
       : '<div class="prod-img prod-fb">' + glyphSvg(name) + '</div>';
     var range = priceRangeHtml(catProducts(catKey));
     var style = ' style="animation-delay:' + Math.min((idx || 0) * 50, 400) + 'ms"';
-    return '<div class="prod cat-tile reveal-up" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button"' + style + '>'
-      + '<div class="ct3-media">' + media + '</div>'
-      + '<div class="ct3-scrim" aria-hidden="true"></div>'
-      + '<span class="ct3-count">' + count + ' item' + (count === 1 ? '' : 's') + '</span>'
-      + '<div class="ct3-info">'
-        + '<h3 class="ct3-name">' + esc(name) + '</h3>'
-        + '<div class="ct3-meta"><span class="ct3-range">' + (range || 'Browse the range') + '</span><span class="ct3-go">Browse <span aria-hidden="true">→</span></span></div>'
-      + '</div></div>';
+    return '<div class="prod cat-tile ct4 reveal-up" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button"' + style + '>'
+      + '<h3 class="ct4-name">' + esc(name) + '</h3>'
+      + '<div class="ct4-media">' + media + '</div>'
+      + '<div class="ct4-meta">'
+        + '<span class="ct4-range">' + (range || '&nbsp;') + '</span>'
+        + '<span class="ct4-count">' + count + ' product' + (count === 1 ? '' : 's') + '</span>'
+      + '</div>'
+      + '<span class="ct4-go">View Details <span aria-hidden="true">→</span></span>'
+      + '</div>';
   }
+  // ── Rank tiers ──────────────────────────────────────────────────────────────
+  // Ticket-only tiers, shown as a ladder: the tier, what each length costs, what
+  // is included, and the one action that actually buys it. They are pulled OUT
+  // of the product grid so the grid stays "things you can put in a basket".
+  function rankProducts() {
+    return S.products.filter(function (p) { return p.enquiryOnly; });
+  }
+  function isRank(p) { return !!(p && p.enquiryOnly); }
+
+  // "Lifetime" / "30 days" variants → the two price rows.
+  function rankPrices(p) {
+    var out = [];
+    (p.variants || []).forEach(function (v) {
+      if (v.price_money == null && v.price_credits == null) return;
+      out.push({ label: v.name, money: v.price_money, credits: v.price_credits });
+    });
+    if (!out.length && (p.price_money != null || p.price_credits != null)) {
+      out.push({ label: 'Price', money: p.price_money, credits: p.price_credits });
+    }
+    // Shortest period first, lifetime last — cheapest entry point reads first.
+    out.sort(function (a, b) {
+      var al = /lifetime/i.test(a.label) ? 1 : 0, bl = /lifetime/i.test(b.label) ? 1 : 0;
+      if (al !== bl) return al - bl;
+      return (a.money || 0) - (b.money || 0);
+    });
+    return out;
+  }
+
+  // The rank description is "perk · perk · perk\n\nOne wipe = 30 days." — split
+  // the perks off so they can be listed, and keep the trailing note separate.
+  function rankPerks(p) {
+    var d = String(p.description || '').split(/\n\s*\n/)[0] || '';
+    if (!d.trim()) return [];
+    return d.split('·').map(function (x) { return x.trim(); }).filter(Boolean);
+  }
+
+  function rankCardHtml(p, idx) {
+    var prices = rankPrices(p);
+    var perks = rankPerks(p);
+    var style = ' style="animation-delay:' + Math.min((idx || 0) * 55, 400) + 'ms"';
+    var priceRows = prices.map(function (pr) {
+      var ccy = (S.store && S.store.currency) || 'USD';
+      var amount = pr.money != null ? money(pr.money, ccy)
+        : (pr.credits != null ? fmt(pr.credits) + ' credits' : '—');
+      return '<div class="rank-price"><span class="rank-price-lab">' + esc(pr.label) + '</span>'
+        + '<b class="rank-price-val">' + amount + '</b></div>';
+    }).join('');
+    var perkList = perks.length
+      ? '<ul class="rank-perks">' + perks.slice(0, 8).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'
+      : '<p class="rank-ask">Open a ticket and staff will go through what is included.</p>';
+    return '<article class="rank-card reveal-up" data-pid="' + p.id + '" tabindex="0" role="button"' + style + '>'
+      + '<h3 class="rank-name">' + esc(p.name) + '</h3>'
+      + '<div class="rank-prices">' + priceRows + '</div>'
+      + perkList
+      + '<span class="rank-cta">Buy in Discord <span aria-hidden="true">→</span></span>'
+      + '</article>';
+  }
+
+  function ranksSectionHtml() {
+    var ranks = rankProducts();
+    if (!ranks.length) return '';
+    // Cheapest tier first so the ladder climbs.
+    ranks = ranks.slice().sort(function (a, b) {
+      var am = rankPrices(a)[0], bm = rankPrices(b)[0];
+      return ((am && am.money) || 0) - ((bm && bm.money) || 0);
+    });
+    return '<div class="store-sec2 reveal-up"><span class="store-sec2-kick">' + ICON.spark + 'Ranks</span>'
+      + '<h2 class="store-sec2-title">Server ranks</h2>'
+      + '<span class="store-sec2-hint">Bought in Discord — open a ticket</span></div>'
+      + '<div class="rank-grid">' + ranks.map(rankCardHtml).join('') + '</div>';
+  }
+
+  function wireRankCards(box) {
+    box.querySelectorAll('.rank-card[data-pid]').forEach(function (card) {
+      var go = function () { var p = productById(card.getAttribute('data-pid')); if (p) openProduct(p); };
+      card.addEventListener('click', go);
+      card.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    });
+  }
+
   // Featured rail — a horizontal showcase of featured/bestselling products at
   // the top of the landing. Hidden when the store has nothing to spotlight.
   function featuredRailHtml() {
@@ -1020,12 +1101,13 @@
     // No category tiles at all → just show the products (drill into "Other").
     if (!tiles.length) { S.view.cat = 'other'; return renderGrouped(box); }
     var rail = featuredRailHtml();
-    box.innerHTML = rail +
+    box.innerHTML = ranksSectionHtml() + rail +
       '<div class="store-sec2 reveal-up"><span class="store-sec2-kick">' + ICON.grid + 'Categories</span>' +
       '<h2 class="store-sec2-title">Browse the store</h2></div>' +
       '<div class="cat-grid">' + tiles.join('') + '</div>';
     S._revealed = true;
     wireImgFallbacks(box);
+    wireRankCards(box);
     wireGridEvents(box); // featured-rail cards: add-to-cart + open modal
     animateGrid(box);
     box.querySelectorAll('.cat-tile[data-cat]').forEach(function (tile) {

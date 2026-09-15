@@ -797,6 +797,52 @@
     
     /* Ticket-only tiers (ranks): browsed here, bought in Discord */
     .prod-badge.ticket{background:linear-gradient(180deg,#5865f2,#4450d8);color:#fff;border-color:rgba(255,255,255,.18)}
+
+    /* ── Rank tiers ── a price ladder, not products: tier, what each length
+       costs, what is included, and the one action that buys it. ── */
+    .rank-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin:0 0 42px}
+    .rank-card{display:flex;flex-direction:column;gap:14px;padding:22px 20px 20px;cursor:pointer;
+      border:1px solid rgba(255,255,255,.10);border-radius:16px;
+      background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012));
+      box-shadow:0 22px 46px -32px rgba(0,0,0,.95);transition:border-color .18s,transform .18s,box-shadow .18s}
+    .rank-card:hover,.rank-card:focus-visible{border-color:color-mix(in srgb,var(--accent) 55%,transparent);
+      transform:translateY(-3px);box-shadow:0 26px 54px -30px color-mix(in srgb,var(--accent) 45%,transparent);outline:none}
+    .rank-name{margin:0;font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-size:21px;font-weight:800;
+      letter-spacing:-.01em;text-align:center;color:var(--text)}
+    .rank-prices{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08)}
+    .rank-price{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+    .rank-price-lab{font-size:12.5px;color:var(--text-muted)}
+    .rank-price-val{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent)}
+    .rank-price:not(:first-child) .rank-price-val{font-size:15px;color:var(--text)}
+    .rank-perks{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;flex:1}
+    .rank-perks li{position:relative;padding-left:16px;font-size:13px;line-height:1.45;color:var(--text-muted)}
+    .rank-perks li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;
+      background:color-mix(in srgb,var(--accent) 80%,transparent)}
+    .rank-ask{margin:0;flex:1;font-size:13px;line-height:1.5;color:var(--text-muted)}
+    .rank-cta{display:block;text-align:center;padding:10px 12px;border-radius:10px;font-size:13.5px;font-weight:700;
+      color:var(--text);border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);transition:background .18s,border-color .18s}
+    .rank-card:hover .rank-cta{border-color:color-mix(in srgb,var(--accent) 60%,transparent);
+      background:color-mix(in srgb,var(--accent) 16%,transparent)}
+
+    /* ── Category tile, reference shape: name on top, artwork, meta row,
+       then a full-width View Details button. ── */
+    .cat-tile.ct4{display:flex;flex-direction:column;gap:0;padding:0;overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);border-radius:14px;
+      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012))}
+    .ct4-name{margin:0;padding:13px 14px;text-align:center;font-family:"Space Grotesk",Inter,system-ui,sans-serif;
+      font-size:16.5px;font-weight:800;letter-spacing:-.01em;color:var(--text)}
+    .ct4-media{position:relative;aspect-ratio:16/10;overflow:hidden;background:#0b0e13;margin:0 12px;border-radius:8px}
+    .ct4-media .prod-img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .45s cubic-bezier(.2,.7,.3,1)}
+    .cat-tile.ct4:hover .ct4-media .prod-img{transform:scale(1.05)}
+    .ct4-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px 8px;font-size:13px}
+    .ct4-range{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+    .ct4-count{color:var(--text-muted)}
+    .ct4-go{display:block;margin:0 12px 12px;text-align:center;padding:9px 12px;border-radius:8px;
+      font-size:13.5px;font-weight:700;color:var(--text);
+      border:1px solid rgba(255,255,255,.20);background:rgba(255,255,255,.03);transition:background .18s,border-color .18s}
+    .cat-tile.ct4:hover .ct4-go{border-color:color-mix(in srgb,var(--accent) 60%,transparent);
+      background:color-mix(in srgb,var(--accent) 16%,transparent)}
+    @media (prefers-reduced-motion:reduce){.rank-card,.ct4-media .prod-img{transition:none}}
 </style>
   </head>
   <body>
@@ -837,6 +883,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=55"></script>
+    <script src="store.js?v=56"></script>
   </body>
 </html>
