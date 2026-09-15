@@ -673,6 +673,8 @@
   }
   // A product is uncategorised when it has no category_id that resolves in the tree.
   function isUncategorised(p) { return !(p.category_id != null && _catIndex && _catIndex.byId[p.category_id]); }
+  // Ranks are shown as a ladder at the top, never as grid products.
+  function gridProducts() { return S.products.filter(function (p) { return !p.enquiryOnly; }); }
   // Apply the active sort to a list (shared by flat + grouped views).
   function sortList(list) {
     var v = S.view, l = list.slice();
@@ -908,7 +910,7 @@
     var v = S.view;
     // Drilled into the uncategorised ("Other") bucket.
     if (v.cat === 'other') {
-      var items = sortList(S.products.filter(isUncategorised));
+      var items = sortList(gridProducts().filter(isUncategorised));
       box.innerHTML = backRowHtml() + sectionHeaderHtml({ name: 'Other', image_url: null, id: 'other' }, items.length) +
         '<div class="store-grid">' + items.map(productCardHtml).join('') + '</div>';
       S._revealed = true; wireImgFallbacks(box); wireGridEvents(box); animateGrid(box); wireBack(box);
@@ -926,7 +928,7 @@
       });
       if (direct.length || subs.length) sections.push({ cat: t, direct: direct, subs: subs });
     });
-    var other = selected ? [] : sortList(S.products.filter(isUncategorised));
+    var other = selected ? [] : sortList(gridProducts().filter(isUncategorised));
 
     if (!sections.length && !other.length) {
       box.innerHTML = (selected ? backRowHtml() : '') + '<div class="store-state" style="margin-top:4px"><div class="store-state-ico">' + ICON.bag + '</div><h2>Nothing here yet</h2><p>This category has no products yet.</p><button type="button" class="btn btn-primary" id="store-clear">Show all</button></div>';
@@ -964,7 +966,7 @@
   // Products belonging to a top-level category (its own + its sub-categories), or
   // the uncategorised bucket for 'other'.
   function catProducts(catKey) {
-    return S.products.filter(function (p) {
+    return gridProducts().filter(function (p) {
       if (catKey === 'other') return isUncategorised(p);
       return p.category_id === catKey || (_catIndex && _catIndex.parentTop[p.category_id] === catKey);
     });
@@ -1091,12 +1093,15 @@
       '<div class="feat-rail">' + picks.map(productCardHtml).join('') + '</div>';
   }
   function renderCategoryTiles(box) {
-    var tops = _catIndex.tops || [];
+    var tops = (_catIndex.tops || []).filter(function (t) {
+      var n = t.totalProductCount != null ? t.totalProductCount : (t.productCount || 0);
+      return n > 0;
+    });
     var tiles = tops.map(function (t, i) {
       var count = t.totalProductCount != null ? t.totalProductCount : (t.productCount || 0);
       return categoryTileHtml(t.id, t.name, t.image_url, count, t.description, i);
     });
-    var otherCount = S.products.filter(isUncategorised).length;
+    var otherCount = gridProducts().filter(isUncategorised).length;
     if (otherCount) tiles.push(categoryTileHtml('other', 'Other', null, otherCount, null, tiles.length));
     // No category tiles at all → just show the products (drill into "Other").
     if (!tiles.length) { S.view.cat = 'other'; return renderGrouped(box); }
