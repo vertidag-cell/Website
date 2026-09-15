@@ -1697,18 +1697,53 @@
         el("div", { class: "grid2" }, field("From", from), field("To", to)),
         el("div", { style: { display: "flex", gap: "8px" } }, reload)));
 
+      // Money in, split by server AND by how it arrived — the question is
+      // always "which server earned this, and through which route".
+      var totals = (d.revenue && d.revenue.totals) || { money: 0, paymentMoney: 0, ticketMoney: 0, totalMoney: 0, credits: 0 };
       var rows = (d.revenue && d.revenue.servers ? d.revenue.servers : []).slice().sort(function (a, b) {
-        return (b.money + b.paymentMoney) - (a.money + a.paymentMoney);
+        return (b.totalMoney || 0) - (a.totalMoney || 0);
       });
-      var revBox = el("div", { class: "fin-preview" });
-      rows.forEach(function (s) {
-        revBox.append(el("div", { class: "fin-row" }, el("span", null, s.name || s.guildId),
-          el("b", null, money(s.money + s.paymentMoney))));
+
+      var srcBox = el("div", { class: "fin-src" });
+      [["Web store", totals.money, "Paid orders on arkoris.net"],
+       ["Payment links", totals.paymentMoney, "/payment links marked paid"],
+       ["Ticket sales", totals.ticketMoney, "Ranks handed over with /ranks give"]].forEach(function (t) {
+        srcBox.append(el("div", { class: "fin-src-tile" },
+          el("span", { class: "fin-src-lab" }, t[0]),
+          el("b", { class: "fin-src-val" }, money(t[1])),
+          el("span", { class: "fin-src-note" }, t[2])));
       });
-      if (!rows.length) revBox.append(el("p", { class: "hint" }, "No servers found."));
-      box.append(panel(panelHead("Money in", el("span", { class: "pill on" }, money(((d.revenue || {}).totals || {}).money + ((d.revenue || {}).totals || {}).paymentMoney))),
-        el("p", { class: "panel-sub" }, "Straight from the bot: paid store orders plus paid staff payment links, for this period. Credits spent in-game are not counted as money."),
-        revBox));
+
+      var tbl = el("table", { class: "fin-tbl" });
+      var thead = el("thead", null, el("tr", null,
+        el("th", null, "Server"), el("th", { class: "num" }, "Web store"),
+        el("th", { class: "num" }, "Payment links"), el("th", { class: "num" }, "Ticket sales"),
+        el("th", { class: "num" }, "Total")));
+      var tbody = el("tbody");
+      rows.forEach(function (sv) {
+        tbody.append(el("tr", null,
+          el("td", null, sv.name || sv.guildId),
+          el("td", { class: "num" }, money(sv.money)),
+          el("td", { class: "num" }, money(sv.paymentMoney)),
+          el("td", { class: "num" }, money(sv.ticketMoney)),
+          el("td", { class: "num strong" }, money(sv.totalMoney))));
+      });
+      if (!rows.length) tbody.append(el("tr", null, el("td", { colspan: "5" }, "No servers found.")));
+      var tfoot = el("tfoot", null, el("tr", null,
+        el("td", null, "Total"),
+        el("td", { class: "num" }, money(totals.money)),
+        el("td", { class: "num" }, money(totals.paymentMoney)),
+        el("td", { class: "num" }, money(totals.ticketMoney)),
+        el("td", { class: "num strong" }, money(totals.totalMoney))));
+      tbl.append(thead, tbody, tfoot);
+
+      box.append(panel(panelHead("Money in", el("span", { class: "pill on" }, money(totals.totalMoney))),
+        el("p", { class: "panel-sub" }, "Straight from the bot, for this period: which server the money came from and how it arrived."),
+        srcBox,
+        el("div", { class: "fin-tbl-wrap" }, tbl),
+        el("p", { class: "hint", style: { marginTop: "10px" } },
+          "Web store counts for the server the buyer shopped from. Payment links count for the server the link was made in. Ticket sales count for the server the rank was sold in."
+          + (totals.credits ? "  " + fmt(totals.credits) + " credits were also spent — that is in-game currency, not money in, so it is left out of every figure above." : ""))));
 
       box.append(panel(panelHead("Costs"),
         el("p", { class: "panel-sub" }, "What running the servers costs you this period. Saved here and pre-filled into the spreadsheet."),
