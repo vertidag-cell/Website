@@ -625,8 +625,8 @@
         animation: catpMediaIn .5s cubic-bezier(.22,.61,.36,1) both; }
       .catp-media::after { content: ""; position: absolute; inset: auto 0 0 0; height: 34%; pointer-events: none;
         background: linear-gradient(transparent, rgba(3,5,8,.42)); }
-      .catp-img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; transition: transform .65s cubic-bezier(.22,.61,.36,1); }
-      .catp-media:hover .catp-img { transform: scale(1.045); }
+      .catp-img { width: 100%; aspect-ratio: 1 / 1; object-fit: contain; padding: 10px; box-sizing: border-box; display: block; transition: filter .65s cubic-bezier(.22,.61,.36,1); }
+      .catp-media:hover .catp-img { filter: brightness(1.08); }
       .catp-img.catp-fb { display: grid; place-items: center; color: color-mix(in srgb, var(--accent) 78%, #fff);
         background:
           radial-gradient(80% 70% at 50% 32%, color-mix(in srgb, var(--accent) 32%, transparent), transparent 70%),
@@ -838,8 +838,8 @@
     .ct4-name{margin:0;padding:13px 14px;text-align:center;font-family:"Space Grotesk",Inter,system-ui,sans-serif;
       font-size:16.5px;font-weight:800;letter-spacing:-.01em;color:var(--text)}
     .ct4-media{position:relative;aspect-ratio:16/10;overflow:hidden;background:#0b0e13;margin:0 12px;border-radius:8px}
-    .ct4-media .prod-img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .45s cubic-bezier(.2,.7,.3,1)}
-    .cat-tile.ct4:hover .ct4-media .prod-img{transform:scale(1.05)}
+    .ct4-media .prod-img{width:100%;height:100%;object-fit:contain;display:block;padding:6px;box-sizing:border-box;transition:filter .45s cubic-bezier(.2,.7,.3,1)}
+    .cat-tile.ct4:hover .ct4-media .prod-img{filter:brightness(1.08)}
     .ct4-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px 8px;font-size:13px}
     .ct4-range{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
     .ct4-count{color:var(--text-muted)}
@@ -915,6 +915,6 @@
     </main>
 
     <script src="config.js"></script>
-    <script src="store.js?v=60"></script>
+    <script src="store.js?v=61"></script>
   </body>
 </html>
