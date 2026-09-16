@@ -989,11 +989,14 @@
     var media = image
       ? '<img class="prod-img" src="' + esc(image) + '" alt="" loading="lazy" data-letter="' + initial(name) + '">'
       : '<div class="prod-img prod-fb">' + glyphSvg(name) + '</div>';
+    // A blurred, zoomed copy of the same art fills the frame behind the image,
+    // so nothing is cropped and nothing sits on an empty letterbox either.
+    var mediaStyle = image ? ' style="background-image:url(' + esc(image).replace(/"/g, '%22') + ')"' : '';
     var range = priceRangeHtml(catProducts(catKey));
     var style = ' style="animation-delay:' + Math.min((idx || 0) * 50, 400) + 'ms"';
     return '<div class="prod cat-tile ct4 reveal-up" data-cat="' + esc(String(catKey)) + '" tabindex="0" role="button"' + style + '>'
       + '<h3 class="ct4-name">' + esc(name) + '</h3>'
-      + '<div class="ct4-media">' + media + '</div>'
+      + '<div class="ct4-media"' + mediaStyle + '>' + media + '</div>'
       + '<div class="ct4-meta">'
         + '<span class="ct4-range">' + (range || '&nbsp;') + '</span>'
         + '<span class="ct4-count">' + count + ' product' + (count === 1 ? '' : 's') + '</span>'
