@@ -191,11 +191,48 @@
   // If the store collects delivery details (e.g. in-game name), gather them in a
   // dialog before placing the order; otherwise go straight to checkout.
   function checkout(rail) {
-    var fields = (S.store && S.store.checkoutFields) || [];
-    if (fields.length) return openCheckoutDetails(rail, fields);
-    submitCheckout(rail, {});
+    // Card orders ask which rail to pay on first, but only when the shop
+    // actually has more than one. With a single provider there is no choice to
+    // make, so the buyer is never shown a dialog with one button in it.
+    chooseProvider(rail, function (provider) {
+      var fields = (S.store && S.store.checkoutFields) || [];
+      if (fields.length) return openCheckoutDetails(rail, fields, provider);
+      submitCheckout(rail, {}, provider);
+    });
   }
-  function openCheckoutDetails(rail, fields) {
+  var PROVIDER_META = {
+    paypal: { name: 'PayPal', sub: 'Pay with your PayPal balance or a linked card' },
+    stripe: { name: 'Card', sub: 'Visa, Mastercard, Amex, Apple Pay and Cash App' }
+  };
+  function chooseProvider(rail, done) {
+    var list = (S.store && S.store.providers) || [];
+    if (rail !== 'money' || list.length < 2) return done(null);
+    var ov = document.createElement('div');
+    ov.className = 'cart-overlay checkout-overlay';
+    ov.innerHTML = '<div class="checkout-panel" role="dialog" aria-label="Choose how to pay">' +
+      '<div class="cart-head"><h2>How would you like to pay?</h2><button type="button" class="cart-x co-close" aria-label="Close">✕</button></div>' +
+      '<div class="pay-picks">' + list.map(function (k) {
+        var m = PROVIDER_META[k] || { name: k, sub: '' };
+        return '<button type="button" class="pay-pick" data-provider="' + esc(k) + '">' +
+          '<span class="pay-pick-name">' + esc(m.name) + '</span>' +
+          '<span class="pay-pick-sub">' + esc(m.sub) + '</span></button>';
+      }).join('') + '</div></div>';
+    document.body.appendChild(ov);
+    var onKey = function (e) { if (e.key === 'Escape') { e.stopImmediatePropagation(); close(); } };
+    function close() { document.removeEventListener('keydown', onKey, true); ov.remove(); }
+    document.addEventListener('keydown', onKey, true);
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+    ov.querySelector('.co-close').addEventListener('click', close);
+    ov.querySelectorAll('.pay-pick').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var k = b.getAttribute('data-provider');
+        close();
+        done(k);
+      });
+    });
+    var first = ov.querySelector('.pay-pick'); if (first) first.focus();
+  }
+  function openCheckoutDetails(rail, fields, provider) {
     var ov = document.createElement('div');
     ov.className = 'cart-overlay checkout-overlay';
     var rows = fields.map(function (f, i) {
@@ -229,15 +266,16 @@
       });
       if (missing.length) { errBox.hidden = false; errBox.textContent = 'Please fill in: ' + missing.join(', '); return; }
       close();
-      submitCheckout(rail, answers);
+      submitCheckout(rail, answers, provider);
     }
     ov.querySelector('.co-submit').addEventListener('click', doSubmit);
     var first = ov.querySelector('.co-input'); if (first) first.focus();
   }
-  function submitCheckout(rail, customFields) {
+  function submitCheckout(rail, customFields, provider) {
     var btns = document.querySelectorAll('.cart-rail-btn');
     btns.forEach(function (b) { b.disabled = true; });
     var body = { rail: rail };
+    if (provider) body.provider = provider;
     if (customFields && Object.keys(customFields).length) body.customFields = customFields;
     if (S.coupon && S.coupon.code) body.coupon = S.coupon.code;
     api('/api/dashboard/store/checkout?guild=' + encodeURIComponent(guildId), { method: 'POST', body: body })
