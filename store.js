@@ -1311,12 +1311,17 @@
     }
     var rows = opts.map(function (o, i) {
       var stock = o.inStock === false ? 'Sold out' : (o.lowStock ? 'Only ' + o.lowStock + ' left' : 'In stock');
-      return '<button type="button" class="pm-prow' + (o.inStock === false ? ' oos' : '') + '" data-i="' + i + '" style="animation-delay:' + Math.min(i * 45, 380) + 'ms"' + (o.inStock === false ? ' disabled' : '') + '>' +
+      return '<div class="pm-prow-wrap">' +
+        '<button type="button" class="pm-prow' + (o.inStock === false ? ' oos' : '') + '" data-i="' + i + '" style="animation-delay:' + Math.min(i * 45, 380) + 'ms"' + (o.inStock === false ? ' disabled' : '') + '>' +
         '<span class="pm-prow-info"><span class="pm-prow-title">' + esc(o.title) + '</span>' +
         (o.sub ? '<span class="pm-prow-sub">' + esc(o.sub) + '</span>' : '') +
         '<span class="pm-prow-stock' + (o.inStock === false ? ' out' : '') + '">' + stock + '</span></span>' +
         '<span class="pm-prow-price">' + priceHtml(o) + '</span>' +
-        '<span class="pm-prow-check" aria-hidden="true">✓</span></button>';
+        '<span class="pm-prow-check" aria-hidden="true">✓</span></button>' +
+        // Sits OUTSIDE the select button so clicking it reads the product
+        // instead of silently adding it to the basket.
+        '<button type="button" class="pm-prow-more" data-pid="' + o.pid + '">What\'s included ›</button>' +
+        '</div>';
     }).join('');
 
     var media = cat.image_url
@@ -1382,6 +1387,13 @@
         selected = opts[parseInt(b.getAttribute('data-i'), 10)];
         rowBtns.forEach(function (x) { x.classList.remove('on'); });
         b.classList.add('on'); refresh();
+      });
+    });
+    box.querySelectorAll('.pm-prow-more').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var prod = productById(b.getAttribute('data-pid'));
+        if (prod) openProduct(prod);
       });
     });
     box.querySelectorAll('.pm-qd').forEach(function (b) {
