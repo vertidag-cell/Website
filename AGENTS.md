@@ -8,6 +8,27 @@ live in the sibling repo **`vertidag-cell/QuicksArk`** (see its `AGENTS.md` for 
 
 ---
 
+## Hadi HQ (the owner's project brain)
+
+This repository is the project `arkoris` in **Hadi HQ**, the owner's private portal and the
+shared memory of all his AI agents (Claude Code, Codex, the Claude app). Status, roadmap,
+handoffs and questions live there — not in files in this repo. Use its MCP server (connector
+"Hadi HQ"; tools `get_briefing`, `start_session`, `log_progress`, `ask_owner`, `finish_session`,
+`next_task`, `roadmap_upsert`):
+
+1. **Start:** call `get_briefing` with project `arkoris` (unless a Hadi briefing is already in your
+   context). Read the latest handoffs and the owner's answers before you change anything.
+2. Call `start_session`, then log notable steps with `log_progress` (one short line each).
+3. Need a decision? Use `ask_owner` instead of guessing; the answer shows up in a later briefing.
+4. **Finish:** before you stop, call `finish_session` with a 1–3 line summary in Swedish and a
+   handoff (gjort / läget nu / nästa steg / öppna frågor / länkar). Update the roadmap with
+   `roadmap_upsert` (agents never delete; close items by moving them to "done").
+
+If the Hadi HQ tools are not available, say so once and carry on; never invent briefing content.
+Never put secrets (keys, tokens, passwords) in Hadi HQ.
+
+---
+
 ## 📣 Community / changelog updates — STANDING INSTRUCTION
 
 Post user-facing updates (bug fixes, new features) to the Discord **support channel, ID
