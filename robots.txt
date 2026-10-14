@@ -4,3 +4,5 @@ Disallow: /api/
 Disallow: /auth/
 Disallow: /dashboard.html
 Disallow: /dashboard
+
+Sitemap: https://arkoris.net/sitemap.xml
