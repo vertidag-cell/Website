@@ -70,6 +70,10 @@ export default {
       return Response.redirect("https://arkoris.net" + path + url.search, 301);
     }
 
+    if (path === "/api/admin" || path.startsWith("/api/admin/")) {
+      return new Response("Not found", { status: 404 }); // owner panel API: bot origin only
+    }
+
     if (path.startsWith("/api/")) {
       return proxy(request, url, env);
     }

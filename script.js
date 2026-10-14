@@ -53,8 +53,8 @@
     { href: "premium.html", label: "Premium", desc: "Payments, staff tools, branding, automation." },
     { href: "branding.html", label: "Branding", desc: "Customize embeds and panels for your server." },
     { href: "demos.html", label: "Demos", desc: "Animated Discord command previews." },
-    { href: "pricing.html", label: "Pricing", desc: "Free · Monthly · Lifetime." },
-    { href: "dashboard.html", label: "Dashboard", desc: "Customer dashboard placeholder." },
+    { href: "pricing.html", label: "Pricing", desc: "Free · Premium · Custom." },
+    { href: "dashboard.html", label: "Dashboard", desc: "Manage your server, branding, payments and store." },
     { href: "faq.html", label: "FAQ", desc: "Common questions answered." },
     { href: "support.html", label: "Support", desc: "Discord, email, owner contact." },
     { href: "terms.html", label: "Terms" },
@@ -667,7 +667,7 @@
                   { name: "Plan", value: "Monthly · 30 days" },
                   { name: "Modules", value: "All 14 included" },
                   { name: "Activation", value: "Automatic on payment" },
-                  { name: "Cancel", value: "Anytime via PayPal" },
+                  { name: "Renewal", value: "Manual — nothing auto-charges" },
                 ],
                 footer: "Choose an option below",
               },
@@ -714,7 +714,7 @@
                     name: "Status",
                     value: '<span class="dchecky">✓</span>&nbsp;&nbsp;Active',
                   },
-                  { name: "Renews", value: "in 30 days" },
+                  { name: "Expires", value: "in 30 days" },
                 ],
                 footer: "Run /setup to configure your modules",
                 style: "success",
@@ -1068,7 +1068,7 @@
           );
           await api.sleep(400);
           api.systemMsg(
-            'Footer updated to <strong style="color:#dbdee1">Iron ARK · powered by Quick\'s ARK Bot</strong>'
+            'Footer updated to <strong style="color:#dbdee1">Iron ARK · powered by Arkoris</strong>'
           );
         },
       },
@@ -1247,7 +1247,7 @@
 
   TUTORIALS.guard = {
     title: "ARK Guard — 14-Signal Review",
-    sub: "Evidence for your staff. Flags, never auto-accusations.",
+    sub: "Evidence for your staff. Review first.",
     channel: "cluster",
     steps: ["Auto-alert", "Open review", "See the signals", "Staff decides"],
     scenes: [
@@ -1279,7 +1279,7 @@
           api.botRow({
             embed: {
               title: "Review — GhostRunner",
-              desc: "Each signal is shown with its evidence. Nothing is automatic.",
+              desc: "Each signal is shown with its evidence. Your staff decides.",
               fields: [
                 { name: "Gamertag spoof", value: "lookalike of a banned tag" },
                 { name: "Gamerscore", value: "0 — fresh account" },

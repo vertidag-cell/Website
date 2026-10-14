@@ -50,7 +50,7 @@ window.SITE_CONFIG = {
     // External — opens in new tab
     // Server (guild) install — scope=bot forces the "Add to Server" flow
     // (not a user install); integration_type=0 makes that explicit.
-    // permissions=8 = Administrator.
+    // Requested permissions are the bitmask below (Administrator is NOT requested).
     inviteBot:
       "https://discord.com/oauth2/authorize?client_id=1487468686150336614&permissions=1495454182518&scope=bot+applications.commands&integration_type=0",
     supportDiscord: "https://discord.gg/sNG6DfkbKt",
@@ -88,8 +88,8 @@ window.SITE_CONFIG = {
     monthly: {
       name: "Premium Monthly",
       price: "$15",
-      period: "/ month",
-      cadence: "30 days access · cancel anytime",
+      period: "/ 30 days",
+      cadence: "30 days access · no auto-renew",
       cta: "Subscribe in Discord",
       ctaLink: "subscribe",
       featured: true,
@@ -100,6 +100,8 @@ window.SITE_CONFIG = {
         "Live in-game logs + game-chat relay",
         "Leaderboards (playtime & K/D) + /grace timers",
         "One-tap Nitrado backup rollback",
+        "Web store — cart, coupons & reviews",
+        "Tribe-log feeds — private live logs per tribe",
         "PayPal & Stripe payments (per-server)",
         "Tickets, Staff Pay, Hype & Advanced Credits",
         "Giveaways, Events & Moderation",

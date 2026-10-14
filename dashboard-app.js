@@ -2520,7 +2520,7 @@
           h("div", { class: "dsx-up-title" }, "Unlock the full Arkoris toolkit"),
           h("div", { class: "dsx-up-sub" },
             "This server is on the Free plan. Go Premium to switch on ARK management, "
-            + "anti-cheat, live logs, leaderboards and more — $15/mo, cancel anytime.")
+            + "anti-cheat, live logs, leaderboards and more — $15 per 30 days, no auto-renew.")
         ),
         h("button", { type: "button", class: "dsx-btn dsx-up-cta",
           onclick: () => { state.activeTab = "premium"; render(); } },
@@ -3737,7 +3737,7 @@
 
       // Premium gate — this is a conversion moment, so sell it (don't just block).
       if (m.tierLocked) {
-        const price = (cfg.pricing && cfg.pricing.monthly) ? `${cfg.pricing.monthly.price}${cfg.pricing.monthly.period || ""}` : "$15 / month";
+        const price = (cfg.pricing && cfg.pricing.monthly) ? `${cfg.pricing.monthly.price} ${cfg.pricing.monthly.period || ""}` : "$15 / 30 days";
         content.append(
           h("div", { class: "dash-card dash-upsell" },
             h("div", { class: "dash-upsell-badge" }, "✨ Premium"),
@@ -5783,7 +5783,7 @@
       h("p", { style: { margin: 0, color: "var(--text-muted)" } }, body));
     const feats = [
       ["🔎 Player Lookup", "Search any player or tribe — sessions, maps, in-game chat, tribemates, names, bans and risk flags."],
-      ["🛡️ ARK Guard", "19 cheater-detection signals (ban-evasion, dupes, aimbot cadence, account-sharing…) with auto-alerts on top suspects."],
+      ["🛡️ ARK Guard", "14 cheater-detection signals (ban-evasion, dupes, aimbot cadence, account-sharing…) with auto-alerts on top suspects."],
       ["📜 Live Logs", "Cluster-wide chat, joins/leaves, kills, tribe events and admin commands — timestamped and map-labelled."],
       ["🏆 Leaderboards", "Playtime and K/D rankings across your maps."],
       ["🔨 Bans", "Banlist management across every linked map, with durations + audit."],
@@ -7187,7 +7187,7 @@
     // client only sends the plan key.
     const statusBox = h("div");
     const monthlyBtn = h("button", { class: "btn btn-primary", type: "button" },
-      (premium ? "Renew Monthly" : "Subscribe Monthly") + " · " + monthlyPrice + "/mo");
+      (premium ? "Renew for 30 days" : "Subscribe for 30 days") + " · " + monthlyPrice);
     const annualBtn = h("button", { class: "btn btn-ghost", type: "button" },
       "Pay Annually · " + annualPrice + "/yr (save 2 months)");
     const payBtns = [monthlyBtn, annualBtn];
@@ -7221,7 +7221,7 @@
       h("div", { class: "dash-card" },
         h("h3", null, premium ? "Renew or extend Premium" : "Upgrade to Premium"),
         h("p", { style: { color: "var(--text-muted)", marginTop: "4px" } },
-          "Pay securely with PayPal — your server activates automatically the moment payment confirms (usually a few seconds). Premium is " + monthlyPrice + "/month, or " + annualPrice + "/year (save 2 months)."),
+          "Pay securely with PayPal — your server activates automatically the moment payment confirms (usually a few seconds). Premium is " + monthlyPrice + " per 30 days, or " + annualPrice + "/year (save 2 months)."),
         h("div", { class: "dash-actions" }, monthlyBtn, annualBtn),
         statusBox,
         h("p", { style: { color: "var(--text-muted)", fontSize: "12px", marginTop: "10px" } },

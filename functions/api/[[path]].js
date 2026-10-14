@@ -20,6 +20,17 @@ export async function onRequest(context) {
     return new Response('Not found', { status: 404 });
   }
 
+  // The owner panel API (/api/admin/*) is reached on the bot's own origin only.
+  // It must never be exposed through the public marketing domain.
+  if (url.pathname === '/api/admin' || url.pathname.startsWith('/api/admin/')) {
+    return new Response('Not found', { status: 404 });
+  }
+
+  // The public server directory is the same for everyone and is requested on
+  // every landing-page view. Serve it from the edge for a minute instead of
+  // hitting the single bot process for each visitor.
+  const isDirectory = request.method === 'GET' && url.pathname === '/api/servers';
+
   // Rebuild the request against the backend URL. `redirect: 'manual'` keeps
   // any 3xx (e.g. Discord OAuth) flowing back to the browser instead of being
   // followed here. The Host header is set automatically from the target URL.
@@ -29,6 +40,7 @@ export async function onRequest(context) {
   // auth is cookie-based; anything in Authorization here (stray Basic Auth,
   // extensions) is not ours to leak.
   proxied.headers.delete('Authorization');
+  if (isDirectory) proxied.headers.delete('Cookie'); // public + cacheable: never vary on a session
   // Shared secret proving this request came through the arkoris.net proxy.
   // Set PROXY_SECRET on the Pages project + backend to activate; fails open until then.
   if (context.env && context.env.PROXY_SECRET) proxied.headers.set('X-Arkoris-Proxy', context.env.PROXY_SECRET);
@@ -43,13 +55,20 @@ export async function onRequest(context) {
   // are unaffected. A hard fetch failure (backend unreachable) becomes a 502.
   let resp;
   try {
-    resp = await fetch(proxied, { redirect: 'manual' });
+    resp = await fetch(proxied, isDirectory
+      ? { redirect: 'manual', cf: { cacheEverything: true, cacheTtl: 60 } }
+      : { redirect: 'manual' });
   } catch (e) {
     return backendUnavailable(502);
   }
   const ct = resp.headers.get('content-type') || '';
   if (resp.status >= 400 && !ct.includes('application/json')) {
     return backendUnavailable(resp.status || 502);
+  }
+  if (isDirectory && resp.ok) {
+    const out = new Response(resp.body, resp);
+    out.headers.set('Cache-Control', 'public, max-age=30');
+    return out;
   }
   return resp;
 }
