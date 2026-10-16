@@ -53,7 +53,7 @@ window.SITE_CONFIG = {
     // Requested permissions are the bitmask below (Administrator is NOT requested).
     inviteBot:
       "https://discord.com/oauth2/authorize?client_id=1487468686150336614&permissions=1495454182518&scope=bot+applications.commands&integration_type=0",
-    supportDiscord: "https://discord.gg/sNG6DfkbKt",
+    supportDiscord: "https://discord.gg/ZTsmVwYSy8",
 
     // Internal — Subscribe CTAs now lead to the dashboard, where premium can be
     // purchased on-site (PayPal) per server, or via /subscribe in Discord.
